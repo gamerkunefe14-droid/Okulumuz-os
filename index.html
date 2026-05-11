@@ -7,35 +7,35 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        body { background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
         .hidden { display: none !important; }
 
         /* Kart Yapısı */
-        .auth-card { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 420px; }
+        .auth-card { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 420px; z-index: 10; }
         h2 { text-align: center; margin-bottom: 1.5rem; color: #2d3436; }
-        input { width: 100%; padding: 14px; margin-bottom: 12px; border: 1.5px solid #eee; border-radius: 10px; outline: none; transition: 0.3s; }
+        input { width: 100%; padding: 14px; margin-bottom: 12px; border: 1.5px solid #eee; border-radius: 10px; outline: none; }
         input:focus { border-color: #ff9f43; }
         
         button { width: 100%; padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.3s; }
         .btn-main { background: #ff9f43; color: white; }
-        .btn-main:hover { background: #f39c12; transform: translateY(-2px); }
+        .btn-main:hover { background: #f39c12; }
         .toggle-link { text-align: center; margin-top: 15px; color: #3498db; cursor: pointer; font-size: 14px; }
 
         /* Uygulama Arayüzü */
-        #app-container { width: 100%; height: 100vh; background: #fff; display: flex; flex-direction: column; position: fixed; top:0; left:0; }
-        header { padding: 15px 20px; background: #ff9f43; color: white; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        #app-container { width: 100%; height: 100vh; background: #fff; display: flex; flex-direction: column; position: fixed; top:0; left:0; z-index: 20; }
+        header { padding: 15px 20px; background: #ff9f43; color: white; display: flex; justify-content: space-between; align-items: center; }
         .admin-btn { background: #d63031; padding: 6px 15px; border-radius: 25px; font-size: 13px; font-weight: bold; }
         
         main { flex: 1; padding: 25px; overflow-y: auto; text-align: center; background: #fafafa; }
 
         /* Alt Menü */
-        .bottom-nav { height: 70px; background: #fff; border-top: 1px solid #eee; display: flex; justify-content: space-around; align-items: center; padding-bottom: 5px; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #a4b0be; cursor: pointer; font-size: 11px; flex: 1; transition: 0.3s; }
+        .bottom-nav { height: 70px; background: #fff; border-top: 1px solid #eee; display: flex; justify-content: space-around; align-items: center; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #a4b0be; cursor: pointer; font-size: 11px; flex: 1; }
         .nav-item i { font-size: 22px; margin-bottom: 4px; }
         .nav-item.active { color: #ff9f43; }
 
-        /* Kod Doğrulama Modal */
-        .modal-bg { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; justify-content:center; align-items:center; z-index: 100; }
+        /* Doğrulama Modal */
+        .modal-bg { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; z-index: 100; }
         .modal { background: white; padding: 2rem; border-radius: 15px; text-align: center; width: 320px; }
     </style>
 </head>
@@ -44,49 +44,40 @@
     <!-- GİRİŞ/KAYIT FORMU -->
     <div id="auth-screen" class="auth-card">
         <h2 id="auth-title">Giriş Yap</h2>
-        
         <div id="login-fields">
             <input type="text" id="login-user" placeholder="Kullanıcı Adı">
             <input type="password" id="login-pass" placeholder="Şifre">
             <button class="btn-main" onclick="app.login()">Giriş Yap</button>
-            <div class="toggle-link" onclick="app.toggleAuth(true)">Yeni hesap oluştur</div>
+            <div class="toggle-link" onclick="app.toggleAuth(true)">Kayıt Ol</div>
         </div>
-
         <div id="register-fields" class="hidden">
-            <input type="email" id="reg-email" placeholder="E-posta (Doğrulama için)">
-            <input type="text" id="reg-user" placeholder="Eşsiz Kullanıcı Adı">
+            <input type="email" id="reg-email" placeholder="E-posta">
+            <input type="text" id="reg-user" placeholder="Kullanıcı Adı">
             <input type="password" id="reg-pass" placeholder="Şifre">
-            <button class="btn-main" onclick="app.startRegister()">Kayıt Ol ve Kod Gönder</button>
-            <div class="toggle-link" onclick="app.toggleAuth(false)">Zaten üyeyim, giriş yap</div>
+            <button class="btn-main" onclick="app.startRegister()">Kod Gönder</button>
+            <div class="toggle-link" onclick="app.toggleAuth(false)">Geri Dön</div>
         </div>
     </div>
 
     <!-- DOĞRULAMA MODAL -->
     <div id="verify-modal" class="modal-bg hidden">
         <div class="modal">
-            <h3>Doğrulama</h3>
-            <p style="color: #636e72; font-size: 13px; margin: 10px 0;">E-postana gönderilen 4 haneli kodu gir:</p>
-            <input type="text" id="verify-code" maxlength="4" style="text-align:center; font-size: 28px; letter-spacing: 8px; border-bottom: 2px solid #ff9f43;">
-            <button class="btn-main" onclick="app.verifyAndFinish()">Kodu Onayla</button>
+            <h3>Kodu Gir</h3>
+            <input type="text" id="verify-code" maxlength="4" style="text-align:center; font-size: 24px;">
+            <button class="btn-main" onclick="app.verifyAndFinish()">Onayla</button>
         </div>
     </div>
 
     <!-- ANA UYGULAMA -->
     <div id="app-container" class="hidden">
         <header>
-            <div style="font-weight: bold;">Selam, <span id="display-name"></span>!</div>
+            <div>Selam, <span id="display-name"></span></div>
             <div id="admin-btn" class="admin-btn hidden">ADMİN</div>
         </header>
-
         <main id="main-content">
-            <!-- Varsayılan sayfa: Ana Sayfa -->
-            <div style="margin-top: 50px;">
-                <i class="fas fa-rocket" style="font-size: 50px; color: #ff9f43; margin-bottom: 15px;"></i>
-                <h1>Ana Sayfaya Hoş Geldin</h1>
-                <p style="color: #636e72; margin-top: 10px;">Bizim Okul uygulaması kullanıma hazır.</p>
-            </div>
+            <h1>Ana Sayfa</h1>
+            <p>Hoş geldin!</p>
         </main>
-
         <nav class="bottom-nav">
             <div class="nav-item" onclick="app.navigate('users', this)"><i class="fas fa-users"></i><span>Kullanıcılar</span></div>
             <div class="nav-item active" onclick="app.navigate('home', this)"><i class="fas fa-home"></i><span>Ana Sayfa</span></div>
@@ -98,12 +89,10 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Senin Firebase Bilgilerin
         const firebaseConfig = {
             apiKey: "AIzaSyBjs49askwa3CJi9MY_ABhK2l1umFLuEZo",
             authDomain: "bizimokul14-4d546.firebaseapp.com",
@@ -115,9 +104,9 @@
 
         const fApp = initializeApp(firebaseConfig);
         const db = getFirestore(fApp);
-
-        // EMAILJS AYARLARI (Burayı kendi bilgilerine göre güncelle!)
-        emailjs.init("bgyhgWde8icqWQ5gB"); 
+        
+        // ÖNEMLİ: Kendi EmailJS Public Key'ini buraya yaz!
+        emailjs.init("YOUR_PUBLIC_KEY"); 
 
         const app = {
             generatedCode: null,
@@ -126,7 +115,6 @@
             toggleAuth(isReg) {
                 document.getElementById('login-fields').classList.toggle('hidden', isReg);
                 document.getElementById('register-fields').classList.toggle('hidden', !isReg);
-                document.getElementById('auth-title').innerText = isReg ? "Yeni Kayıt" : "Giriş Yap";
             },
 
             async startRegister() {
@@ -134,81 +122,67 @@
                 const user = document.getElementById('reg-user').value;
                 const pass = document.getElementById('reg-pass').value;
 
-                if(!email || !user || !pass) return alert("Lütfen tüm alanları doldur!");
-
-                // Kullanıcı adı kontrolü
                 const q = query(collection(db, "users"), where("username", "==", user));
                 const snap = await getDocs(q);
-                if(!snap.empty) return alert("Bu kullanıcı adı başkası tarafından alınmış!");
+                if(!snap.empty) return alert("Kullanıcı adı alınmış!");
 
-                // Kod üretme ve Mail gönderme
                 this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
                 this.tempUser = { email, username: user, password: pass };
 
-                emailjs.send("service_9rbygdk", "template_ygxjrhm", {
+                // EmailJS Service ID ve Template ID buraya!
+                emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", {
                     to_email: email,
-                    code: this.generatedCode // Template içinde {{code}} kullanmalısın
+                    code: this.generatedCode
                 }).then(() => {
                     document.getElementById('verify-modal').classList.remove('hidden');
-                    alert("Doğrulama kodu e-postana gönderildi.");
-                }).catch(err => {
-                    console.error(err);
-                    alert("EmailJS hatası: Lütfen kodun içindeki ID'leri kontrol et.");
-                });
+                }).catch(() => alert("EmailJS Hatası! Kodları kontrol et."));
             },
 
             async verifyAndFinish() {
-                const enteredCode = document.getElementById('verify-code').value;
-                if(enteredCode === this.generatedCode) {
+                if(document.getElementById('verify-code').value === this.generatedCode) {
                     await setDoc(doc(db, "users", this.tempUser.username), this.tempUser);
-                    alert("Kayıt başarılı! Giriş yapabilirsin.");
+                    alert("Kayıt tamam!");
                     location.reload();
                 } else {
-                    alert("Hatalı kod girdiniz.");
+                    alert("Kod yanlış!");
                 }
             },
 
             async login() {
                 const user = document.getElementById('login-user').value;
                 const pass = document.getElementById('login-pass').value;
-
                 const userDoc = await getDoc(doc(db, "users", user));
 
                 if(userDoc.exists() && userDoc.data().password === pass) {
-                    this.launchApp(userDoc.data().username);
+                    this.launch(userDoc.data().username);
                 } else {
-                    alert("Hatalı kullanıcı adı veya şifre!");
+                    alert("Hatalı giriş!");
                 }
             },
 
-            launchApp(username) {
+            launch(username) {
                 document.getElementById('auth-screen').classList.add('hidden');
                 document.getElementById('app-container').classList.remove('hidden');
                 document.getElementById('display-name').innerText = username;
-
-                if(username.toLowerCase() === "künefe") {
-                    document.getElementById('admin-btn').classList.remove('hidden');
-                }
+                if(username.toLowerCase() === "künefe") document.getElementById('admin-btn').classList.remove('hidden');
             },
 
             navigate(page, element) {
-                // Aktif menü stilini değiştir
                 document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
                 element.classList.add('active');
-
-                const content = document.getElementById('main-content');
-                const pageData = {
-                    home: "<h1>Ana Sayfa</h1><p>Burası ana ekran.</p>",
-                    users: "<h1>Kullanıcılar</h1><p>Okul arkadaşların burada görünecek.</p>",
-                    forum: "<h1>Forum</h1><p>Sorularını buraya yazabilirsin.</p>",
-                    messages: "<h1>Mesajlar</h1><p>Mesajlaşma kutusu yakında aktif.</p>",
-                    settings: "<h1>Ayarlar</h1><p>Profilini buradan düzenle.</p>",
-                    updates: "<h1>Güncellemeler</h1><p>Versiyon 1.0.0: Firebase entegrasyonu tamamlandı.</p>"
+                const pages = {
+                    home: "<h1>Ana Sayfa</h1><p>Hoş geldin!</p>",
+                    users: "<h1>Kullanıcılar</h1><p>Liste yükleniyor...</p>",
+                    forum: "<h1>Forum</h1><p>Sohbet alanı.</p>",
+                    messages: "<h1>Mesajlar</h1><p>Kutunuz boş.</p>",
+                    settings: "<h1>Ayarlar</h1><p>Profil ayarları.</p>",
+                    updates: "<h1>Güncelleme</h1><p>Sürüm 1.0.1</p>"
                 };
-                content.innerHTML = pageData[page] || pageData.home;
+                document.getElementById('main-content').innerHTML = pages[page];
             }
         };
 
+        // BUTONLARIN ÇALIŞMASI İÇİN KRİTİK SATIR:
         window.app = app;
     </script>
 </body>
