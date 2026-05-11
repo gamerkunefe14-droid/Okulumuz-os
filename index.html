@@ -6,54 +6,50 @@
     <title>Bizim Okul - Künefe App</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         body { background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
         .hidden { display: none !important; }
 
-        /* Giriş Kartı */
-        .auth-card { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 90%; max-width: 400px; z-index: 10; }
-        h2 { text-align: center; margin-bottom: 1.5rem; color: #333; }
+        /* Kartlar */
+        .auth-card { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 90%; max-width: 400px; }
         input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1.5px solid #eee; border-radius: 10px; outline: none; }
-        input:focus { border-color: #ff9f43; }
-        button { width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        .btn-main { background: #ff9f43; color: white; margin-top: 5px; }
-        .btn-main:hover { background: #e67e22; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        .btn-main { background: #ff9f43; color: white; }
         .toggle-link { text-align: center; margin-top: 15px; color: #3498db; cursor: pointer; font-size: 14px; }
 
-        /* Uygulama Ekranı */
-        #app-container { width: 100%; height: 100vh; background: #fff; display: flex; flex-direction: column; position: fixed; top:0; left:0; z-index: 20; }
+        /* Uygulama */
+        #app-container { width: 100%; height: 100vh; background: #fff; display: flex; flex-direction: column; position: fixed; top:0; left:0; z-index: 100; }
         header { padding: 15px 20px; background: #ff9f43; color: white; display: flex; justify-content: space-between; align-items: center; }
-        .admin-badge { background: #d63031; padding: 6px 15px; border-radius: 25px; font-size: 12px; font-weight: bold; cursor: pointer; }
-        main { flex: 1; padding: 20px; overflow-y: auto; text-align: center; background: #fafafa; }
+        .admin-badge { background: #d63031; padding: 6px 15px; border-radius: 25px; font-size: 12px; font-weight: bold; }
+        main { flex: 1; padding: 20px; overflow-y: auto; text-align: center; }
 
-        /* Alt Araç Çubuğu */
+        /* Alt Menü */
         .bottom-nav { height: 70px; background: #fff; border-top: 1px solid #eee; display: flex; justify-content: space-around; align-items: center; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #a4b0be; cursor: pointer; font-size: 11px; flex: 1; }
         .nav-item i { font-size: 22px; margin-bottom: 4px; }
         .nav-item.active { color: #ff9f43; }
 
-        /* Modal */
-        .modal-bg { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; z-index: 100; }
+        .modal-bg { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; z-index: 200; }
         .modal { background: white; padding: 2rem; border-radius: 15px; text-align: center; width: 300px; }
     </style>
 </head>
 <body>
 
-    <!-- GİRİŞ VE KAYIT EKRANI -->
+    <!-- GİRİŞ EKRANI -->
     <div id="auth-screen" class="auth-card">
-        <h2 id="auth-title">Hoş Geldin</h2>
+        <h2 id="auth-title" style="text-align:center; margin-bottom:15px;">Hoş Geldin</h2>
         <div id="login-fields">
             <input type="text" id="login-user" placeholder="Kullanıcı Adı">
             <input type="password" id="login-pass" placeholder="Şifre">
-            <button class="btn-main" onclick="app.login()">Giriş Yap</button>
-            <div class="toggle-link" onclick="app.toggleAuth(true)">Yeni Hesap Oluştur</div>
+            <button class="btn-main" onclick="window.app.login()">Giriş Yap</button>
+            <div class="toggle-link" onclick="window.app.toggleAuth(true)">Hesap Oluştur</div>
         </div>
         <div id="register-fields" class="hidden">
             <input type="email" id="reg-email" placeholder="E-posta">
-            <input type="text" id="reg-user" placeholder="Benzersiz Kullanıcı Adı">
+            <input type="text" id="reg-user" placeholder="Kullanıcı Adı">
             <input type="password" id="reg-pass" placeholder="Şifre">
-            <button class="btn-main" onclick="app.startRegister()">Kayıt Ol & Kod Gönder</button>
-            <div class="toggle-link" onclick="app.toggleAuth(false)">Geri Dön</div>
+            <button class="btn-main" onclick="window.app.startRegister()">Kod Gönder</button>
+            <div class="toggle-link" onclick="window.app.toggleAuth(false)">Geri Dön</div>
         </div>
     </div>
 
@@ -61,9 +57,8 @@
     <div id="verify-modal" class="modal-bg hidden">
         <div class="modal">
             <h3>Doğrulama</h3>
-            <p style="font-size: 12px; margin-bottom: 10px;">E-postana gelen 4 haneli kodu gir:</p>
-            <input type="text" id="verify-code" maxlength="4" style="text-align:center; font-size: 24px; letter-spacing: 5px;">
-            <button class="btn-main" onclick="app.verifyAndFinish()">Onayla</button>
+            <input type="text" id="verify-code" maxlength="4" style="text-align:center; font-size: 24px; margin-top:10px;">
+            <button class="btn-main" onclick="window.app.verifyAndFinish()">Onayla</button>
         </div>
     </div>
 
@@ -71,29 +66,28 @@
     <div id="app-container" class="hidden">
         <header>
             <div style="font-weight: 600;">Merhaba, <span id="display-name"></span></div>
-            <div id="admin-btn" class="admin-badge hidden">ADMİN PANELİ</div>
+            <div id="admin-btn" class="admin-badge hidden">ADMİN</div>
         </header>
         <main id="main-content">
-            <h1 style="color: #333;">Ana Sayfa</h1>
-            <p style="color: #777; margin-top: 10px;">Uygulama başarıyla yüklendi.</p>
+            <h1>Ana Sayfa</h1>
+            <p style="margin-top:15px; color:#666;">Bizim Okul uygulamasına başarıyla giriş yaptın.</p>
         </main>
         <nav class="bottom-nav">
-            <div class="nav-item" onclick="app.navigate('users', this)"><i class="fas fa-users"></i><span>Kullanıcılar</span></div>
-            <div class="nav-item active" onclick="app.navigate('home', this)"><i class="fas fa-home"></i><span>Ana Sayfa</span></div>
-            <div class="nav-item" onclick="app.navigate('forum', this)"><i class="fas fa-comments"></i><span>Forum</span></div>
-            <div class="nav-item" onclick="app.navigate('messages', this)"><i class="fas fa-envelope"></i><span>Mesaj</span></div>
-            <div class="nav-item" onclick="app.navigate('settings', this)"><i class="fas fa-cog"></i><span>Ayarlar</span></div>
-            <div class="nav-item" onclick="app.navigate('updates', this)"><i class="fas fa-sync"></i><span>Güncelleme</span></div>
+            <div class="nav-item" onclick="window.app.navigate('users', this)"><i class="fas fa-users"></i><span>Kullanıcılar</span></div>
+            <div class="nav-item active" onclick="window.app.navigate('home', this)"><i class="fas fa-home"></i><span>Ana Sayfa</span></div>
+            <div class="nav-item" onclick="window.app.navigate('forum', this)"><i class="fas fa-comments"></i><span>Forum</span></div>
+            <div class="nav-item" onclick="window.app.navigate('messages', this)"><i class="fas fa-envelope"></i><span>Mesaj</span></div>
+            <div class="nav-item" onclick="window.app.navigate('settings', this)"><i class="fas fa-cog"></i><span>Ayarlar</span></div>
+            <div class="nav-item" onclick="window.app.navigate('updates', this)"><i class="fas fa-sync"></i><span>Güncelleme</span></div>
         </nav>
     </div>
 
-    <!-- SDK'lar -->
+    <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Senin Firebase Bilgilerin
         const firebaseConfig = {
             apiKey: "AIzaSyBjs49askwa3CJi9MY_ABhK2l1umFLuEZo",
             authDomain: "bizimokul14-4d546.firebaseapp.com",
@@ -106,17 +100,16 @@
         const fApp = initializeApp(firebaseConfig);
         const db = getFirestore(fApp);
         
-        // Senin EmailJS Bilgilerin
         emailjs.init("bgyhgWde8icqWQ5gB"); 
 
-        const app = {
+        const appLogic = {
             generatedCode: null,
             tempUser: null,
 
             toggleAuth(isReg) {
                 document.getElementById('login-fields').classList.toggle('hidden', isReg);
                 document.getElementById('register-fields').classList.toggle('hidden', !isReg);
-                document.getElementById('auth-title').innerText = isReg ? "Yeni Kayıt" : "Giriş Yap";
+                document.getElementById('auth-title').innerText = isReg ? "Kayıt Ol" : "Giriş Yap";
             },
 
             async startRegister() {
@@ -126,10 +119,9 @@
 
                 if(!email || !user || !pass) return alert("Boş alan bırakma!");
 
-                // Kullanıcı adı eşsiz mi?
                 const q = query(collection(db, "users"), where("username", "==", user));
                 const snap = await getDocs(q);
-                if(!snap.empty) return alert("Bu kullanıcı adı zaten alınmış!");
+                if(!snap.empty) return alert("Bu kullanıcı adı alınmış!");
 
                 this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
                 this.tempUser = { email, username: user, password: pass };
@@ -139,15 +131,15 @@
                     code: this.generatedCode
                 }).then(() => {
                     document.getElementById('verify-modal').classList.remove('hidden');
-                    alert("Kod gönderildi!");
-                }).catch((err) => alert("Mail hatası: " + err.text));
+                    alert("E-postana kod gönderildi!");
+                }).catch(() => alert("EmailJS Hatası! Bilgileri kontrol et."));
             },
 
             async verifyAndFinish() {
-                const enteredCode = document.getElementById('verify-code').value;
-                if(enteredCode === this.generatedCode) {
+                const val = document.getElementById('verify-code').value;
+                if(val === this.generatedCode) {
                     await setDoc(doc(db, "users", this.tempUser.username), this.tempUser);
-                    alert("Kayıt başarılı!");
+                    alert("Kayıt başarılı! Giriş yapabilirsin.");
                     location.reload();
                 } else {
                     alert("Kod yanlış!");
@@ -157,7 +149,9 @@
             async login() {
                 const user = document.getElementById('login-user').value;
                 const pass = document.getElementById('login-pass').value;
-                const userDoc = await getDoc(doc(db, "users", user));
+                if(!user || !pass) return alert("Alanları doldur!");
+
+                const userDoc = await getDoc(doc(doc(db, "users", user)));
 
                 if(userDoc.exists() && userDoc.data().password === pass) {
                     this.launch(userDoc.data().username);
@@ -175,24 +169,24 @@
                 }
             },
 
-            navigate(page, element) {
-                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-                element.classList.add('active');
+            navigate(page, el) {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                el.classList.add('active');
                 
                 const pages = {
                     home: "<h1>Ana Sayfa</h1><p>Hoş geldin!</p>",
-                    users: "<h1>Kullanıcılar</h1><p>Arkadaş listesi yakında.</p>",
-                    forum: "<h1>Forum</h1><p>Sohbetler burada döner.</p>",
-                    messages: "<h1>Mesajlar</h1><p>Henüz mesajın yok.</p>",
-                    settings: "<h1>Ayarlar</h1><p>Hesap ayarlarını düzenle.</p>",
-                    updates: "<h1>Güncelleme</h1><p>Versiyon 1.0.2 - EmailJS Aktif!</p>"
+                    users: "<h1>Kullanıcılar</h1><p>Arkadaşlarını gör.</p>",
+                    forum: "<h1>Forum</h1><p>Tartışmalara katıl.</p>",
+                    messages: "<h1>Mesajlar</h1><p>Gelen kutusu.</p>",
+                    settings: "<h1>Ayarlar</h1><p>Profilini düzenle.</p>",
+                    updates: "<h1>Güncelleme</h1><p>v1.0.3 - Butonlar Onarıldı!</p>"
                 };
                 document.getElementById('main-content').innerHTML = pages[page];
             }
         };
 
-        // GLOBAL ERİŞİM İÇİN ŞART
-        window.app = app;
+        // BUTONLARI ÇALIŞTIRAN EN ÖNEMLİ KISIM:
+        window.app = appLogic;
     </script>
 </body>
 </html>
