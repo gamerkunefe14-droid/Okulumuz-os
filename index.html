@@ -90,14 +90,16 @@
             <h3 id="edit-user-title">Kullanıcı Düzenle</h3>
             <label>Okul:</label><select id="edit-school"></select>
             <div style="display:flex; gap:5px;"><select id="edit-grade"></select><select id="edit-section"></select></div>
-            <button id="block-btn" class="btn-danger" onclick="app.adminUpdateStatus(true)">Girişi Engelle</button>
-            <button id="unblock-btn" class="btn-success hidden" onclick="app.adminUpdateStatus(false)">Engeli Kaldır</button>
+            
             <button id="leader-btn" class="btn-main" onclick="app.adminMakeLeader(true)">Sınıf Başkanı Yap</button>
             <button id="unleader-btn" class="btn-danger hidden" onclick="app.adminMakeLeader(false)">Başkanlığı Al</button>
             
+            <button id="block-btn" class="btn-danger" onclick="app.adminUpdateStatus(true)">Ceza Ver (Engelle)</button>
+            <button id="unblock-btn" class="btn-success hidden" onclick="app.adminUpdateStatus(false)">Cezayı Kaldır</button>
+            
             <hr style="margin:10px 0;">
             <p style="font-size:12px; margin-bottom:5px;"><b>Unvan Ayarları:</b></p>
-            <input type="text" id="edit-rank" placeholder="Unvan (Örn: Kral, Yazılımcı)">
+            <input type="text" id="edit-rank" placeholder="Unvan Girin">
             <label style="font-size:11px;">Unvan Rengi:</label>
             <input type="color" id="edit-rank-color" style="height:40px; cursor:pointer;" value="#ff9f43">
             
@@ -201,7 +203,7 @@
                 const pass = document.getElementById('login-pass').value;
                 const userDoc = await getDoc(doc(db, "users", id));
                 if(userDoc.exists() && userDoc.data().password === pass) {
-                    if(userDoc.data().isBlocked) return alert("Engellendiniz!");
+                    if(userDoc.data().isBlocked) return alert("Cezalı olduğunuz için giriş yapamazsınız!");
                     this.currentUser = userDoc.data();
                     this.launch();
                 } else alert("Hatalı Giriş!");
@@ -344,6 +346,7 @@
                 document.getElementById('edit-section').value = user.section;
                 document.getElementById('edit-rank').value = user.rank || "";
                 document.getElementById('edit-rank-color').value = user.rankColor || "#ff9f43";
+                
                 document.getElementById('block-btn').classList.toggle('hidden', user.isBlocked);
                 document.getElementById('unblock-btn').classList.toggle('hidden', !user.isBlocked);
                 document.getElementById('leader-btn').classList.toggle('hidden', user.isLeader);
@@ -352,12 +355,14 @@
 
             async adminUpdateStatus(status) {
                 await updateDoc(doc(db, "users", this.selectedEditUser.username), { isBlocked: status });
+                alert(status ? "Ceza verildi!" : "Ceza kaldırıldı!");
                 this.renderAdminPanel();
                 document.getElementById('admin-user-modal').classList.add('hidden');
             },
 
             async adminMakeLeader(status) {
                 await updateDoc(doc(db, "users", this.selectedEditUser.username), { isLeader: status });
+                alert(status ? "Başkan yapıldı!" : "Başkanlık alındı!");
                 this.renderAdminPanel();
                 document.getElementById('admin-user-modal').classList.add('hidden');
             },
