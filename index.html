@@ -13,7 +13,6 @@
         body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
         .hidden { display: none !important; }
 
-        /* Kartlar ve Formlar */
         .auth-card { background: var(--card); padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 90%; max-width: 450px; }
         input, select { width: 100%; padding: 12px; margin-bottom: 12px; border: 1.5px solid #eee; border-radius: 10px; outline: none; background: var(--card); color: var(--text); }
         button { width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-bottom: 5px; }
@@ -22,38 +21,38 @@
         .btn-success { background: #27ae60; color: white; }
         .toggle-link { text-align: center; margin-top: 15px; color: #3498db; cursor: pointer; font-size: 14px; }
 
-        /* Uygulama Ekranı */
         #app-container { width: 100%; height: 100vh; background: var(--bg); display: flex; flex-direction: column; position: fixed; top:0; left:0; z-index: 100; }
         header { padding: 15px 20px; background: #ff9f43; color: white; display: flex; justify-content: space-between; align-items: center; }
         .admin-badge { background: #d63031; padding: 6px 15px; border-radius: 25px; font-size: 12px; font-weight: bold; cursor: pointer; }
         main { flex: 1; padding: 15px; overflow-y: auto; }
 
-        /* Listeler */
+        /* Ödev Kartları */
+        .homework-card { background: var(--card); padding: 15px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: left; position: relative; border-left: 5px solid #ff9f43; }
+        .homework-card h4 { color: #ff9f43; margin-bottom: 5px; }
+        .homework-card p { font-size: 13px; margin-bottom: 2px; }
+        .warning-icon { position: absolute; top: 15px; right: 15px; color: #d63031; font-size: 20px; font-weight: bold; }
+
         .user-item { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .status-active { background: #2ecc71; }
         .status-blocked { background: #e74c3c; }
 
-        /* WhatsApp Stili Mesajlaşma */
         #chat-window { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg); z-index: 600; display: flex; flex-direction: column; }
         .msg-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; }
         .bubble { max-width: 70%; padding: 10px; border-radius: 15px; margin-bottom: 10px; font-size: 14px; }
         .msg-me { align-self: flex-end; background: #ff9f43; color: white; }
         .msg-them { align-self: flex-start; background: var(--card); }
 
-        /* Navigasyon */
         .bottom-nav { height: 70px; background: var(--nav); border-top: 1px solid #eee; display: flex; justify-content: space-around; align-items: center; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #a4b0be; cursor: pointer; font-size: 11px; flex: 1; }
         .nav-item.active { color: #ff9f43; }
 
-        /* Modallar */
         .modal-bg { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; z-index: 1000; }
         .modal { background: var(--card); padding: 20px; border-radius: 15px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
     </style>
 </head>
 <body>
 
-    <!-- GİRİŞ/KAYIT -->
     <div id="auth-screen" class="auth-card">
         <h2 id="auth-title" style="text-align:center; margin-bottom:15px;">Giriş Yap</h2>
         <div id="login-fields">
@@ -73,7 +72,6 @@
         </div>
     </div>
 
-    <!-- APP -->
     <div id="app-container" class="hidden">
         <header>
             <div><i class="fas fa-user-circle"></i> <span id="display-name"></span></div>
@@ -83,28 +81,27 @@
         <nav class="bottom-nav">
             <div class="nav-item active" onclick="app.navigate('home', this)"><i class="fas fa-home"></i><span>Ana Sayfa</span></div>
             <div class="nav-item" onclick="app.navigate('messages', this)"><i class="fas fa-comments"></i><span>Mesajlar</span></div>
+            <div class="nav-item hidden" id="nav-leader" onclick="app.navigate('leader', this)"><i class="fas fa-star"></i><span>Başkanlık</span></div>
             <div class="nav-item" onclick="app.navigate('users', this)"><i class="fas fa-users"></i><span>Okul</span></div>
             <div class="nav-item" onclick="app.navigate('settings', this)"><i class="fas fa-cog"></i><span>Ayarlar</span></div>
         </nav>
     </div>
 
-    <!-- ESKİ ADMİN KULLANICI GUI (MODAL) -->
     <div id="admin-user-modal" class="modal-bg hidden">
         <div class="modal">
             <h3 id="edit-user-title">Kullanıcı Düzenle</h3>
-            <hr style="margin: 10px 0;">
             <label>Okul:</label><select id="edit-school"></select>
             <label>Sınıf:</label><select id="edit-grade"></select>
             <label>Şube:</label><select id="edit-section"></select>
             <button id="block-btn" class="btn-danger" onclick="app.adminUpdateStatus(true)">Girişi Engelle</button>
             <button id="unblock-btn" class="btn-success hidden" onclick="app.adminUpdateStatus(false)">Engeli Kaldır</button>
-            <button class="btn-main" onclick="app.adminMakeLeader()">Sınıf Başkanı Yap</button>
+            <button id="leader-btn" class="btn-main" onclick="app.adminMakeLeader(true)">Sınıf Başkanı Yap</button>
+            <button id="unleader-btn" class="btn-danger hidden" onclick="app.adminMakeLeader(false)">Başkanlığı Al</button>
             <button class="btn-main" style="background:#34495e" onclick="app.saveUserEdits()">Kaydet</button>
             <button onclick="document.getElementById('admin-user-modal').classList.add('hidden')">Kapat</button>
         </div>
     </div>
 
-    <!-- CHAT WINDOW -->
     <div id="chat-window" class="hidden">
         <header style="background:#ff9f43; padding:15px; display:flex; align-items:center;">
             <i class="fas fa-arrow-left" style="cursor:pointer; margin-right:15px;" onclick="document.getElementById('chat-window').classList.add('hidden')"></i>
@@ -117,7 +114,6 @@
         </div>
     </div>
 
-    <!-- VERIFY MODAL -->
     <div id="verify-modal" class="modal-bg hidden">
         <div class="modal">
             <h3>Doğrulama</h3>
@@ -129,7 +125,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, updateDoc, onSnapshot, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, updateDoc, onSnapshot, orderBy, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBjs49askwa3CJi9MY_ABhK2l1umFLuEZo",
@@ -212,6 +208,7 @@
                 document.getElementById('app-container').classList.remove('hidden');
                 document.getElementById('display-name').innerText = this.currentUser.username;
                 if(this.currentUser.username.toLowerCase() === "künefe") document.getElementById('admin-btn').classList.remove('hidden');
+                if(this.currentUser.isLeader) document.getElementById('nav-leader').classList.remove('hidden');
                 this.navigate('home');
             },
 
@@ -221,14 +218,90 @@
                     el.classList.add('active');
                 }
                 const main = document.getElementById('main-content');
-                if(page === 'home') main.innerHTML = `<h3>Hoş Geldin</h3><p>${this.currentUser.school} / ${this.currentUser.grade}-${this.currentUser.section}</p>`;
+                if(page === 'home') this.renderHome();
                 if(page === 'messages') this.renderMessageList();
+                if(page === 'leader') this.renderLeaderPanel();
                 if(page === 'users') main.innerHTML = `<h3>Okul Listesi</h3><p>Yakında aktif...</p>`;
                 if(page === 'settings') this.renderSettings();
                 if(page === 'admin') this.renderAdminPanel();
             },
 
-            // MESSAGES (WHATSAPP)
+            async renderHome() {
+                const main = document.getElementById('main-content');
+                main.innerHTML = `<h3>Ana Sayfa</h3><div id="homework-list"></div>`;
+                
+                const q = query(collection(db, "homeworks"), 
+                    where("school", "==", this.currentUser.school),
+                    where("grade", "==", this.currentUser.grade),
+                    where("section", "==", this.currentUser.section)
+                );
+
+                onSnapshot(q, (snap) => {
+                    const list = document.getElementById('homework-list');
+                    list.innerHTML = "";
+                    const now = new Date().getTime();
+
+                    snap.forEach(docSnap => {
+                        const h = docSnap.data();
+                        const deadline = new Date(h.deadline).getTime();
+                        
+                        if(now > deadline) {
+                            deleteDoc(doc(db, "homeworks", docSnap.id)); // Süresi geçeni sil
+                        } else {
+                            const diffHours = (deadline - now) / (1000 * 60 * 60);
+                            const isUrgent = diffHours <= 24;
+                            
+                            list.innerHTML += `
+                                <div class="homework-card">
+                                    ${isUrgent ? '<div class="warning-icon">!</div>' : ''}
+                                    <h4>${h.title}</h4>
+                                    <p><b>Ders:</b> ${h.subject}</p>
+                                    <p><b>Kitap:</b> ${h.book}</p>
+                                    <p><b>Sayfalar:</b> ${h.pages}</p>
+                                    <p style="margin-top:5px; font-size:11px; color:#666;"><b>Bitiş:</b> ${h.deadline.replace('T', ' ')}</p>
+                                </div>
+                            `;
+                        }
+                    });
+                    if(list.innerHTML === "") list.innerHTML = "<p>Şu an ödevin yok, keyfine bak!</p>";
+                });
+            },
+
+            renderLeaderPanel() {
+                document.getElementById('main-content').innerHTML = `
+                    <h3>Başkanlık Paneli</h3>
+                    <div style="background:var(--card); padding:15px; border-radius:15px; margin-top:10px;">
+                        <input id="hw-title" placeholder="Ödevin Adı">
+                        <input id="hw-subject" placeholder="Ders">
+                        <input id="hw-book" placeholder="Kitap">
+                        <input id="hw-pages" placeholder="Sayfalar">
+                        <label style="font-size:12px;">Bitiş Tarihi ve Saati:</label>
+                        <input type="datetime-local" id="hw-date">
+                        <button class="btn-main" onclick="app.addHomework()">Ödev Paylaş</button>
+                    </div>
+                `;
+            },
+
+            async addHomework() {
+                const title = document.getElementById('hw-title').value;
+                const deadline = document.getElementById('hw-date').value;
+                if(!title || !deadline) return alert("Başlık ve Tarih zorunlu!");
+
+                await addDoc(collection(db, "homeworks"), {
+                    title, subject: document.getElementById('hw-subject').value,
+                    book: document.getElementById('hw-book').value,
+                    pages: document.getElementById('hw-pages').value,
+                    deadline,
+                    school: this.currentUser.school,
+                    grade: this.currentUser.grade,
+                    section: this.currentUser.section,
+                    createdAt: serverTimestamp()
+                });
+                alert("Ödev paylaşıldı!");
+                this.navigate('home');
+            },
+
+            // MESSAGES
             async renderMessageList() {
                 const main = document.getElementById('main-content');
                 main.innerHTML = '<h3>Mesajlar</h3><div id="msg-list"></div>';
@@ -271,19 +344,18 @@
                 input.value = "";
             },
 
-            // ADMIN PANEL
+            // ADMIN
             async renderAdminPanel() {
                 const main = document.getElementById('main-content');
-                main.innerHTML = `<h3>Admin Panel</h3><input id="new-sch" placeholder="Yeni Okul Adı"><button class="btn-success" onclick="app.addSchool()">Okul Ekle</button><div id="admin-users"></div>`;
+                main.innerHTML = `<h3>Admin Panel</h3><input id="new-sch" placeholder="Yeni Okul"><button class="btn-success" onclick="app.addSchool()">Ekle</button><div id="admin-users"></div>`;
                 const snap = await getDocs(collection(db, "users"));
-                const list = document.getElementById('admin-users');
                 snap.forEach(uDoc => {
                     const u = uDoc.data();
                     const item = document.createElement('div');
                     item.className = 'user-item';
                     item.innerHTML = `<span><span class="status-dot ${u.isBlocked ? 'status-blocked' : 'status-active'}"></span><b>${u.username}</b></span><small>${u.grade}/${u.section}</small>`;
                     item.onclick = () => this.openUserEdit(u);
-                    list.appendChild(item);
+                    document.getElementById('admin-users').appendChild(item);
                 });
             },
 
@@ -296,6 +368,8 @@
                 document.getElementById('edit-section').value = user.section;
                 document.getElementById('block-btn').classList.toggle('hidden', user.isBlocked);
                 document.getElementById('unblock-btn').classList.toggle('hidden', !user.isBlocked);
+                document.getElementById('leader-btn').classList.toggle('hidden', user.isLeader);
+                document.getElementById('unleader-btn').classList.toggle('hidden', !user.isLeader);
             },
 
             async adminUpdateStatus(status) {
@@ -305,15 +379,17 @@
                 document.getElementById('admin-user-modal').classList.add('hidden');
             },
 
-            async adminMakeLeader() {
-                await updateDoc(doc(db, "users", this.selectedEditUser.username), { isLeader: true });
-                alert("Başkan yapıldı!");
+            async adminMakeLeader(status) {
+                await updateDoc(doc(db, "users", this.selectedEditUser.username), { isLeader: status });
+                alert(status ? "Başkan Yapıldı" : "Başkanlık Alındı");
+                this.renderAdminPanel();
+                document.getElementById('admin-user-modal').classList.add('hidden');
             },
 
             async saveUserEdits() {
                 const up = { school: document.getElementById('edit-school').value, grade: document.getElementById('edit-grade').value, section: document.getElementById('edit-section').value };
                 await updateDoc(doc(db, "users", this.selectedEditUser.username), up);
-                alert("Bilgiler güncellendi!");
+                alert("Kaydedildi!");
                 this.renderAdminPanel();
                 document.getElementById('admin-user-modal').classList.add('hidden');
             },
@@ -325,17 +401,14 @@
                 await setDoc(doc(db, "config", "schools"), { list: this.allSchools });
                 alert("Okul Eklendi!");
                 this.renderAdminPanel();
-                this.fetchSchools();
             },
 
-            // SETTINGS
             renderSettings() {
                 document.getElementById('main-content').innerHTML = `
                     <h3>Ayarlar</h3>
                     <div style="margin-top:15px;">
-                        <input type="text" id="up-user" value="${this.currentUser.username}" placeholder="Yeni Kullanıcı Adı (Yalnızca Görünüm)">
                         <input type="password" id="up-pass" placeholder="Yeni Şifre">
-                        <button class="btn-main" onclick="app.saveProfile()">Bilgileri Güncelle</button>
+                        <button class="btn-main" onclick="app.saveProfile()">Şifreyi Değiştir</button>
                         <hr style="margin:15px 0;">
                         <button class="btn-main" style="background:#34495e" onclick="document.body.classList.toggle('dark-mode')">Temayı Değiştir</button>
                     </div>
@@ -344,10 +417,7 @@
 
             async saveProfile() {
                 const pass = document.getElementById('up-pass').value;
-                if(pass) {
-                    await updateDoc(doc(db, "users", this.currentUser.username), { password: pass });
-                    alert("Şifre Değiştirildi!");
-                }
+                if(pass) { await updateDoc(doc(db, "users", this.currentUser.username), { password: pass }); alert("Tamam!"); }
             }
         };
 
