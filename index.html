@@ -12,16 +12,17 @@
 
         /* Kartlar */
         .auth-card { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 90%; max-width: 400px; }
+        h2 { text-align: center; margin-bottom: 1.5rem; color: #333; }
         input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1.5px solid #eee; border-radius: 10px; outline: none; }
         button { width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
         .btn-main { background: #ff9f43; color: white; }
         .toggle-link { text-align: center; margin-top: 15px; color: #3498db; cursor: pointer; font-size: 14px; }
 
-        /* Uygulama */
+        /* Uygulama Ekranı */
         #app-container { width: 100%; height: 100vh; background: #fff; display: flex; flex-direction: column; position: fixed; top:0; left:0; z-index: 100; }
         header { padding: 15px 20px; background: #ff9f43; color: white; display: flex; justify-content: space-between; align-items: center; }
         .admin-badge { background: #d63031; padding: 6px 15px; border-radius: 25px; font-size: 12px; font-weight: bold; }
-        main { flex: 1; padding: 20px; overflow-y: auto; text-align: center; }
+        main { flex: 1; padding: 20px; overflow-y: auto; text-align: center; background: #fafafa; }
 
         /* Alt Menü */
         .bottom-nav { height: 70px; background: #fff; border-top: 1px solid #eee; display: flex; justify-content: space-around; align-items: center; }
@@ -29,15 +30,16 @@
         .nav-item i { font-size: 22px; margin-bottom: 4px; }
         .nav-item.active { color: #ff9f43; }
 
+        /* Modal */
         .modal-bg { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; z-index: 200; }
         .modal { background: white; padding: 2rem; border-radius: 15px; text-align: center; width: 300px; }
     </style>
 </head>
 <body>
 
-    <!-- GİRİŞ EKRANI -->
+    <!-- GİRİŞ/KAYIT EKRANI -->
     <div id="auth-screen" class="auth-card">
-        <h2 id="auth-title" style="text-align:center; margin-bottom:15px;">Hoş Geldin</h2>
+        <h2 id="auth-title">Giriş Yap</h2>
         <div id="login-fields">
             <input type="text" id="login-user" placeholder="Kullanıcı Adı">
             <input type="password" id="login-pass" placeholder="Şifre">
@@ -46,17 +48,18 @@
         </div>
         <div id="register-fields" class="hidden">
             <input type="email" id="reg-email" placeholder="E-posta">
-            <input type="text" id="reg-user" placeholder="Kullanıcı Adı">
+            <input type="text" id="reg-user" placeholder="Benzersiz Kullanıcı Adı">
             <input type="password" id="reg-pass" placeholder="Şifre">
             <button class="btn-main" onclick="window.app.startRegister()">Kod Gönder</button>
             <div class="toggle-link" onclick="window.app.toggleAuth(false)">Geri Dön</div>
         </div>
     </div>
 
-    <!-- DOĞRULAMA MODAL -->
+    <!-- DOĞRULAMA MODALI -->
     <div id="verify-modal" class="modal-bg hidden">
         <div class="modal">
             <h3>Doğrulama</h3>
+            <p style="font-size: 12px; margin-top:5px;">E-postana gelen kodu gir:</p>
             <input type="text" id="verify-code" maxlength="4" style="text-align:center; font-size: 24px; margin-top:10px;">
             <button class="btn-main" onclick="window.app.verifyAndFinish()">Onayla</button>
         </div>
@@ -70,7 +73,7 @@
         </header>
         <main id="main-content">
             <h1>Ana Sayfa</h1>
-            <p style="margin-top:15px; color:#666;">Bizim Okul uygulamasına başarıyla giriş yaptın.</p>
+            <p style="margin-top:15px; color:#666;">Bizim Okul uygulamasına hoş geldin!</p>
         </main>
         <nav class="bottom-nav">
             <div class="nav-item" onclick="window.app.navigate('users', this)"><i class="fas fa-users"></i><span>Kullanıcılar</span></div>
@@ -82,7 +85,6 @@
         </nav>
     </div>
 
-    <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -119,31 +121,33 @@
 
                 if(!email || !user || !pass) return alert("Boş alan bırakma!");
 
-                const q = query(collection(db, "users"), where("username", "==", user));
-                const snap = await getDocs(q);
-                if(!snap.empty) return alert("Bu kullanıcı adı alınmış!");
+                try {
+                    const q = query(collection(db, "users"), where("username", "==", user));
+                    const snap = await getDocs(q);
+                    if(!snap.empty) return alert("Bu kullanıcı adı alınmış!");
 
-                this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
-                this.tempUser = { email, username: user, password: pass };
+                    this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
+                    this.tempUser = { email, username: user, password: pass };
 
-                emailjs.send("service_9rbygdk", "template_ygxjrhm", {
-                    to_email: email,
-                    code: this.generatedCode
-                }).then(() => {
-                    document.getElementById('verify-modal').classList.remove('hidden');
-                    alert("E-postana kod gönderildi!");
-                }).catch(() => alert("EmailJS Hatası! Bilgileri kontrol et."));
+                    emailjs.send("service_9rbygdk", "template_ygxjrhm", {
+                        to_email: email,
+                        code: this.generatedCode
+                    }).then(() => {
+                        document.getElementById('verify-modal').classList.remove('hidden');
+                        alert("Kod gönderildi!");
+                    }).catch(() => alert("EmailJS Hatası!"));
+                } catch(e) { alert("Firebase Hatası: " + e.message); }
             },
 
             async verifyAndFinish() {
-                const val = document.getElementById('verify-code').value;
-                if(val === this.generatedCode) {
-                    await setDoc(doc(db, "users", this.tempUser.username), this.tempUser);
-                    alert("Kayıt başarılı! Giriş yapabilirsin.");
-                    location.reload();
-                } else {
-                    alert("Kod yanlış!");
-                }
+                if(document.getElementById('verify-code').value === this.generatedCode) {
+                    try {
+                        await setDoc(doc(db, "users", this.tempUser.username), this.tempUser);
+                        document.getElementById('verify-modal').classList.add('hidden');
+                        alert("Başarıyla kayıt oldun!");
+                        this.launch(this.tempUser.username);
+                    } catch(e) { alert("Kaydedilemedi: " + e.message); }
+                } else { alert("Kod yanlış!"); }
             },
 
             async login() {
@@ -151,13 +155,14 @@
                 const pass = document.getElementById('login-pass').value;
                 if(!user || !pass) return alert("Alanları doldur!");
 
-                const userDoc = await getDoc(doc(doc(db, "users", user)));
-
-                if(userDoc.exists() && userDoc.data().password === pass) {
-                    this.launch(userDoc.data().username);
-                } else {
-                    alert("Hatalı kullanıcı adı veya şifre!");
-                }
+                try {
+                    const userDoc = await getDoc(doc(db, "users", user));
+                    if(userDoc.exists() && userDoc.data().password === pass) {
+                        this.launch(userDoc.data().username);
+                    } else {
+                        alert("Hatalı giriş!");
+                    }
+                } catch(e) { alert("Hata: " + e.message); }
             },
 
             launch(username) {
@@ -172,20 +177,18 @@
             navigate(page, el) {
                 document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
                 el.classList.add('active');
-                
-                const pages = {
+                const content = {
                     home: "<h1>Ana Sayfa</h1><p>Hoş geldin!</p>",
-                    users: "<h1>Kullanıcılar</h1><p>Arkadaşlarını gör.</p>",
-                    forum: "<h1>Forum</h1><p>Tartışmalara katıl.</p>",
+                    users: "<h1>Kullanıcılar</h1><p>Okul listesi burada.</p>",
+                    forum: "<h1>Forum</h1><p>Mesaj panosu.</p>",
                     messages: "<h1>Mesajlar</h1><p>Gelen kutusu.</p>",
-                    settings: "<h1>Ayarlar</h1><p>Profilini düzenle.</p>",
-                    updates: "<h1>Güncelleme</h1><p>v1.0.3 - Butonlar Onarıldı!</p>"
+                    settings: "<h1>Ayarlar</h1><p>Profil ayarları.</p>",
+                    updates: "<h1>Güncelleme</h1><p>v1.0.4 - Fix</p>"
                 };
-                document.getElementById('main-content').innerHTML = pages[page];
+                document.getElementById('main-content').innerHTML = content[page];
             }
         };
 
-        // BUTONLARI ÇALIŞTIRAN EN ÖNEMLİ KISIM:
         window.app = appLogic;
     </script>
 </body>
