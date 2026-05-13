@@ -13,115 +13,73 @@
         body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
         .hidden { display: none !important; }
 
+        /* Auth & Cards */
         .auth-card { background: var(--card); padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 90%; max-width: 450px; }
         input, select, textarea { width: 100%; padding: 12px; margin-bottom: 12px; border: 1.5px solid #eee; border-radius: 10px; outline: none; background: var(--card); color: var(--text); }
         button { width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-bottom: 5px; }
         .btn-main { background: #ff9f43; color: white; }
         .btn-danger { background: #d63031; color: white; }
         .btn-success { background: #27ae60; color: white; }
-        .toggle-link { text-align: center; margin-top: 15px; color: #3498db; cursor: pointer; font-size: 14px; }
 
+        /* App Layout */
         #app-container { width: 100%; height: 100vh; background: var(--bg); display: flex; flex-direction: column; position: fixed; top:0; left:0; z-index: 100; }
         header { padding: 15px 20px; background: #ff9f43; color: white; display: flex; justify-content: space-between; align-items: center; }
         .admin-badge { background: #d63031; padding: 6px 15px; border-radius: 25px; font-size: 12px; font-weight: bold; cursor: pointer; }
-        main { flex: 1; padding: 15px; overflow-y: auto; }
+        main { flex: 1; padding: 15px; overflow-y: auto; padding-bottom: 80px; }
 
-        .homework-card { background: var(--card); padding: 15px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: left; position: relative; border-left: 5px solid #ff9f43; overflow: hidden; }
-        .homework-card h4 { color: #ff9f43; margin-bottom: 5px; }
-        .warning-icon { position: absolute; top: 15px; right: 15px; color: #d63031; font-size: 20px; font-weight: bold; }
+        /* Homeworks & Content */
+        .homework-card { background: var(--card); padding: 15px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-left: 5px solid #ff9f43; }
         .media-content { width: 100%; border-radius: 10px; margin-top: 10px; border: 1px solid #eee; }
 
-        .user-item { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .badge-tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; margin-left: 10px; color: white; font-weight: bold; }
+        /* List Items */
+        .user-item { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
-        #chat-window { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg); z-index: 600; display: flex; flex-direction: column; }
-        .msg-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; }
-        .bubble { max-width: 70%; padding: 10px; border-radius: 15px; margin-bottom: 10px; font-size: 14px; }
-        .msg-me { align-self: flex-end; background: #ff9f43; color: white; }
-        .msg-them { align-self: flex-start; background: var(--card); }
-
-        .bottom-nav { height: 70px; background: var(--nav); border-top: 1px solid #eee; display: flex; justify-content: space-around; align-items: center; }
+        /* Navigation */
+        .bottom-nav { height: 70px; background: var(--nav); border-top: 1px solid #eee; display: flex; justify-content: space-around; align-items: center; position: fixed; bottom: 0; width: 100%; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #a4b0be; cursor: pointer; font-size: 11px; flex: 1; }
         .nav-item.active { color: #ff9f43; }
 
-        .modal-bg { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; z-index: 1000; }
-        .modal { background: var(--card); padding: 20px; border-radius: 15px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
+        /* Chat */
+        .chat-container { display: flex; flex-direction: column; height: 100%; }
+        .messages-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .msg { margin-bottom: 10px; padding: 10px; border-radius: 10px; max-width: 80%; }
+        .msg.sent { align-self: flex-end; background: #ff9f43; color: white; }
+        .msg.received { align-self: flex-start; background: #eee; color: #333; }
     </style>
 </head>
 <body>
 
+    <!-- Giriş Ekranı -->
     <div id="auth-screen" class="auth-card">
-        <h2 id="auth-title" style="text-align:center; margin-bottom:15px;">Giriş Yap</h2>
-        <div id="login-fields">
-            <input type="text" id="login-user" placeholder="Kullanıcı Adı">
-            <input type="password" id="login-pass" placeholder="Şifre">
-            <button class="btn-main" onclick="app.login()">Giriş Yap</button>
-            <div class="toggle-link" onclick="app.toggleAuth(true)">Hesap Oluştur</div>
-        </div>
-        <div id="register-fields" class="hidden">
-            <input type="email" id="reg-email" placeholder="E-posta">
-            <input type="text" id="reg-user" placeholder="Kullanıcı Adı">
-            <input type="password" id="reg-pass" placeholder="Şifre">
-            <select id="reg-school"></select>
-            <div style="display:flex; gap:5px;"><select id="reg-grade"></select><select id="reg-section"></select></div>
-            <button class="btn-main" onclick="app.startRegister()">Kod Gönder</button>
-            <div class="toggle-link" onclick="app.toggleAuth(false)">Geri Dön</div>
-        </div>
+        <h2 style="text-align:center; margin-bottom:15px;">Giriş Yap</h2>
+        <input type="text" id="login-user" placeholder="Kullanıcı Adı">
+        <input type="password" id="login-pass" placeholder="Şifre">
+        <button class="btn-main" onclick="app.login()">Giriş Yap</button>
     </div>
 
+    <!-- Uygulama Ana Yapısı -->
     <div id="app-container" class="hidden">
         <header>
             <div><i class="fas fa-user-circle"></i> <span id="display-name"></span></div>
             <div id="admin-btn" class="admin-badge hidden" onclick="app.navigate('admin')">ADMİN</div>
         </header>
-        <main id="main-content"></main>
+
+        <main id="main-content">
+            <!-- İçerik Dinamik Gelecek -->
+        </main>
+
         <nav class="bottom-nav">
             <div class="nav-item active" onclick="app.navigate('home', this)"><i class="fas fa-home"></i><span>Ana Sayfa</span></div>
             <div class="nav-item" onclick="app.navigate('messages', this)"><i class="fas fa-comments"></i><span>Mesajlar</span></div>
             <div class="nav-item hidden" id="nav-leader" onclick="app.navigate('leader', this)"><i class="fas fa-star"></i><span>Başkanlık</span></div>
-            <div class="nav-item" onclick="app.navigate('users', this)"><i class="fas fa-users"></i><span>Kullanıcılar</span></div>
+            <div class="nav-item" onclick="app.navigate('users', this)"><i class="fas fa-users"></i><span>Sınıfım</span></div>
             <div class="nav-item" onclick="app.navigate('settings', this)"><i class="fas fa-cog"></i><span>Ayarlar</span></div>
         </nav>
     </div>
 
-    <div id="admin-user-modal" class="modal-bg hidden">
-        <div class="modal">
-            <h3 id="edit-user-title">Kullanıcı Düzenle</h3>
-            <label>Okul:</label><select id="edit-school"></select>
-            <div style="display:flex; gap:5px;"><select id="edit-grade"></select><select id="edit-section"></select></div>
-            <button id="leader-btn" class="btn-main" onclick="app.adminMakeLeader(true)">Sınıf Başkanı Yap</button>
-            <button id="unleader-btn" class="btn-danger hidden" onclick="app.adminMakeLeader(false)">Başkanlığı Al</button>
-            <button id="block-btn" class="btn-danger" onclick="app.adminUpdateStatus(true)">Ceza Ver (Engelle)</button>
-            <button id="unblock-btn" class="btn-success hidden" onclick="app.adminUpdateStatus(false)">Cezayı Kaldır</button>
-            <hr style="margin:10px 0;">
-            <p style="font-size:12px; margin-bottom:5px;"><b>Unvan Ayarları:</b></p>
-            <input type="text" id="edit-rank" placeholder="Unvan Girin">
-            <input type="color" id="edit-rank-color" style="height:40px; cursor:pointer;" value="#ff9f43">
-            <button class="btn-main" style="background:#34495e" onclick="app.saveUserEdits()">Kaydet</button>
-            <button onclick="document.getElementById('admin-user-modal').classList.add('hidden')">Kapat</button>
-        </div>
-    </div>
-
-    <div id="chat-window" class="hidden">
-        <header style="background:#ff9f43; padding:15px; display:flex; align-items:center;">
-            <i class="fas fa-arrow-left" style="cursor:pointer; margin-right:15px;" onclick="document.getElementById('chat-window').classList.add('hidden')"></i>
-            <span id="chat-target-name" style="font-weight:bold;">Sohbet</span>
-        </header>
-        <div class="msg-container" id="chat-messages"></div>
-        <div style="padding:10px; display:flex; gap:5px; background:var(--card);">
-            <input type="text" id="msg-input" placeholder="Mesaj..." style="margin:0;">
-            <button class="btn-main" style="width:60px; margin:0;" onclick="app.sendMessage()"><i class="fas fa-paper-plane"></i></button>
-        </div>
-    </div>
-
-    <div id="verify-modal" class="modal-bg hidden">
-        <div class="modal"><h3>Doğrulama</h3><input type="text" id="verify-code" maxlength="4" style="text-align:center; font-size:24px;"><button class="btn-main" onclick="app.verifyAndFinish()">Onayla</button></div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, updateDoc, onSnapshot, orderBy, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, onSnapshot, addDoc, serverTimestamp, deleteDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBjs49askwa3CJi9MY_ABhK2l1umFLuEZo",
@@ -134,214 +92,145 @@
 
         const fApp = initializeApp(firebaseConfig);
         const db = getFirestore(fApp);
-        emailjs.init("bgyhgWde8icqWQ5gB");
 
         window.app = {
             currentUser: null,
-            allSchools: [],
-            updateLink: "#",
-            activeChat: null,
-            unsubscribeChat: null,
-
-            async init() {
-                const gSelects = [document.getElementById('reg-grade'), document.getElementById('edit-grade')];
-                gSelects.forEach(s => { for(let i=1; i<=12; i++) s.innerHTML += `<option value="${i}">${i}. Sınıf</option>`; });
-                const sSelects = [document.getElementById('reg-section'), document.getElementById('edit-section')];
-                sSelects.forEach(s => { "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => s.innerHTML += `<option value="${char}">${char}</option>`); });
-                await this.fetchSchools();
-                const upSnap = await getDoc(doc(db, "config", "app_info"));
-                if(upSnap.exists()) this.updateLink = upSnap.data().link;
-            },
-
-            async fetchSchools() {
-                const snap = await getDoc(doc(db, "config", "schools"));
-                this.allSchools = snap.exists() ? snap.data().list : [];
-                const selects = [document.getElementById('reg-school'), document.getElementById('edit-school')];
-                selects.forEach(s => {
-                    s.innerHTML = this.allSchools.length ? "" : '<option>Okul Ekleyin</option>';
-                    this.allSchools.forEach(sch => s.innerHTML += `<option value="${sch}">${sch}</option>`);
-                });
-            },
-
-            toggleAuth(isReg) {
-                document.getElementById('login-fields').classList.toggle('hidden', isReg);
-                document.getElementById('register-fields').classList.toggle('hidden', !isReg);
-            },
-
-            async startRegister() {
-                const email = document.getElementById('reg-email').value;
-                this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
-                this.tempUser = { username: document.getElementById('reg-user').value, email, password: document.getElementById('reg-pass').value, school: document.getElementById('reg-school').value, grade: document.getElementById('reg-grade').value, section: document.getElementById('reg-section').value, isBlocked: false, isLeader: false, rank: "", rankColor: "#ff9f43" };
-                await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
-                document.getElementById('verify-modal').classList.remove('hidden');
-            },
-
-            async verifyAndFinish() {
-                if(document.getElementById('verify-code').value === this.generatedCode) { await setDoc(doc(db, "users", this.tempUser.username), this.tempUser); location.reload(); }
-            },
 
             async login() {
                 const id = document.getElementById('login-user').value;
                 const pass = document.getElementById('login-pass').value;
                 const userDoc = await getDoc(doc(db, "users", id));
                 if(userDoc.exists() && userDoc.data().password === pass) {
-                    if(userDoc.data().isBlocked) return alert("Cezalı olduğunuz için giriş yapamazsınız!");
                     this.currentUser = userDoc.data();
-                    this.launch();
+                    document.getElementById('auth-screen').classList.add('hidden');
+                    document.getElementById('app-container').classList.remove('hidden');
+                    document.getElementById('display-name').innerText = this.currentUser.username;
+                    if(this.currentUser.username.toLowerCase() === "künefe") document.getElementById('admin-btn').classList.remove('hidden');
+                    if(this.currentUser.isLeader) document.getElementById('nav-leader').classList.remove('hidden');
+                    this.navigate('home');
                 } else alert("Hatalı Giriş!");
             },
 
-            launch() {
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('app-container').classList.remove('hidden');
-                document.getElementById('display-name').innerText = this.currentUser.username;
-                if(this.currentUser.username.toLowerCase() === "künefe") document.getElementById('admin-btn').classList.remove('hidden');
-                if(this.currentUser.isLeader) document.getElementById('nav-leader').classList.remove('hidden');
-                this.navigate('home');
-            },
-
-            async navigate(page, el) {
+            navigate(page, el) {
                 if(el) { document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); el.classList.add('active'); }
-                if(page === 'home') this.renderHome();
-                if(page === 'messages') this.renderMessageList();
-                if(page === 'leader') this.renderLeaderPanel();
-                if(page === 'users') this.renderAllUsers();
-                if(page === 'settings') this.renderSettings();
-                if(page === 'admin') this.renderAdminPanel();
+                const main = document.getElementById('main-content');
+                if(page === 'home') this.renderHome(main);
+                if(page === 'leader') this.renderLeader(main);
+                if(page === 'users') this.renderUsers(main);
+                if(page === 'settings') this.renderSettings(main);
+                if(page === 'messages') this.renderMessages(main);
             },
 
-            async renderHome() {
-                const main = document.getElementById('main-content');
-                main.innerHTML = `<h3>Ana Sayfa</h3><div id="homework-list"></div>`;
+            renderHome(main) {
+                main.innerHTML = `<h3>Ana Sayfa</h3><div id="hw-list"></div>`;
                 const q = query(collection(db, "homeworks"), where("school", "==", this.currentUser.school), where("grade", "==", this.currentUser.grade), where("section", "==", this.currentUser.section));
                 onSnapshot(q, (snap) => {
-                    const list = document.getElementById('homework-list');
+                    const list = document.getElementById('hw-list');
+                    if(snap.empty) { list.innerHTML = "<p>Şu an ödevin yok!</p>"; return; }
                     list.innerHTML = "";
-                    snap.forEach(docSnap => {
-                        const h = docSnap.data();
-                        let mediaHtml = "";
-                        if(h.mediaUrl) {
-                            if(h.mediaUrl.includes('youtube.com') || h.mediaUrl.includes('youtu.be')) {
-                                const vidId = h.mediaUrl.split('v=')[1] || h.mediaUrl.split('/').pop();
-                                mediaHtml = `<iframe class="media-content" height="200" src="https://www.youtube.com/embed/${vidId}" frameborder="0" allowfullscreen></iframe>`;
-                            } else { mediaHtml = `<img src="${h.mediaUrl}" class="media-content" onerror="this.style.display='none'">`; }
-                        }
-                        list.innerHTML += `<div class="homework-card"><h4>${h.title}</h4><p><b>Ders:</b> ${h.subject}</p><p><b>Kitap:</b> ${h.book}</p><p><b>Sayfalar:</b> ${h.pages}</p>${h.desc ? `<p style="margin-top:5px;"><b>Açıklama:</b> ${h.desc}</p>` : ''}${mediaHtml}</div>`;
+                    snap.forEach(d => {
+                        const h = d.data();
+                        let media = h.mediaUrl ? `<img src="${h.mediaUrl}" class="media-content">` : "";
+                        list.innerHTML += `<div class="homework-card"><h4>${h.title}</h4><p>${h.subject || ''} ${h.pages || ''}</p>${media}</div>`;
                     });
                 });
             },
 
-            renderLeaderPanel() {
-                document.getElementById('main-content').innerHTML = `<h3>Başkanlık Paneli</h3><div style="background:var(--card); padding:15px; border-radius:15px; margin-top:10px;"><input id="hw-title" placeholder="Başlık"><input id="hw-subject" placeholder="Ders"><input id="hw-book" placeholder="Kitap"><input id="hw-pages" placeholder="Sayfalar"><input id="hw-media" placeholder="Görsel veya Video Linki"><textarea id="hw-desc" placeholder="Ek Açıklama (Opsiyonel)"></textarea><label>Bitiş Tarihi:</label><input type="datetime-local" id="hw-date"><button class="btn-main" onclick="app.addHomework()">Paylaş</button></div>`;
+            renderLeader(main) {
+                if(!this.currentUser.isLeader) return;
+                main.innerHTML = `
+                    <h3>Başkanlık Paneli</h3>
+                    <div class="auth-card" style="width:100%; margin-bottom:15px;">
+                        <p><b>Ödev Paylaş</b></p>
+                        <input id="hw-t" placeholder="Ödev Başlığı">
+                        <input id="hw-s" placeholder="Ders">
+                        <input id="hw-p" placeholder="Sayfalar">
+                        <button class="btn-main" onclick="app.post('homework')">Ödevi Yayınla</button>
+                    </div>
+                    <div class="auth-card" style="width:100%; margin-bottom:15px;">
+                        <p><b>İçerik/Duyuru Paylaş</b></p>
+                        <input id="cnt-t" placeholder="Başlık">
+                        <input id="cnt-m" placeholder="Resim Linki">
+                        <button class="btn-success" onclick="app.post('content')">İçeriği Yayınla</button>
+                    </div>
+                    <div class="auth-card" style="width:100%;">
+                        <p><b>Paylaşılanları Sil</b></p>
+                        <div id="del-list"></div>
+                    </div>`;
+                this.loadDeleteList();
             },
 
-            async addHomework() {
-                const title = document.getElementById('hw-title').value;
-                const deadline = document.getElementById('hw-date').value;
-                if(!title || !deadline) return alert("Hata!");
-                await addDoc(collection(db, "homeworks"), { title, subject: document.getElementById('hw-subject').value, book: document.getElementById('hw-book').value, pages: document.getElementById('hw-pages').value, mediaUrl: document.getElementById('hw-media').value, desc: document.getElementById('hw-desc').value, deadline, school: this.currentUser.school, grade: this.currentUser.grade, section: this.currentUser.section, createdAt: serverTimestamp() });
-                alert("Paylaşıldı!"); this.navigate('home');
+            async post(type) {
+                const data = {
+                    school: this.currentUser.school,
+                    grade: this.currentUser.grade,
+                    section: this.currentUser.section,
+                    type: type,
+                    title: type === 'homework' ? document.getElementById('hw-t').value : document.getElementById('cnt-t').value,
+                    subject: type === 'homework' ? document.getElementById('hw-s').value : "",
+                    pages: type === 'homework' ? document.getElementById('hw-p').value : "",
+                    mediaUrl: type === 'content' ? document.getElementById('cnt-m').value : ""
+                };
+                await addDoc(collection(db, "homeworks"), data);
+                alert("Başarıyla paylaşıldı!");
+                this.renderLeader(document.getElementById('main-content'));
             },
 
-            async renderMessageList() {
-                const main = document.getElementById('main-content');
-                main.innerHTML = '<h3>Mesajlar</h3><div id="msg-list"></div>';
-                const snap = await getDocs(collection(db, "users"));
-                snap.forEach(uDoc => {
-                    const u = uDoc.data(); if(u.username === this.currentUser.username) return;
-                    const div = document.createElement('div'); div.className = 'user-item'; div.innerHTML = `<b>${u.username}</b>`; div.onclick = () => this.openChat(u.username);
-                    document.getElementById('msg-list').appendChild(div);
+            async loadDeleteList() {
+                const q = query(collection(db, "homeworks"), where("section", "==", this.currentUser.section));
+                const snap = await getDocs(q);
+                const list = document.getElementById('del-list');
+                snap.forEach(d => {
+                    list.innerHTML += `<div class="user-item"><span>${d.data().title}</span><button class="btn-danger" style="width:60px;" onclick="app.deleteP('${d.id}')">Sil</button></div>`;
                 });
             },
 
-            openChat(target) {
-                this.activeChat = target; document.getElementById('chat-window').classList.remove('hidden'); document.getElementById('chat-target-name').innerText = target;
-                const chatId = [this.currentUser.username, target].sort().join("_");
-                if(this.unsubscribeChat) this.unsubscribeChat();
-                const q = query(collection(db, "chats", chatId, "messages"), orderBy("time", "asc"));
-                this.unsubscribeChat = onSnapshot(q, (snap) => {
-                    const cont = document.getElementById('chat-messages'); cont.innerHTML = "";
-                    snap.forEach(m => { const d = m.data(); const cls = d.sender === this.currentUser.username ? 'msg-me' : 'msg-them'; cont.innerHTML += `<div class="bubble ${cls}">${d.text}</div>`; });
-                    cont.scrollTop = cont.scrollHeight;
+            async deleteP(id) {
+                if(confirm("Silinsin mi?")) { await deleteDoc(doc(db, "homeworks", id)); this.renderLeader(document.getElementById('main-content')); }
+            },
+
+            async renderUsers(main) {
+                main.innerHTML = `<h3>Sınıf Arkadaşlarım</h3><div id="u-list"></div>`;
+                const q = query(collection(db, "users"), where("section", "==", this.currentUser.section));
+                const snap = await getDocs(q);
+                snap.forEach(d => {
+                    document.getElementById('u-list').innerHTML += `<div class="user-item">${d.data().username} ${d.data().isLeader ? '⭐' : ''}</div>`;
                 });
             },
 
-            async sendMessage() {
-                const input = document.getElementById('msg-input'); if(!input.value) return;
-                const chatId = [this.currentUser.username, this.activeChat].sort().join("_");
-                await addDoc(collection(db, "chats", chatId, "messages"), { text: input.value, sender: this.currentUser.username, time: serverTimestamp() });
-                input.value = "";
+            renderSettings(main) {
+                main.innerHTML = `<h3>Ayarlar</h3>
+                <button class="btn-main" onclick="document.body.classList.toggle('dark-mode')">Tema Değiştir</button>
+                <button class="btn-danger" onclick="location.reload()">Çıkış Yap</button>`;
             },
 
-            async renderAllUsers() {
-                const main = document.getElementById('main-content');
-                main.innerHTML = `<h3>Kullanıcılar</h3><div id="full-user-list"></div>`;
-                const snap = await getDocs(collection(db, "users"));
-                snap.forEach(uDoc => {
-                    const u = uDoc.data();
-                    const item = document.createElement('div'); item.className = 'user-item';
-                    const rankHtml = u.rank ? `<span class="badge-tag" style="background:${u.rankColor || '#ff9f43'}">${u.rank}</span>` : "";
-                    item.innerHTML = `<span><b>${u.username}</b>${rankHtml}</span><small>${u.school}</small>`;
-                    item.onclick = () => this.openChat(u.username);
-                    document.getElementById('full-user-list').appendChild(item);
+            renderMessages(main) {
+                main.innerHTML = `<div class="chat-container"><div class="messages-list" id="m-list"></div><div style="display:flex;"><input id="m-input" placeholder="Mesaj yaz..."><button class="btn-main" style="width:80px;" onclick="app.sendMsg()">Gönder</button></div></div>`;
+                const q = query(collection(db, "chats"), where("section", "==", this.currentUser.section), orderBy("at", "asc"));
+                onSnapshot(q, (snap) => {
+                    const list = document.getElementById('m-list');
+                    list.innerHTML = "";
+                    snap.forEach(d => {
+                        const m = d.data();
+                        const isMe = m.from === this.currentUser.username;
+                        list.innerHTML += `<div class="msg ${isMe ? 'sent' : 'received'}"><b>${m.from}:</b><br>${m.text}</div>`;
+                    });
+                    list.scrollTop = list.scrollHeight;
                 });
             },
 
-            async renderAdminPanel() {
-                const main = document.getElementById('main-content');
-                main.innerHTML = `<h3>Admin Panel</h3>
-                <input id="new-sch" placeholder="Yeni Okul">
-                <button class="btn-success" onclick="app.addSchool()">Okul Ekle</button>
-                <hr style="margin:10px 0;">
-                <input id="new-update-link" placeholder="Güncelleme Linki (URL)" value="${this.updateLink}">
-                <button class="btn-main" style="background:#34495e" onclick="app.setUpdateLink()">Link Kaydet</button>
-                <div id="admin-users"></div>`;
-                const snap = await getDocs(collection(db, "users"));
-                snap.forEach(uDoc => {
-                    const u = uDoc.data(); const item = document.createElement('div'); item.className = 'user-item';
-                    item.innerHTML = `<span><b>${u.username}</b></span><small>${u.grade}/${u.section}</small>`;
-                    item.onclick = () => this.openUserEdit(u); document.getElementById('admin-users').appendChild(item);
+            async sendMsg() {
+                const text = document.getElementById('m-input').value;
+                if(!text) return;
+                await addDoc(collection(db, "chats"), {
+                    text: text,
+                    from: this.currentUser.username,
+                    section: this.currentUser.section,
+                    at: serverTimestamp()
                 });
-            },
-
-            async setUpdateLink() {
-                const link = document.getElementById('new-update-link').value;
-                await setDoc(doc(db, "config", "app_info"), { link }); alert("Güncelleme linki tanımlandı!");
-            },
-
-            openUserEdit(user) {
-                this.selectedEditUser = user; document.getElementById('admin-user-modal').classList.remove('hidden');
-                document.getElementById('edit-user-title').innerText = user.username + " Ayarları";
-                document.getElementById('edit-rank').value = user.rank || "";
-                document.getElementById('edit-rank-color').value = user.rankColor || "#ff9f43";
-                document.getElementById('block-btn').classList.toggle('hidden', user.isBlocked); document.getElementById('unblock-btn').classList.toggle('hidden', !user.isBlocked);
-                document.getElementById('leader-btn').classList.toggle('hidden', user.isLeader); document.getElementById('unleader-btn').classList.toggle('hidden', !user.isLeader);
-            },
-
-            async adminUpdateStatus(status) { await updateDoc(doc(db, "users", this.selectedEditUser.username), { isBlocked: status }); this.renderAdminPanel(); document.getElementById('admin-user-modal').classList.add('hidden'); },
-            async adminMakeLeader(status) { await updateDoc(doc(db, "users", this.selectedEditUser.username), { isLeader: status }); this.renderAdminPanel(); document.getElementById('admin-user-modal').classList.add('hidden'); },
-            async saveUserEdits() { 
-                await updateDoc(doc(db, "users", this.selectedEditUser.username), { rank: document.getElementById('edit-rank').value, rankColor: document.getElementById('edit-rank-color').value });
-                this.renderAdminPanel(); document.getElementById('admin-user-modal').classList.add('hidden');
-            },
-
-            renderSettings() {
-                document.getElementById('main-content').innerHTML = `<h3>Ayarlar</h3>
-                <div style="margin-top:15px;">
-                    <input type="password" id="up-pass" placeholder="Yeni Şifre">
-                    <button class="btn-main" onclick="app.saveProfile()">Şifre Değiştir</button>
-                    <hr style="margin:15px 0;">
-                    <button class="btn-main" style="background:#34495e" onclick="document.body.classList.toggle('dark-mode')">Tema Değiştir</button>
-                    <hr style="margin:15px 0;">
-                    <p style="font-size:12px; margin-bottom:5px;"><b>Sistem Güncelleme</b></p>
-                    <button class="btn-success" onclick="window.open('${this.updateLink}', '_blank')"><i class="fas fa-download"></i> Yeni Sürümü İndir</button>
-                </div>`;
-            },
-
-            async saveProfile() { const pass = document.getElementById('up-pass').value; if(pass) { await updateDoc(doc(db, "users", this.currentUser.username), { password: pass }); alert("Tamam!"); } }
+                document.getElementById('m-input').value = "";
+            }
         };
-
-        window.app.init();
     </script>
 </body>
 </html>
