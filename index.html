@@ -14,7 +14,7 @@
         .hidden { display: none !important; }
 
         .auth-card { background: var(--card); padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 90%; max-width: 450px; }
-        input, select { width: 100%; padding: 12px; margin-bottom: 12px; border: 1.5px solid #eee; border-radius: 10px; outline: none; background: var(--card); color: var(--text); }
+        input, select, textarea { width: 100%; padding: 12px; margin-bottom: 12px; border: 1.5px solid #eee; border-radius: 10px; outline: none; background: var(--card); color: var(--text); }
         button { width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-bottom: 5px; }
         .btn-main { background: #ff9f43; color: white; }
         .btn-danger { background: #d63031; color: white; }
@@ -26,12 +26,12 @@
         .admin-badge { background: #d63031; padding: 6px 15px; border-radius: 25px; font-size: 12px; font-weight: bold; cursor: pointer; }
         main { flex: 1; padding: 15px; overflow-y: auto; }
 
-        .homework-card { background: var(--card); padding: 15px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: left; position: relative; border-left: 5px solid #ff9f43; }
+        .homework-card { background: var(--card); padding: 15px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: left; position: relative; border-left: 5px solid #ff9f43; overflow: hidden; }
         .homework-card h4 { color: #ff9f43; margin-bottom: 5px; }
         .warning-icon { position: absolute; top: 15px; right: 15px; color: #d63031; font-size: 20px; font-weight: bold; }
+        .media-content { width: 100%; border-radius: 10px; margin-top: 10px; border: 1px solid #eee; }
 
         .user-item { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .badge-tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; margin-left: 10px; color: white; font-weight: bold; }
 
         #chat-window { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg); z-index: 600; display: flex; flex-direction: column; }
@@ -84,25 +84,19 @@
         </nav>
     </div>
 
-    <!-- ADMIN GUI MODAL -->
     <div id="admin-user-modal" class="modal-bg hidden">
         <div class="modal">
             <h3 id="edit-user-title">Kullanıcı Düzenle</h3>
             <label>Okul:</label><select id="edit-school"></select>
             <div style="display:flex; gap:5px;"><select id="edit-grade"></select><select id="edit-section"></select></div>
-            
             <button id="leader-btn" class="btn-main" onclick="app.adminMakeLeader(true)">Sınıf Başkanı Yap</button>
             <button id="unleader-btn" class="btn-danger hidden" onclick="app.adminMakeLeader(false)">Başkanlığı Al</button>
-            
             <button id="block-btn" class="btn-danger" onclick="app.adminUpdateStatus(true)">Ceza Ver (Engelle)</button>
             <button id="unblock-btn" class="btn-success hidden" onclick="app.adminUpdateStatus(false)">Cezayı Kaldır</button>
-            
             <hr style="margin:10px 0;">
             <p style="font-size:12px; margin-bottom:5px;"><b>Unvan Ayarları:</b></p>
             <input type="text" id="edit-rank" placeholder="Unvan Girin">
-            <label style="font-size:11px;">Unvan Rengi:</label>
             <input type="color" id="edit-rank-color" style="height:40px; cursor:pointer;" value="#ff9f43">
-            
             <button class="btn-main" style="background:#34495e" onclick="app.saveUserEdits()">Kaydet</button>
             <button onclick="document.getElementById('admin-user-modal').classList.add('hidden')">Kapat</button>
         </div>
@@ -121,11 +115,7 @@
     </div>
 
     <div id="verify-modal" class="modal-bg hidden">
-        <div class="modal">
-            <h3>Doğrulama</h3>
-            <input type="text" id="verify-code" maxlength="4" style="text-align:center; font-size:24px;">
-            <button class="btn-main" onclick="app.verifyAndFinish()">Onayla</button>
-        </div>
+        <div class="modal"><h3>Doğrulama</h3><input type="text" id="verify-code" maxlength="4" style="text-align:center; font-size:24px;"><button class="btn-main" onclick="app.verifyAndFinish()">Onayla</button></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
@@ -149,9 +139,9 @@
         window.app = {
             currentUser: null,
             allSchools: [],
+            updateLink: "#",
             activeChat: null,
             unsubscribeChat: null,
-            selectedEditUser: null,
 
             async init() {
                 const gSelects = [document.getElementById('reg-grade'), document.getElementById('edit-grade')];
@@ -159,6 +149,8 @@
                 const sSelects = [document.getElementById('reg-section'), document.getElementById('edit-section')];
                 sSelects.forEach(s => { "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => s.innerHTML += `<option value="${char}">${char}</option>`); });
                 await this.fetchSchools();
+                const upSnap = await getDoc(doc(db, "config", "app_info"));
+                if(upSnap.exists()) this.updateLink = upSnap.data().link;
             },
 
             async fetchSchools() {
@@ -179,23 +171,13 @@
             async startRegister() {
                 const email = document.getElementById('reg-email').value;
                 this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
-                this.tempUser = {
-                    username: document.getElementById('reg-user').value,
-                    email: email, password: document.getElementById('reg-pass').value,
-                    school: document.getElementById('reg-school').value,
-                    grade: document.getElementById('reg-grade').value,
-                    section: document.getElementById('reg-section').value,
-                    isBlocked: false, isLeader: false, rank: "", rankColor: "#ff9f43"
-                };
+                this.tempUser = { username: document.getElementById('reg-user').value, email, password: document.getElementById('reg-pass').value, school: document.getElementById('reg-school').value, grade: document.getElementById('reg-grade').value, section: document.getElementById('reg-section').value, isBlocked: false, isLeader: false, rank: "", rankColor: "#ff9f43" };
                 await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
                 document.getElementById('verify-modal').classList.remove('hidden');
             },
 
             async verifyAndFinish() {
-                if(document.getElementById('verify-code').value === this.generatedCode) {
-                    await setDoc(doc(db, "users", this.tempUser.username), this.tempUser);
-                    location.reload();
-                }
+                if(document.getElementById('verify-code').value === this.generatedCode) { await setDoc(doc(db, "users", this.tempUser.username), this.tempUser); location.reload(); }
             },
 
             async login() {
@@ -219,11 +201,7 @@
             },
 
             async navigate(page, el) {
-                if(el) {
-                    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-                    el.classList.add('active');
-                }
-                const main = document.getElementById('main-content');
+                if(el) { document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); el.classList.add('active'); }
                 if(page === 'home') this.renderHome();
                 if(page === 'messages') this.renderMessageList();
                 if(page === 'leader') this.renderLeaderPanel();
@@ -239,18 +217,60 @@
                 onSnapshot(q, (snap) => {
                     const list = document.getElementById('homework-list');
                     list.innerHTML = "";
-                    const now = new Date().getTime();
                     snap.forEach(docSnap => {
                         const h = docSnap.data();
-                        const deadline = new Date(h.deadline).getTime();
-                        if(now > deadline) { deleteDoc(doc(db, "homeworks", docSnap.id)); }
-                        else {
-                            const isUrgent = ((deadline - now) / (1000 * 60 * 60)) <= 24;
-                            list.innerHTML += `<div class="homework-card">${isUrgent ? '<div class="warning-icon">!</div>' : ''}<h4>${h.title}</h4><p><b>Ders:</b> ${h.subject}</p><p><b>Kitap:</b> ${h.book}</p><p><b>Sayfalar:</b> ${h.pages}</p><p style="margin-top:5px; font-size:11px; color:#666;"><b>Bitiş:</b> ${h.deadline.replace('T', ' ')}</p></div>`;
+                        let mediaHtml = "";
+                        if(h.mediaUrl) {
+                            if(h.mediaUrl.includes('youtube.com') || h.mediaUrl.includes('youtu.be')) {
+                                const vidId = h.mediaUrl.split('v=')[1] || h.mediaUrl.split('/').pop();
+                                mediaHtml = `<iframe class="media-content" height="200" src="https://www.youtube.com/embed/${vidId}" frameborder="0" allowfullscreen></iframe>`;
+                            } else { mediaHtml = `<img src="${h.mediaUrl}" class="media-content" onerror="this.style.display='none'">`; }
                         }
+                        list.innerHTML += `<div class="homework-card"><h4>${h.title}</h4><p><b>Ders:</b> ${h.subject}</p><p><b>Kitap:</b> ${h.book}</p><p><b>Sayfalar:</b> ${h.pages}</p>${h.desc ? `<p style="margin-top:5px;"><b>Açıklama:</b> ${h.desc}</p>` : ''}${mediaHtml}</div>`;
                     });
-                    if(list.innerHTML === "") list.innerHTML = "<p>Şu an ödevin yok!</p>";
                 });
+            },
+
+            renderLeaderPanel() {
+                document.getElementById('main-content').innerHTML = `<h3>Başkanlık Paneli</h3><div style="background:var(--card); padding:15px; border-radius:15px; margin-top:10px;"><input id="hw-title" placeholder="Başlık"><input id="hw-subject" placeholder="Ders"><input id="hw-book" placeholder="Kitap"><input id="hw-pages" placeholder="Sayfalar"><input id="hw-media" placeholder="Görsel veya Video Linki"><textarea id="hw-desc" placeholder="Ek Açıklama (Opsiyonel)"></textarea><label>Bitiş Tarihi:</label><input type="datetime-local" id="hw-date"><button class="btn-main" onclick="app.addHomework()">Paylaş</button></div>`;
+            },
+
+            async addHomework() {
+                const title = document.getElementById('hw-title').value;
+                const deadline = document.getElementById('hw-date').value;
+                if(!title || !deadline) return alert("Hata!");
+                await addDoc(collection(db, "homeworks"), { title, subject: document.getElementById('hw-subject').value, book: document.getElementById('hw-book').value, pages: document.getElementById('hw-pages').value, mediaUrl: document.getElementById('hw-media').value, desc: document.getElementById('hw-desc').value, deadline, school: this.currentUser.school, grade: this.currentUser.grade, section: this.currentUser.section, createdAt: serverTimestamp() });
+                alert("Paylaşıldı!"); this.navigate('home');
+            },
+
+            async renderMessageList() {
+                const main = document.getElementById('main-content');
+                main.innerHTML = '<h3>Mesajlar</h3><div id="msg-list"></div>';
+                const snap = await getDocs(collection(db, "users"));
+                snap.forEach(uDoc => {
+                    const u = uDoc.data(); if(u.username === this.currentUser.username) return;
+                    const div = document.createElement('div'); div.className = 'user-item'; div.innerHTML = `<b>${u.username}</b>`; div.onclick = () => this.openChat(u.username);
+                    document.getElementById('msg-list').appendChild(div);
+                });
+            },
+
+            openChat(target) {
+                this.activeChat = target; document.getElementById('chat-window').classList.remove('hidden'); document.getElementById('chat-target-name').innerText = target;
+                const chatId = [this.currentUser.username, target].sort().join("_");
+                if(this.unsubscribeChat) this.unsubscribeChat();
+                const q = query(collection(db, "chats", chatId, "messages"), orderBy("time", "asc"));
+                this.unsubscribeChat = onSnapshot(q, (snap) => {
+                    const cont = document.getElementById('chat-messages'); cont.innerHTML = "";
+                    snap.forEach(m => { const d = m.data(); const cls = d.sender === this.currentUser.username ? 'msg-me' : 'msg-them'; cont.innerHTML += `<div class="bubble ${cls}">${d.text}</div>`; });
+                    cont.scrollTop = cont.scrollHeight;
+                });
+            },
+
+            async sendMessage() {
+                const input = document.getElementById('msg-input'); if(!input.value) return;
+                const chatId = [this.currentUser.username, this.activeChat].sort().join("_");
+                await addDoc(collection(db, "chats", chatId, "messages"), { text: input.value, sender: this.currentUser.username, time: serverTimestamp() });
+                input.value = "";
             },
 
             async renderAllUsers() {
@@ -259,8 +279,7 @@
                 const snap = await getDocs(collection(db, "users"));
                 snap.forEach(uDoc => {
                     const u = uDoc.data();
-                    const item = document.createElement('div');
-                    item.className = 'user-item';
+                    const item = document.createElement('div'); item.className = 'user-item';
                     const rankHtml = u.rank ? `<span class="badge-tag" style="background:${u.rankColor || '#ff9f43'}">${u.rank}</span>` : "";
                     item.innerHTML = `<span><b>${u.username}</b>${rankHtml}</span><small>${u.school}</small>`;
                     item.onclick = () => this.openChat(u.username);
@@ -268,135 +287,58 @@
                 });
             },
 
-            renderLeaderPanel() {
-                document.getElementById('main-content').innerHTML = `<h3>Başkanlık Paneli</h3><div style="background:var(--card); padding:15px; border-radius:15px; margin-top:10px;"><input id="hw-title" placeholder="Ödevin Adı"><input id="hw-subject" placeholder="Ders"><input id="hw-book" placeholder="Kitap"><input id="hw-pages" placeholder="Sayfalar"><label style="font-size:12px;">Bitiş Tarihi:</label><input type="datetime-local" id="hw-date"><button class="btn-main" onclick="app.addHomework()">Ödev Paylaş</button></div>`;
-            },
-
-            async addHomework() {
-                const title = document.getElementById('hw-title').value;
-                const deadline = document.getElementById('hw-date').value;
-                if(!title || !deadline) return alert("Hata!");
-                await addDoc(collection(db, "homeworks"), { title, subject: document.getElementById('hw-subject').value, book: document.getElementById('hw-book').value, pages: document.getElementById('hw-pages').value, deadline, school: this.currentUser.school, grade: this.currentUser.grade, section: this.currentUser.section, createdAt: serverTimestamp() });
-                alert("Paylaşıldı!");
-                this.navigate('home');
-            },
-
-            async renderMessageList() {
-                const main = document.getElementById('main-content');
-                main.innerHTML = '<h3>Mesajlar</h3><div id="msg-list"></div>';
-                const snap = await getDocs(collection(db, "users"));
-                snap.forEach(uDoc => {
-                    const u = uDoc.data();
-                    if(u.username === this.currentUser.username) return;
-                    const div = document.createElement('div');
-                    div.className = 'user-item';
-                    div.innerHTML = `<b>${u.username}</b> <small>${u.school}</small>`;
-                    div.onclick = () => this.openChat(u.username);
-                    document.getElementById('msg-list').appendChild(div);
-                });
-            },
-
-            openChat(target) {
-                this.activeChat = target;
-                document.getElementById('chat-window').classList.remove('hidden');
-                document.getElementById('chat-target-name').innerText = target;
-                const chatId = [this.currentUser.username, target].sort().join("_");
-                if(this.unsubscribeChat) this.unsubscribeChat();
-                const q = query(collection(db, "chats", chatId, "messages"), orderBy("time", "asc"));
-                this.unsubscribeChat = onSnapshot(q, (snap) => {
-                    const cont = document.getElementById('chat-messages');
-                    cont.innerHTML = "";
-                    snap.forEach(m => {
-                        const d = m.data();
-                        const cls = d.sender === this.currentUser.username ? 'msg-me' : 'msg-them';
-                        cont.innerHTML += `<div class="bubble ${cls}">${d.text}</div>`;
-                    });
-                    cont.scrollTop = cont.scrollHeight;
-                });
-            },
-
-            async sendMessage() {
-                const input = document.getElementById('msg-input');
-                if(!input.value) return;
-                const chatId = [this.currentUser.username, this.activeChat].sort().join("_");
-                await addDoc(collection(db, "chats", chatId, "messages"), { text: input.value, sender: this.currentUser.username, time: serverTimestamp() });
-                input.value = "";
-            },
-
             async renderAdminPanel() {
                 const main = document.getElementById('main-content');
-                main.innerHTML = `<h3>Admin Panel</h3><input id="new-sch" placeholder="Yeni Okul"><button class="btn-success" onclick="app.addSchool()">Ekle</button><div id="admin-users"></div>`;
+                main.innerHTML = `<h3>Admin Panel</h3>
+                <input id="new-sch" placeholder="Yeni Okul">
+                <button class="btn-success" onclick="app.addSchool()">Okul Ekle</button>
+                <hr style="margin:10px 0;">
+                <input id="new-update-link" placeholder="Güncelleme Linki (URL)" value="${this.updateLink}">
+                <button class="btn-main" style="background:#34495e" onclick="app.setUpdateLink()">Link Kaydet</button>
+                <div id="admin-users"></div>`;
                 const snap = await getDocs(collection(db, "users"));
                 snap.forEach(uDoc => {
-                    const u = uDoc.data();
-                    const item = document.createElement('div');
-                    item.className = 'user-item';
-                    item.innerHTML = `<span><span class="status-dot ${u.isBlocked ? 'status-blocked' : 'status-active'}"></span><b>${u.username}</b></span><small>${u.grade}/${u.section}</small>`;
-                    item.onclick = () => this.openUserEdit(u);
-                    document.getElementById('admin-users').appendChild(item);
+                    const u = uDoc.data(); const item = document.createElement('div'); item.className = 'user-item';
+                    item.innerHTML = `<span><b>${u.username}</b></span><small>${u.grade}/${u.section}</small>`;
+                    item.onclick = () => this.openUserEdit(u); document.getElementById('admin-users').appendChild(item);
                 });
+            },
+
+            async setUpdateLink() {
+                const link = document.getElementById('new-update-link').value;
+                await setDoc(doc(db, "config", "app_info"), { link }); alert("Güncelleme linki tanımlandı!");
             },
 
             openUserEdit(user) {
-                this.selectedEditUser = user;
-                document.getElementById('admin-user-modal').classList.remove('hidden');
+                this.selectedEditUser = user; document.getElementById('admin-user-modal').classList.remove('hidden');
                 document.getElementById('edit-user-title').innerText = user.username + " Ayarları";
-                document.getElementById('edit-school').value = user.school;
-                document.getElementById('edit-grade').value = user.grade;
-                document.getElementById('edit-section').value = user.section;
                 document.getElementById('edit-rank').value = user.rank || "";
                 document.getElementById('edit-rank-color').value = user.rankColor || "#ff9f43";
-                
-                document.getElementById('block-btn').classList.toggle('hidden', user.isBlocked);
-                document.getElementById('unblock-btn').classList.toggle('hidden', !user.isBlocked);
-                document.getElementById('leader-btn').classList.toggle('hidden', user.isLeader);
-                document.getElementById('unleader-btn').classList.toggle('hidden', !user.isLeader);
+                document.getElementById('block-btn').classList.toggle('hidden', user.isBlocked); document.getElementById('unblock-btn').classList.toggle('hidden', !user.isBlocked);
+                document.getElementById('leader-btn').classList.toggle('hidden', user.isLeader); document.getElementById('unleader-btn').classList.toggle('hidden', !user.isLeader);
             },
 
-            async adminUpdateStatus(status) {
-                await updateDoc(doc(db, "users", this.selectedEditUser.username), { isBlocked: status });
-                alert(status ? "Ceza verildi!" : "Ceza kaldırıldı!");
-                this.renderAdminPanel();
-                document.getElementById('admin-user-modal').classList.add('hidden');
-            },
-
-            async adminMakeLeader(status) {
-                await updateDoc(doc(db, "users", this.selectedEditUser.username), { isLeader: status });
-                alert(status ? "Başkan yapıldı!" : "Başkanlık alındı!");
-                this.renderAdminPanel();
-                document.getElementById('admin-user-modal').classList.add('hidden');
-            },
-
-            async saveUserEdits() {
-                const up = { 
-                    school: document.getElementById('edit-school').value, 
-                    grade: document.getElementById('edit-grade').value, 
-                    section: document.getElementById('edit-section').value,
-                    rank: document.getElementById('edit-rank').value,
-                    rankColor: document.getElementById('edit-rank-color').value
-                };
-                await updateDoc(doc(db, "users", this.selectedEditUser.username), up);
-                alert("Kaydedildi!");
-                this.renderAdminPanel();
-                document.getElementById('admin-user-modal').classList.add('hidden');
-            },
-
-            async addSchool() {
-                const name = document.getElementById('new-sch').value;
-                if(!name) return;
-                this.allSchools.push(name);
-                await setDoc(doc(db, "config", "schools"), { list: this.allSchools });
-                this.renderAdminPanel();
+            async adminUpdateStatus(status) { await updateDoc(doc(db, "users", this.selectedEditUser.username), { isBlocked: status }); this.renderAdminPanel(); document.getElementById('admin-user-modal').classList.add('hidden'); },
+            async adminMakeLeader(status) { await updateDoc(doc(db, "users", this.selectedEditUser.username), { isLeader: status }); this.renderAdminPanel(); document.getElementById('admin-user-modal').classList.add('hidden'); },
+            async saveUserEdits() { 
+                await updateDoc(doc(db, "users", this.selectedEditUser.username), { rank: document.getElementById('edit-rank').value, rankColor: document.getElementById('edit-rank-color').value });
+                this.renderAdminPanel(); document.getElementById('admin-user-modal').classList.add('hidden');
             },
 
             renderSettings() {
-                document.getElementById('main-content').innerHTML = `<h3>Ayarlar</h3><div style="margin-top:15px;"><input type="password" id="up-pass" placeholder="Yeni Şifre"><button class="btn-main" onclick="app.saveProfile()">Şifre Değiştir</button><hr style="margin:15px 0;"><button class="btn-main" style="background:#34495e" onclick="document.body.classList.toggle('dark-mode')">Tema Değiştir</button></div>`;
+                document.getElementById('main-content').innerHTML = `<h3>Ayarlar</h3>
+                <div style="margin-top:15px;">
+                    <input type="password" id="up-pass" placeholder="Yeni Şifre">
+                    <button class="btn-main" onclick="app.saveProfile()">Şifre Değiştir</button>
+                    <hr style="margin:15px 0;">
+                    <button class="btn-main" style="background:#34495e" onclick="document.body.classList.toggle('dark-mode')">Tema Değiştir</button>
+                    <hr style="margin:15px 0;">
+                    <p style="font-size:12px; margin-bottom:5px;"><b>Sistem Güncelleme</b></p>
+                    <button class="btn-success" onclick="window.open('${this.updateLink}', '_blank')"><i class="fas fa-download"></i> Yeni Sürümü İndir</button>
+                </div>`;
             },
 
-            async saveProfile() {
-                const pass = document.getElementById('up-pass').value;
-                if(pass) { await updateDoc(doc(db, "users", this.currentUser.username), { password: pass }); alert("Tamam!"); }
-            }
+            async saveProfile() { const pass = document.getElementById('up-pass').value; if(pass) { await updateDoc(doc(db, "users", this.currentUser.username), { password: pass }); alert("Tamam!"); } }
         };
 
         window.app.init();
