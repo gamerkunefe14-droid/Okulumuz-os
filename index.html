@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bizim Okul - Künefe App</title>
+    <title>OKULUMUZ OS - Künefe App</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --bg: #f0f2f5; --card: #ffffff; --text: #333; --nav: #ffffff; }
@@ -23,15 +23,21 @@
 
         #app-container { width: 100%; height: 100vh; background: var(--bg); display: flex; flex-direction: column; position: fixed; top:0; left:0; z-index: 100; }
         header { padding: 15px 20px; background: #ff9f43; color: white; display: flex; justify-content: space-between; align-items: center; }
+        
+        #update-banner { background: #2980b9; color: white; padding: 10px; text-align: center; font-size: 14px; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        #update-banner a { background: white; color: #2980b9; padding: 4px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 12px; }
+
         .admin-badge { background: #d63031; padding: 6px 15px; border-radius: 25px; font-size: 12px; font-weight: bold; cursor: pointer; }
         main { flex: 1; padding: 15px; overflow-y: auto; }
 
         .homework-card { background: var(--card); padding: 15px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: left; position: relative; border-left: 5px solid #ff9f43; }
         .homework-card h4 { color: #ff9f43; margin-bottom: 5px; }
         .warning-icon { position: absolute; top: 15px; right: 15px; color: #d63031; font-size: 20px; font-weight: bold; }
+        .del-hw { color: #d63031; cursor: pointer; float: right; }
 
         .user-item { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .status-active { background: #27ae60; } .status-blocked { background: #d63031; }
         .badge-tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; margin-left: 10px; color: white; font-weight: bold; }
 
         #chat-window { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg); z-index: 600; display: flex; flex-direction: column; }
@@ -70,6 +76,10 @@
     </div>
 
     <div id="app-container" class="hidden">
+        <div id="update-banner" class="hidden">
+            <span>🚀 Yeni güncelleme mevcut!</span>
+            <a id="update-link" href="#" target="_blank">HEMEN İNDİR</a>
+        </div>
         <header>
             <div><i class="fas fa-user-circle"></i> <span id="display-name"></span></div>
             <div id="admin-btn" class="admin-badge hidden" onclick="app.navigate('admin')">ADMİN</div>
@@ -159,6 +169,19 @@
                 const sSelects = [document.getElementById('reg-section'), document.getElementById('edit-section')];
                 sSelects.forEach(s => { "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => s.innerHTML += `<option value="${char}">${char}</option>`); });
                 await this.fetchSchools();
+                this.listenForUpdates();
+            },
+
+            listenForUpdates() {
+                onSnapshot(doc(db, "config", "updates"), (snap) => {
+                    const banner = document.getElementById('update-banner');
+                    if(snap.exists() && snap.data().active) {
+                        banner.classList.remove('hidden');
+                        document.getElementById('update-link').href = snap.data().link;
+                    } else {
+                        banner.classList.add('hidden');
+                    }
+                });
             },
 
             async fetchSchools() {
@@ -230,21 +253,50 @@
                 if(page === 'users') this.renderAllUsers();
                 if(page === 'settings') this.renderSettings();
                 if(page === 'admin') this.renderAdminPanel();
+                if(page === 'admin-homeworks') this.renderAdminHomeworks();
             },
 
             async renderHome() {
                 const main = document.getElementById('main-content');
-                main.innerHTML = `<h3>Ana Sayfa</h3><div id="homework-list"></div>`;
-                const q = query(collection(db, "homeworks"), where("school", "==", this.currentUser.school), where("grade", "==", this.currentUser.grade), where("section", "==", this.currentUser.section));
-                onSnapshot(q, (snap) => {
+                main.innerHTML = `
+                    <h3>Duyurular</h3>
+                    <div id="announcement-list" style="margin-bottom:20px;"></div>
+                    <hr>
+                    <h3>Ödevler</h3>
+                    <div id="homework-list"></div>`;
+                
+                const commonQuery = [
+                    where("school", "==", this.currentUser.school),
+                    where("grade", "==", this.currentUser.grade),
+                    where("section", "==", this.currentUser.section)
+                ];
+
+                // Duyuruları Dinle
+                onSnapshot(query(collection(db, "announcements"), ...commonQuery, orderBy("createdAt", "desc")), (snap) => {
+                    const aList = document.getElementById('announcement-list');
+                    aList.innerHTML = snap.empty ? "<p style='font-size:13px; color:gray;'>Henüz duyuru yok.</p>" : "";
+                    snap.forEach(docSnap => {
+                        const a = docSnap.data();
+                        aList.innerHTML += `
+                            <div class="homework-card" style="border-left-color: #2ecc71;">
+                                <h4>📢 ${a.title}</h4>
+                                <p>${a.content}</p>
+                                <small style="color:gray;">${a.date || ''}</small>
+                            </div>`;
+                    });
+                });
+
+                // Ödevleri Dinle
+                onSnapshot(query(collection(db, "homeworks"), ...commonQuery), (snap) => {
                     const list = document.getElementById('homework-list');
                     list.innerHTML = "";
                     const now = new Date().getTime();
                     snap.forEach(docSnap => {
                         const h = docSnap.data();
                         const deadline = new Date(h.deadline).getTime();
-                        if(now > deadline) { deleteDoc(doc(db, "homeworks", docSnap.id)); }
-                        else {
+                        if(now > deadline) { 
+                            deleteDoc(doc(db, "homeworks", docSnap.id)); 
+                        } else {
                             const isUrgent = ((deadline - now) / (1000 * 60 * 60)) <= 24;
                             list.innerHTML += `<div class="homework-card">${isUrgent ? '<div class="warning-icon">!</div>' : ''}<h4>${h.title}</h4><p><b>Ders:</b> ${h.subject}</p><p><b>Kitap:</b> ${h.book}</p><p><b>Sayfalar:</b> ${h.pages}</p><p style="margin-top:5px; font-size:11px; color:#666;"><b>Bitiş:</b> ${h.deadline.replace('T', ' ')}</p></div>`;
                         }
@@ -269,7 +321,45 @@
             },
 
             renderLeaderPanel() {
-                document.getElementById('main-content').innerHTML = `<h3>Başkanlık Paneli</h3><div style="background:var(--card); padding:15px; border-radius:15px; margin-top:10px;"><input id="hw-title" placeholder="Ödevin Adı"><input id="hw-subject" placeholder="Ders"><input id="hw-book" placeholder="Kitap"><input id="hw-pages" placeholder="Sayfalar"><label style="font-size:12px;">Bitiş Tarihi:</label><input type="datetime-local" id="hw-date"><button class="btn-main" onclick="app.addHomework()">Ödev Paylaş</button></div>`;
+                document.getElementById('main-content').innerHTML = `
+                    <h3>Başkanlık Paneli</h3>
+                    <div style="background:var(--card); padding:15px; border-radius:15px; margin-top:10px;">
+                        <p><b>📌 Yeni Duyuru Yayınla</b></p>
+                        <input id="ann-title" placeholder="Duyuru Başlığı">
+                        <input id="ann-content" placeholder="Duyuru İçeriği">
+                        <button class="btn-success" onclick="app.addAnnouncement()">Duyuruyu Paylaş</button>
+                    </div>
+                    
+                    <div style="background:var(--card); padding:15px; border-radius:15px; margin-top:15px;">
+                        <p><b>📚 Yeni Ödev Paylaş</b></p>
+                        <input id="hw-title" placeholder="Ödevin Adı">
+                        <input id="hw-subject" placeholder="Ders">
+                        <input id="hw-book" placeholder="Kitap">
+                        <input id="hw-pages" placeholder="Sayfalar">
+                        <label style="font-size:12px;">Bitiş Tarihi ve Saati:</label>
+                        <input type="datetime-local" id="hw-date">
+                        <button class="btn-main" onclick="app.addHomework()">Ödev Paylaş</button>
+                    </div>
+                    <hr style="margin:15px 0;">
+                    <button class="btn-danger" style="width:100%" onclick="app.renderLeaderDeleteList()">Paylaşımları Yönet (Sil)</button>
+                `;
+            },
+
+            async addAnnouncement() {
+                const title = document.getElementById('ann-title').value;
+                const content = document.getElementById('ann-content').value;
+                if(!title || !content) return alert("Lütfen tüm alanları doldurun!");
+                
+                await addDoc(collection(db, "announcements"), {
+                    title, content,
+                    school: this.currentUser.school,
+                    grade: this.currentUser.grade,
+                    section: this.currentUser.section,
+                    date: new Date().toLocaleString('tr-TR'),
+                    createdAt: serverTimestamp()
+                });
+                alert("Duyuru yayınlandı!");
+                this.navigate('home');
             },
 
             async addHomework() {
@@ -279,6 +369,38 @@
                 await addDoc(collection(db, "homeworks"), { title, subject: document.getElementById('hw-subject').value, book: document.getElementById('hw-book').value, pages: document.getElementById('hw-pages').value, deadline, school: this.currentUser.school, grade: this.currentUser.grade, section: this.currentUser.section, createdAt: serverTimestamp() });
                 alert("Paylaşıldı!");
                 this.navigate('home');
+            },
+
+            async renderLeaderDeleteList() {
+                const main = document.getElementById('main-content');
+                main.innerHTML = `<h3>Paylaşımları Yönet</h3><button class="btn-main" onclick="app.renderLeaderPanel()">Geri Dön</button><div id="delete-list"></div>`;
+                
+                const annSnap = await getDocs(query(collection(db, "announcements"), where("section", "==", this.currentUser.section)));
+                annSnap.forEach(d => {
+                    const data = d.data();
+                    document.getElementById('delete-list').innerHTML += `
+                        <div class="user-item">
+                            <span>📢 ${data.title}</span>
+                            <button class="btn-danger" style="width:60px; padding:5px;" onclick="app.deleteItem('announcements', '${d.id}')">Sil</button>
+                        </div>`;
+                });
+
+                const hwSnap = await getDocs(query(collection(db, "homeworks"), where("section", "==", this.currentUser.section)));
+                hwSnap.forEach(d => {
+                    const data = d.data();
+                    document.getElementById('delete-list').innerHTML += `
+                        <div class="user-item">
+                            <span>📚 ${data.title}</span>
+                            <button class="btn-danger" style="width:60px; padding:5px;" onclick="app.deleteItem('homeworks', '${d.id}')">Sil</button>
+                        </div>`;
+                });
+            },
+
+            async deleteItem(coll, id) {
+                if(confirm("Silmek istediğine emin misin?")) {
+                    await deleteDoc(doc(db, coll, id));
+                    this.renderLeaderDeleteList();
+                }
             },
 
             async renderMessageList() {
@@ -325,7 +447,22 @@
 
             async renderAdminPanel() {
                 const main = document.getElementById('main-content');
-                main.innerHTML = `<h3>Admin Panel</h3><input id="new-sch" placeholder="Yeni Okul"><button class="btn-success" onclick="app.addSchool()">Ekle</button><div id="admin-users"></div>`;
+                main.innerHTML = `
+                    <h3>Admin Panel</h3>
+                    <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
+                        <p><b>Güncelleme Yayınla</b></p>
+                        <input id="upd-link" placeholder="İndirme Linki">
+                        <div style="display:flex; gap:5px;">
+                            <button class="btn-success" onclick="app.setUpdate(true)">Bannerı Aç</button>
+                            <button class="btn-danger" onclick="app.setUpdate(false)">Kapat</button>
+                        </div>
+                    </div>
+                    <input id="new-sch" placeholder="Yeni Okul">
+                    <button class="btn-success" onclick="app.addSchool()">Okul Ekle</button>
+                    <button class="btn-main" style="background:#8e44ad" onclick="app.navigate('admin-homeworks')">Ödevleri Yönet</button>
+                    <hr style="margin:15px 0;">
+                    <div id="admin-users"></div>`;
+                
                 const snap = await getDocs(collection(db, "users"));
                 snap.forEach(uDoc => {
                     const u = uDoc.data();
@@ -335,6 +472,33 @@
                     item.onclick = () => this.openUserEdit(u);
                     document.getElementById('admin-users').appendChild(item);
                 });
+            },
+
+            async setUpdate(status) {
+                const link = document.getElementById('upd-link').value;
+                if(status && !link) return alert("Link girin!");
+                await setDoc(doc(db, "config", "updates"), { active: status, link: link });
+                alert(status ? "Güncelleme yayında!" : "Banner kaldırıldı.");
+            },
+
+            async renderAdminHomeworks() {
+                const main = document.getElementById('main-content');
+                main.innerHTML = `<h3>Ödevleri Yönet</h3><button class="btn-main" onclick="app.navigate('admin')">Geri Dön</button><div id="admin-hw-list"></div>`;
+                const snap = await getDocs(collection(db, "homeworks"));
+                snap.forEach(hDoc => {
+                    const h = hDoc.data();
+                    const div = document.createElement('div');
+                    div.className = 'homework-card';
+                    div.innerHTML = `<i class="fas fa-trash del-hw" onclick="app.deleteHw('${hDoc.id}')"></i><h4>${h.title}</h4><p>${h.school} - ${h.grade}/${h.section}</p>`;
+                    document.getElementById('admin-hw-list').appendChild(div);
+                });
+            },
+
+            async deleteHw(id) {
+                if(confirm("Silmek istiyor musun?")) {
+                    await deleteDoc(doc(db, "homeworks", id));
+                    this.renderAdminHomeworks();
+                }
             },
 
             openUserEdit(user) {
