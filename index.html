@@ -20,6 +20,8 @@
         .btn-danger { background: #d63031; color: white; }
         .btn-success { background: #27ae60; color: white; }
         .btn-mod { background: #2980b9; color: white; }
+        .btn-teacher { background: #9b59b6; color: white; }
+        .btn-admin { background: #e67e22; color: white; }
         .toggle-link { text-align: center; margin-top: 15px; color: #3498db; cursor: pointer; font-size: 14px; }
 
         #app-container { width: 100%; height: 100vh; background: var(--bg); display: flex; flex-direction: column; position: fixed; top:0; left:0; z-index: 100; }
@@ -37,9 +39,13 @@
         .del-hw { color: #d63031; cursor: pointer; float: right; }
 
         .user-item { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        .status-active { background: #27ae60; } .status-blocked { background: #d63031; }
-        .badge-tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; margin-left: 10px; color: white; font-weight: bold; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .status-active { background: #27ae60; } 
+        .status-blocked { background: #d63031; }
+        .status-offline { background: #95a5a6; }
+        
+        .badges-wrapper { display: inline-flex; gap: 4px; vertical-align: middle; }
+        .badge-tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; color: white; font-weight: bold; text-transform: uppercase; }
 
         #chat-window { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg); z-index: 600; display: flex; flex-direction: column; }
         .msg-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; }
@@ -90,41 +96,51 @@
             <div class="nav-item active" onclick="app.navigate('home', this)"><i class="fas fa-home"></i><span>Ana Sayfa</span></div>
             <div class="nav-item" onclick="app.navigate('messages', this)"><i class="fas fa-comments"></i><span>Mesajlar</span></div>
             <div class="nav-item hidden" id="nav-leader" onclick="app.navigate('leader', this)"><i class="fas fa-star"></i><span>Başkanlık</span></div>
+            <div class="nav-item hidden" id="nav-teacher" onclick="app.navigate('teacher', this)"><i class="fas fa-chalkboard-teacher"></i><span>Öğretmen</span></div>
             <div class="nav-item" onclick="app.navigate('users', this)"><i class="fas fa-users"></i><span>Kullanıcılar</span></div>
             <div class="nav-item" onclick="app.navigate('settings', this)"><i class="fas fa-cog"></i><span>Ayarlar</span></div>
         </nav>
     </div>
 
-    <!-- ADMIN / MOD GUI MODAL -->
+    <!-- ADMIN / MOD / TEACHER GUI MODAL -->
     <div id="admin-user-modal" class="modal-bg hidden">
         <div class="modal">
             <h3 id="edit-user-title">Kullanıcı Düzenle</h3>
+            
+            <div id="name-edit-area" class="hidden" style="margin-top:10px;">
+                <label>Kullanıcı Adı Değiştir:</label>
+                <input type="text" id="edit-username-input">
+                <button class="btn-main" style="background:#2ecc71; margin-bottom:15px;" onclick="app.adminChangeUsername()">Adı Güncelle</button>
+            </div>
+
             <label>Okul:</label><select id="edit-school"></select>
             <div style="display:flex; gap:5px;"><select id="edit-grade"></select><select id="edit-section"></select></div>
             
-            <button id="leader-btn" class="btn-main" onclick="app.adminMakeLeader(true)">Sınıf Başkanı Yap</button>
-            <button id="unleader-btn" class="btn-danger hidden" onclick="app.adminMakeLeader(false)">Başkanlığı Al</button>
-
-            <!-- MODERATÖR YAP BUTONU -->
-            <button id="mod-btn" class="btn-mod" onclick="app.adminMakeMod(true)">Moderatör Yap</button>
-            <button id="unmod-btn" class="btn-danger hidden" onclick="app.adminMakeMod(false)">Moderatörlüğü Al</button>
+            <!-- ÇOKLU YETKİLENDİRME BUTONLARI (DURUMA GÖRE RENK ALIR) -->
+            <button id="leader-btn" class="btn-main hidden" onclick="app.adminToggleRole('isLeader')">Sınıf Başkanı Yap/Al</button>
+            <button id="mod-btn" class="btn-mod hidden" onclick="app.adminToggleRole('isMod')">Moderatör Yap/Al</button>
+            <button id="teacher-btn" class="btn-teacher hidden" onclick="app.adminToggleRole('isTeacher')">Öğretmen Yap/Al</button>
+            <button id="admin-make-btn" class="btn-admin hidden" onclick="app.adminToggleRole('isAdmin')">Admin Yap/Al</button>
             
-            <div id="admin-only-tools">
+            <div id="admin-only-tools" class="hidden">
                 <button id="block-btn" class="btn-danger" onclick="app.adminUpdateStatus(true)">Ceza Ver (Engelle)</button>
                 <button id="unblock-btn" class="btn-success hidden" onclick="app.adminUpdateStatus(false)">Cezayı Kaldır</button>
                 
+                <button class="btn-danger" style="background:#c0392b; margin-top:5px;" onclick="app.adminDeleteUser()">Hesabı Tamamen Sil</button>
+                
                 <hr style="margin:10px 0;">
-                <p style="font-size:12px; margin-bottom:5px;"><b>Unvan Ayarları:</b></p>
-                <input type="text" id="edit-rank" placeholder="Unvan Girin">
-                <label style="font-size:11px;">Unvan Rengi:</label>
+                <p style="font-size:12px; margin-bottom:5px;"><b>Özel Unvan Ayarları:</b></p>
+                <input type="text" id="edit-rank" placeholder="Ekstra Özel Unvan Girin">
+                <label style="font-size:11px;">Özel Unvan Rengi:</label>
                 <input type="color" id="edit-rank-color" style="height:40px; cursor:pointer;" value="#ff9f43">
             </div>
             
-            <button id="save-btn" class="btn-main" style="background:#34495e" onclick="app.saveUserEdits()">Kaydet</button>
+            <button id="save-btn" class="btn-main hidden" style="background:#34495e; margin-top:10px;" onclick="app.saveUserEdits()">Kaydet</button>
             <button onclick="document.getElementById('admin-user-modal').classList.add('hidden')">Kapat</button>
         </div>
     </div>
 
+    <!-- SOHBET PENCERESİ -->
     <div id="chat-window" class="hidden">
         <header style="background:#ff9f43; padding:15px; display:flex; align-items:center;">
             <i class="fas fa-arrow-left" style="cursor:pointer; margin-right:15px;" onclick="document.getElementById('chat-window').classList.add('hidden')"></i>
@@ -169,14 +185,16 @@
             activeChat: null,
             unsubscribeChat: null,
             selectedEditUser: null,
+            activeUsers: new Set(),
 
             async init() {
                 const gSelects = [document.getElementById('reg-grade'), document.getElementById('edit-grade')];
-                gSelects.forEach(s => { for(let i=1; i<=12; i++) s.innerHTML += `<option value="${i}">${i}. Sınıf</option>`; });
+                gSelects.forEach(s => { s.innerHTML = ""; for(let i=1; i<=12; i++) s.innerHTML += `<option value="${i}">${i}. Sınıf</option>`; });
                 const sSelects = [document.getElementById('reg-section'), document.getElementById('edit-section')];
-                sSelects.forEach(s => { "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => s.innerHTML += `<option value="${char}">${char}</option>`); });
+                sSelects.forEach(s => { s.innerHTML = ""; "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => s.innerHTML += `<option value="${char}">${char}</option>`); });
                 await this.fetchSchools();
                 this.listenForUpdates();
+                this.listenActiveStatus();
             },
 
             listenForUpdates() {
@@ -189,6 +207,25 @@
                         banner.classList.add('hidden');
                     }
                 });
+            },
+
+            listenActiveStatus() {
+                onSnapshot(collection(db, "status"), (snap) => {
+                    this.activeUsers.clear();
+                    const now = Date.now();
+                    snap.forEach(docSnap => {
+                        const data = docSnap.data();
+                        if(data.lastSeen && (now - data.lastSeen.toMillis()) < 60000) {
+                            this.activeUsers.add(docSnap.id);
+                        }
+                    });
+                });
+            },
+
+            updateMyStatus() {
+                if(this.currentUser) {
+                    setDoc(doc(db, "status", this.currentUser.username), { lastSeen: serverTimestamp() }, { merge: true });
+                }
             },
 
             async fetchSchools() {
@@ -215,7 +252,7 @@
                     school: document.getElementById('reg-school').value,
                     grade: document.getElementById('reg-grade').value,
                     section: document.getElementById('reg-section').value,
-                    isBlocked: false, isLeader: false, isMod: false, rank: "", rankColor: "#ff9f43"
+                    isBlocked: false, isLeader: false, isMod: false, isTeacher: false, isAdmin: false, rank: "", rankColor: "#ff9f43"
                 };
                 await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
                 document.getElementById('verify-modal').classList.remove('hidden');
@@ -244,12 +281,20 @@
                 document.getElementById('app-container').classList.remove('hidden');
                 document.getElementById('display-name').innerText = this.currentUser.username;
                 
-                // Admin veya Mod ise butonu göster
-                if(this.currentUser.username.toLowerCase() === "künefe" || this.currentUser.isMod) {
+                const lowerName = this.currentUser.username.toLowerCase();
+                const hasAdminPower = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
+                
+                if(hasAdminPower || this.currentUser.isMod) {
                     document.getElementById('admin-btn').classList.remove('hidden');
                 }
                 
+                // Çoklu buton kontrolü (Kişide o yetki varsa bar görünür olur)
                 if(this.currentUser.isLeader) document.getElementById('nav-leader').classList.remove('hidden');
+                if(this.currentUser.isTeacher) document.getElementById('nav-teacher').classList.remove('hidden');
+                
+                this.updateMyStatus();
+                setInterval(() => this.updateMyStatus(), 30000);
+                
                 this.navigate('home');
             },
 
@@ -261,6 +306,7 @@
                 if(page === 'home') this.renderHome();
                 if(page === 'messages') this.renderMessageList();
                 if(page === 'leader') this.renderLeaderPanel();
+                if(page === 'teacher') this.renderTeacherPanel();
                 if(page === 'users') this.renderAllUsers();
                 if(page === 'settings') this.renderSettings();
                 if(page === 'admin') this.renderAdminPanel();
@@ -271,7 +317,6 @@
                 const main = document.getElementById('main-content');
                 main.innerHTML = `<h3>Ana Sayfa</h3><div id="homework-list"></div>`;
                 
-                // Ödevleri sadece kendi okul ve sınıfına göre filtrele
                 const q = query(collection(db, "homeworks"), 
                     where("school", "==", this.currentUser.school), 
                     where("grade", "==", this.currentUser.grade), 
@@ -296,6 +341,20 @@
                 });
             },
 
+            buildUserBadges(u) {
+                let html = '<div class="badges-wrapper">';
+                const lowerName = u.username.toLowerCase();
+                if(lowerName === "künefe" || lowerName === "kodc" || u.isAdmin) {
+                    html += `<span class="badge-tag" style="background:#e67e22">ADMİN</span>`;
+                }
+                if(u.isMod) html += `<span class="badge-tag" style="background:#2980b9">MOD</span>`;
+                if(u.isTeacher) html += `<span class="badge-tag" style="background:#9b59b6">ÖĞR</span>`;
+                if(u.isLeader) html += `<span class="badge-tag" style="background:#ff9f43">BŞK</span>`;
+                if(u.rank) html += `<span class="badge-tag" style="background:${u.rankColor || '#7f8c8d'}">${u.rank}</span>`;
+                html += '</div>';
+                return html;
+            },
+
             async renderAllUsers() {
                 const main = document.getElementById('main-content');
                 main.innerHTML = `<h3>Kullanıcılar</h3><div id="full-user-list"></div>`;
@@ -304,8 +363,12 @@
                     const u = uDoc.data();
                     const item = document.createElement('div');
                     item.className = 'user-item';
-                    const rankHtml = u.rank ? `<span class="badge-tag" style="background:${u.rankColor || '#ff9f43'}">${u.rank}</span>` : "";
-                    item.innerHTML = `<span><b>${u.username}</b>${rankHtml}</span><small>${u.school}</small>`;
+                    
+                    const isOnline = this.activeUsers.has(u.username);
+                    const dotClass = isOnline ? 'status-active' : 'status-offline';
+                    const badgesHtml = this.buildUserBadges(u);
+
+                    item.innerHTML = `<span><span class="status-dot ${dotClass}"></span><b>${u.username}</b> ${badgesHtml}</span><small>${u.school}</small>`;
                     item.onclick = () => this.openChat(u.username);
                     document.getElementById('full-user-list').appendChild(item);
                 });
@@ -313,6 +376,35 @@
 
             renderLeaderPanel() {
                 document.getElementById('main-content').innerHTML = `<h3>Başkanlık Paneli</h3><div style="background:var(--card); padding:15px; border-radius:15px; margin-top:10px;"><input id="hw-title" placeholder="Ödevin Adı"><input id="hw-subject" placeholder="Ders"><input id="hw-book" placeholder="Kitap"><input id="hw-pages" placeholder="Sayfalar"><label style="font-size:12px;">Bitiş Tarihi:</label><input type="datetime-local" id="hw-date"><button class="btn-main" onclick="app.addHomework()">Ödev Paylaş</button></div>`;
+            },
+
+            async renderTeacherPanel() {
+                const main = document.getElementById('main-content');
+                main.innerHTML = `<h3>Öğretmen Paneli</h3><p style="font-size:13px; margin-bottom:10px;">Sınıfınız: ${this.currentUser.grade}/${this.currentUser.section}</p><div id="teacher-student-list"></div>`;
+                
+                const q = query(collection(db, "users"), 
+                    where("school", "==", this.currentUser.school),
+                    where("grade", "==", this.currentUser.grade),
+                    where("section", "==", this.currentUser.section)
+                );
+                
+                const snap = await getDocs(q);
+                snap.forEach(uDoc => {
+                    const u = uDoc.data();
+                    if(u.username === this.currentUser.username) return;
+                    
+                    const div = document.createElement('div');
+                    div.className = 'user-item';
+                    div.innerHTML = `<span><b>${u.username}</b> ${u.isLeader ? '<span class="badge-tag" style="background:#ff9f43">BAŞKAN</span>':''}</span>
+                                     <button class="btn-main" style="width:auto; padding:5px 10px; margin:0;" onclick="event.stopPropagation(); app.teacherToggleLeader('${u.username}', ${!u.isLeader})">${u.isLeader ? 'Başkanlığı Al':'Başkan Yap'}</button>`;
+                    document.getElementById('teacher-student-list').appendChild(div);
+                });
+            },
+
+            async teacherToggleLeader(targetUser, status) {
+                await updateDoc(doc(db, "users", targetUser), { isLeader: status });
+                alert(status ? "Sınıf başkanı atandı!" : "Sınıf başkanlığı geri alındı!");
+                this.renderTeacherPanel();
             },
 
             async addHomework() {
@@ -368,7 +460,8 @@
 
             async renderAdminPanel() {
                 const main = document.getElementById('main-content');
-                const isRealAdmin = this.currentUser.username.toLowerCase() === "künefe";
+                const lowerName = this.currentUser.username.toLowerCase();
+                const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
                 
                 main.innerHTML = `
                     <h3>${isRealAdmin ? 'Admin' : 'Moderatör'} Paneli</h3>
@@ -386,14 +479,19 @@
                     <button class="btn-main" style="background:#8e44ad" onclick="app.navigate('admin-homeworks')">Ödevleri Yönet</button>
                     <hr style="margin:15px 0;">
                     ` : ''}
-                    <div id="admin-users"></div>`;
+                    <div id="admin-users"></div>
+                    ${isRealAdmin ? `
+                    <button class="btn-danger" style="background:#c0392b; font-size:14px; margin-top:20px; padding:15px;" onclick="app.resetAcademicYear()">
+                        <i class="fas fa-exclamation-triangle"></i> Yeni Eğitim Öğretim Yılına Geç
+                    </button>` : ''}`;
                 
                 const snap = await getDocs(collection(db, "users"));
                 snap.forEach(uDoc => {
                     const u = uDoc.data();
                     const item = document.createElement('div');
                     item.className = 'user-item';
-                    item.innerHTML = `<span><span class="status-dot ${u.isBlocked ? 'status-blocked' : 'status-active'}"></span><b>${u.username}</b></span><small>${u.grade}/${u.section}</small>`;
+                    const badgesHtml = this.buildUserBadges(u);
+                    item.innerHTML = `<span><span class="status-dot ${u.isBlocked ? 'status-blocked' : 'status-active'}"></span><b>${u.username}</b> ${badgesHtml}</span><small>${u.grade}/${u.section}</small>`;
                     item.onclick = () => this.openUserEdit(u);
                     document.getElementById('admin-users').appendChild(item);
                 });
@@ -401,47 +499,98 @@
 
             openUserEdit(user) {
                 this.selectedEditUser = user;
-                const isRealAdmin = this.currentUser.username.toLowerCase() === "künefe";
+                const lowerName = this.currentUser.username.toLowerCase();
+                const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
                 const isSameSchool = this.currentUser.school === user.school;
                 
                 document.getElementById('admin-user-modal').classList.remove('hidden');
                 document.getElementById('edit-user-title').innerText = user.username + " Ayarları";
                 
-                // Bilgileri doldur
+                document.getElementById('edit-username-input').value = user.username;
                 document.getElementById('edit-school').value = user.school;
                 document.getElementById('edit-grade').value = user.grade;
                 document.getElementById('edit-section').value = user.section;
                 document.getElementById('edit-rank').value = user.rank || "";
                 document.getElementById('edit-rank-color').value = user.rankColor || "#ff9f43";
 
-                // Yetki Kontrolü: Mod sadece kendi okulundakini yönetebilir
                 const hasPermission = isRealAdmin || (this.currentUser.isMod && isSameSchool);
                 
+                document.getElementById('name-edit-area').classList.toggle('hidden', !isRealAdmin);
                 document.getElementById('save-btn').classList.toggle('hidden', !hasPermission);
-                document.getElementById('leader-btn').classList.toggle('hidden', !hasPermission || user.isLeader);
-                document.getElementById('unleader-btn').classList.toggle('hidden', !hasPermission || !user.isLeader);
                 
-                // Sadece gerçek admin moderatör yapabilir ve banlayabilir
-                document.getElementById('mod-btn').classList.toggle('hidden', !isRealAdmin || user.isMod);
-                document.getElementById('unmod-btn').classList.toggle('hidden', !isRealAdmin || !user.isMod);
-                document.getElementById('admin-only-tools').classList.toggle('hidden', !isRealAdmin);
+                // Çoklu yetki butonlarını yetki durumuna göre görsel olarak güncelle
+                const setBtnState = (btnId, hasRole) => {
+                    const btn = document.getElementById(btnId);
+                    if(hasRole) {
+                        btn.style.border = "2px solid #2ecc71";
+                        btn.innerText = btn.innerText.split(" (AKTİF)")[0] + " (AKTİF)";
+                    } else {
+                        btn.style.border = "none";
+                        btn.innerText = btn.innerText.split(" (AKTİF)")[0];
+                    }
+                };
 
+                document.getElementById('leader-btn').classList.toggle('hidden', !hasPermission);
+                setBtnState('leader-btn', user.isLeader);
+                
+                document.getElementById('mod-btn').classList.toggle('hidden', !isRealAdmin);
+                setBtnState('mod-btn', user.isMod);
+                
+                document.getElementById('teacher-btn').classList.toggle('hidden', !isRealAdmin);
+                setBtnState('teacher-btn', user.isTeacher);
+
+                document.getElementById('admin-make-btn').classList.toggle('hidden', !isRealAdmin);
+                setBtnState('admin-make-btn', user.isAdmin);
+
+                document.getElementById('admin-only-tools').classList.toggle('hidden', !isRealAdmin);
                 document.getElementById('block-btn').classList.toggle('hidden', user.isBlocked);
                 document.getElementById('unblock-btn').classList.toggle('hidden', !user.isBlocked);
             },
 
-            async adminMakeLeader(status) {
-                await updateDoc(doc(db, "users", this.selectedEditUser.username), { isLeader: status });
-                alert(status ? "Başkan yapıldı!" : "Başkanlık alındı!");
+            async adminToggleRole(roleField) {
+                // Mevcut durumun tersini alıyoruz (true -> false, false -> true)
+                const currentStatus = !!this.selectedEditUser[roleField];
+                const newStatus = !currentStatus;
+                
+                let updateData = {};
+                updateData[roleField] = newStatus;
+
+                await updateDoc(doc(db, "users", this.selectedEditUser.username), updateData);
+                this.selectedEditUser[roleField] = newStatus; // Local objeyi güncelle
+                
+                alert("Yetki durumu güncellendi!");
+                this.openUserEdit(this.selectedEditUser); // Arayüzü tazele
                 this.renderAdminPanel();
-                document.getElementById('admin-user-modal').classList.add('hidden');
             },
 
-            async adminMakeMod(status) {
-                await updateDoc(doc(db, "users", this.selectedEditUser.username), { isMod: status, rank: status ? "MODERATÖR" : "", rankColor: "#2980b9" });
-                alert(status ? "Moderatör yapıldı!" : "Moderatörlük alındı!");
-                this.renderAdminPanel();
-                document.getElementById('admin-user-modal').classList.add('hidden');
+            async adminChangeUsername() {
+                const newName = document.getElementById('edit-username-input').value.trim();
+                const oldName = this.selectedEditUser.username;
+                if(!newName || newName === oldName) return;
+                
+                if(confirm(`${oldName} kullanıcısının adını ${newName} olarak değiştirmek istiyor musunuz?`)) {
+                    const userDoc = await getDoc(doc(db, "users", oldName));
+                    if(userDoc.exists()) {
+                        const userData = userDoc.data();
+                        userData.username = newName;
+                        await setDoc(doc(db, "users", newName), userData);
+                        await deleteDoc(doc(db, "users", oldName));
+                        alert("Kullanıcı adı başarıyla değiştirildi!");
+                        document.getElementById('admin-user-modal').classList.add('hidden');
+                        this.renderAdminPanel();
+                    }
+                }
+            },
+
+            async adminDeleteUser() {
+                const oldName = this.selectedEditUser.username;
+                if(confirm(`${oldName} hesabını tamamen silmek istediğinize emin misiniz?`)) {
+                    await deleteDoc(doc(db, "users", oldName));
+                    await deleteDoc(doc(db, "status", oldName));
+                    alert("Hesap başarıyla silindi!");
+                    document.getElementById('admin-user-modal').classList.add('hidden');
+                    this.renderAdminPanel();
+                }
             },
 
             async adminUpdateStatus(status) {
@@ -498,6 +647,37 @@
                 this.allSchools.push(name);
                 await setDoc(doc(db, "config", "schools"), { list: this.allSchools });
                 this.renderAdminPanel();
+            },
+
+            async resetAcademicYear() {
+                const pass1 = prompt("1. Sıfırlama Şifresini Girin:");
+                if(pass1 !== "KODCADMİNSIFILA") return alert("1. Şifre Hatalı! İşlem iptal edildi.");
+                
+                const pass2 = prompt("2. Sıfırlama Şifresini Girin:");
+                if(pass2 !== "KÜNEFEADMİNSIFIRLA") return alert("2. Şifre Hatalı! İşlem iptal edildi.");
+                
+                if(confirm("DİKKAT! Adminler hariç tüm sistem verileri tamamen silinecektir. Emin misiniz?")) {
+                    const hwSnap = await getDocs(collection(db, "homeworks"));
+                    hwSnap.forEach(async (d) => await deleteDoc(doc(db, "homeworks", d.id)));
+
+                    const chatSnap = await getDocs(collection(db, "chats"));
+                    chatSnap.forEach(async (d) => await deleteDoc(doc(db, "chats", d.id)));
+
+                    const userSnap = await getDocs(collection(db, "users"));
+                    userSnap.forEach(async (uDoc) => {
+                        const u = uDoc.data();
+                        const lowerName = u.username.toLowerCase();
+                        const isAdminUser = lowerName === "künefe" || lowerName === "kodc" || u.isAdmin;
+                        
+                        if(!isAdminUser) {
+                            await deleteDoc(doc(db, "users", u.username));
+                            await deleteDoc(doc(db, "status", u.username));
+                        }
+                    });
+
+                    alert("Sistem başarıyla sıfırlandı! Yeni eğitim yılı hazırlığı tamamlandı.");
+                    location.reload();
+                }
             },
 
             renderSettings() {
