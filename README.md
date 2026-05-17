@@ -1,8 +1,14 @@
-Telif Hakkı (c) 2026 gamerkunefe14 (KOD C)
-Tüm Hakları Saklıdır.
+<!-- 
+  ========================================================================
+   🚀 BİZİM OKUL - KÜNEFE APP
+   📜 TELİF HAKKI (C) 2026 gamerkunefe14 (KODC) - TÜM HAKLARI SAKLIDIR.
+  ========================================================================
+   ⚠️ YASAL UYARI: 
+   Bu projenin kaynak kodları, tasarımı ve mimarisi gamerkunefe14 (KOD C) tarafından 
+   geliştirilmiştir. GNU GPLv3 lisansı altında korunmaktadır. 
+   
+   Bu kodların izinsiz olarak kopyalanması, "ben yaptım" diyerek paylaşılması
+   veya Firebase anahtarlarının çalınması DURUMUNDA GITHUB ÜZERİNDEN 
+   YASAL DMCA ŞİKAYETİ YAPILACAK VE HESABINIZ KAPATTIRILACAKTIR.
+  ========================================================================
 
-Bu yazılımın (Bizim Okul - Künefe App) kaynak kodları, görselleri ve tasarımları hiçbir şekilde izin alınmadan kopyalanamaz, dağıtılamaz, değiştirilemez veya başka projelerde kaynak gösterilmeden kullanılamaz. 
-
-İzinsiz kullanım durumunda yasal haklar saklıdır.
-
-Bu uygulama hakkında başka bilgilendirme yok zaten açınca ne olduğu belli burayı okumana gerek yok. Hala niye okuyon?
