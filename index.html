@@ -61,6 +61,19 @@
         .modal { background: var(--card); padding: 20px; border-radius: 15px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
         
         .media-preview { max-width: 100%; max-height: 250px; margin-top: 10px; border-radius: 8px; display: block; }
+
+        /* Forum / Social Styles kanka */
+        .social-card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-bottom: 2px solid #eee; position: relative; }
+        .social-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
+        .social-user { font-weight: bold; color: #ff9f43; }
+        .social-scope { font-size: 11px; background: #e0e0e0; color: #333; padding: 2px 6px; border-radius: 5px; }
+        .social-body { font-size: 14px; line-height: 1.4; white-space: pre-wrap; margin-bottom: 8px; }
+        .social-footer { display: flex; gap: 15px; font-size: 12px; margin-top: 10px; color: #888; }
+        .social-action { cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .social-action:hover { color: #ff9f43; }
+        .reply-box { margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px; background: rgba(0,0,0,0.02); padding: 8px; border-radius: 8px; }
+        .reply-item { font-size: 13px; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dashed #ddd; }
+        .reply-user { font-weight: bold; color: #3498db; }
     </style>
 </head>
 <body>
@@ -82,7 +95,6 @@
             <input type="text" id="reg-user" placeholder="Kullanıcı Adı">
             <input type="password" id="reg-pass" placeholder="Şifre">
             <select id="reg-school"></select>
-          
             <div style="display:flex; gap:5px;"><select id="reg-grade"></select><select id="reg-section"></select></div>
             <button class="btn-main" onclick="app.startRegister()">Kod Gönder</button>
             <div class="toggle-link" onclick="app.toggleAuth('login')">Geri Dön</div>
@@ -90,86 +102,93 @@
         <div id="staff-fields" class="hidden">
             <input type="text" id="staff-user" placeholder="Kullanıcı Adı">
             <input type="password" id="staff-pass" placeholder="Şifre">
-     
             <input type="text" id="staff-code1" placeholder="Öğretmen Kodu">
             <input type="password" id="staff-code2" placeholder="2. Şifre (İdareci)" class="hidden">
             <input type="email" id="staff-email" placeholder="E-posta">
             <select id="staff-school"></select>
+            
+            <div id="staff-class-area">
+                <p style="font-size:11px; margin-bottom:5px; font-weight:bold;">Sınıf(lar)ınızı Ekleyin:</p>
+                <div style="display:flex; gap:5px; margin-bottom:5px;">
+                    <select id="staff-grade-select"></select>
+                    <select id="staff-section-select"></select>
+                    <button type="button" class="btn-main" style="width:auto; margin:0; padding:10px 15px;" onclick="app.addStaffClass()"><i class="fas fa-plus"></i> Ekle</button>
+                </div>
+                <div id="staff-added-classes" style="display:flex; flex-direction:column; gap:5px; margin-bottom:12px;"></div>
+            </div>
 
             <button class="btn-main" onclick="app.handleStaffAuth()">Kayıt Ol / Giriş Yap</button>
             <div class="toggle-link" onclick="app.toggleAuth('login')">Geri Dön</div>
         </div>
     </div>
 
-    <div id="teacher-setup-modal" class="modal-bg hidden">
-        <div class="modal">
-            <h3 style="margin-bottom: 10px;">Sınıf(lar)ınızı Seçin</h3>
-            <p style="font-size:12px; margin-bottom:15px; color:#666;">Öğretmen hesabınızı tamamlamak için gireceğiniz sınıfları ekleyin.</p>
-            <div style="display:flex; gap:5px; margin-bottom:5px;">
-                <select id="setup-grade-select"></select>
-                <select id="setup-section-select"></select>
-                <button type="button" class="btn-main" style="width:auto; margin:0; padding:10px 15px;" onclick="app.addSetupClass()"><i class="fas fa-plus"></i> Ekle</button>
-            </div>
-            <div id="setup-added-classes" style="display:flex; flex-direction:column; gap:5px; margin-bottom:12px;"></div>
-            <button class="btn-main" onclick="app.finishTeacherSetup()">Tamamla ve Giriş Yap</button>
-        </div>
-    </div>
-
     <div id="app-container" class="hidden">
         <div id="update-banner" class="hidden">
             <span>🚀 Yeni güncelleme mevcut!</span>
-          
             <a id="update-link" href="#" target="_blank">HEMEN İNDİR</a>
         </div>
         <header>
-            <div><i class="fas fa-user-circle"></i> <span id="display-name"></span></div>
+            <div>
+                <button id="social-add-btn" class="btn-main hidden" style="width:auto; display:inline-block; margin:0; padding:5px 12px; font-size:14px; border-radius:50%; margin-right:10px;" onclick="app.openSocialModal()"><i class="fas fa-plus"></i></button>
+                <i class="fas fa-user-circle"></i> <span id="display-name"></span>
+            </div>
             <div id="admin-btn" class="admin-badge hidden" onclick="app.navigate('admin')">ADMİN / MOD</div>
         </header>
         <main id="main-content"></main>
         <nav class="bottom-nav">
-        
             <div class="nav-item active" onclick="app.navigate('home', this)"><i class="fas fa-home"></i><span>Ana Sayfa</span></div>
+            <div class="nav-item" onclick="app.navigate('social', this)"><i class="fas fa-globe"></i><span>Sosyal</span></div>
             <div class="nav-item" onclick="app.navigate('messages', this)"><i class="fas fa-comments"></i><span>Mesajlar</span></div>
             <div class="nav-item hidden" id="nav-leader" onclick="app.navigate('leader', this)"><i class="fas fa-star"></i><span>Başkanlık</span></div>
             <div class="nav-item hidden" id="nav-teacher" onclick="app.navigate('teacher', this)"><i class="fas fa-chalkboard-teacher"></i><span>Öğretmen</span></div>
             <div class="nav-item" onclick="app.navigate('users', this)"><i class="fas fa-users"></i><span>Kullanıcılar</span></div>
-         
-            <div class="nav-item" onclick="app.openAIChat()"><i class="fas fa-robot" style="color:#8e44ad;"></i><span>Künefe AI</span></div>
-
             <div class="nav-item" onclick="app.navigate('settings', this)"><i class="fas fa-cog"></i><span>Ayarlar</span></div>
         </nav>
-  
+    </div>
+
+    <div id="social-post-modal" class="modal-bg hidden">
+        <div class="modal">
+            <h3>Sosyal Paylaşım Yap</h3>
+            <textarea id="social-post-text" placeholder="Ne düşünüyorsun kanka?" style="width:100%; height:100px; padding:10px; margin-top:10px; margin-bottom:10px; border-radius:10px; border:1.5px solid #eee; outline:none; font-family:inherit; resize:none; background:var(--card); color:var(--text);"></textarea>
+            
+            <label>Yayın Kapsamı:</label>
+            <select id="social-post-scope" onchange="app.onSocialScopeChange()">
+                <option value="all">Herkese Açık (Tüm Okullar)</option>
+                <option value="school">Sadece Kendi Okulum</option>
+                <option value="class">Sadece Kendi Sınıfım</option>
+                <option value="other-class">Kendi Okulumdan Başka Bir Sınıf</option>
+            </select>
+
+            <div id="social-post-other-class-selects" class="hidden" style="display:flex; gap:5px; margin-bottom:10px;">
+                <select id="social-post-grade"></select>
+                <select id="social-post-section"></select>
+            </div>
+
+            <label>Medya Ekle (Maks 25MB):</label>
+            <input type="file" id="social-post-file" style="padding:5px;">
+
+            <button class="btn-main" onclick="app.submitSocialPost()">Paylaş</button>
+            <button class="btn-danger" style="background:#888;" onclick="document.getElementById('social-post-modal').classList.add('hidden')">İptal</button>
+        </div>
     </div>
 
     <div id="admin-user-modal" class="modal-bg hidden">
         <div class="modal">
             <h3 id="edit-user-title">Kullanıcı Düzenle</h3>
             <div id="name-edit-area" class="hidden" style="margin-top:10px;">
-   
-              <label>Kullanıcı Adı Değiştir:</label>
+                <label>Kullanıcı Adı Değiştir:</label>
                 <input type="text" id="edit-username-input">
-     
                 <button class="btn-main" style="background:#2ecc71; margin-bottom:15px;" onclick="app.adminChangeUsername()">Adı Güncelle</button>
             </div>
+            <label id="edit-school-label">Okul:</label><select id="edit-school"></select>
+            <label>Sınıf ve Şube:</label>
+            <div style="display:flex; gap:5px;"><select id="edit-grade"></select><select id="edit-section"></select></div>
             
-            <div id="edit-student-classes-area">
-                <label id="edit-school-label">Okul:</label><select id="edit-school"></select>
-                <label>Sınıf ve Şube:</label>
-                <div style="display:flex; gap:5px;"><select id="edit-grade"></select><select id="edit-section"></select></div>
-            </div>
-
-            <div id="edit-teacher-classes-area" class="hidden" style="margin-top:10px;">
-                <label>Öğretmenin Sınıfları (Örn: 5-A, 6-B):</label>
-                <input type="text" id="edit-teacher-classes-input" placeholder="Örn: 5-A, 6-B">
-                <p style="font-size:10px; color:#666; margin-top:2px;">Sınıfları arasına virgül koyarak yazın.</p>
-            </div>
-            
-            <button id="leader-btn" class="btn-main hidden" style="margin-top:10px;" onclick="app.adminToggleRole('isLeader')">Sınıf Başkanı Yap/Al</button>
+            <button id="leader-btn" class="btn-main hidden" onclick="app.adminToggleRole('isLeader')">Sınıf Başkanı Yap/Al</button>
             <button id="teacher-btn" class="btn-teacher hidden" onclick="app.adminToggleRole('isTeacher')">Öğretmen Yap/Al</button>
             <button id="mod-btn" class="btn-mod hidden" onclick="app.adminToggleRole('isMod')">Moderatör Yap/Al</button>
             <button id="admin-make-btn" class="btn-admin hidden" onclick="app.adminToggleRole('isAdmin')">Admin Yap/Al</button>
             
-     
             <div id="admin-only-tools" class="hidden">
                 <button id="block-btn" class="btn-danger" onclick="app.adminUpdateStatus(true)">Ceza Ver (Engelle)</button>
                 <button id="unblock-btn" class="btn-success hidden" onclick="app.adminUpdateStatus(false)">Cezayı Kaldır</button>
@@ -197,57 +216,11 @@
         </div>
     </div>
 
-    <div id="ai-chat-window" class="hidden" style="position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg); z-index: 700; display: flex; flex-direction: column;">
-        <header style="background:#8e44ad; padding:15px; display:flex; align-items:center; color:white;">
-            <i class="fas fa-arrow-left" style="cursor:pointer; margin-right:15px;" onclick="document.getElementById('ai-chat-window').classList.add('hidden')"></i>
-            <span style="font-weight:bold;"><i class="fas fa-robot"></i> Künefe AI Yardımcısı</span>
-        </header>
-        <div class="msg-container" id="ai-chat-messages" style="flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column;"></div>
-        
-        <div id="ai-worksheet-selector" class="hidden" style="background:var(--card); padding:10px; border-top:1px solid #eee;">
-            <p style="font-size:12px; font-weight:bold; margin-bottom:5px;">Sınıf Kademesi Seç (Sadece Bu Kademeden Kağıtlar Çıkar):</p>
-            <select id="ai-grade-select" onchange="app.loadAIWorksheets()" style="margin-bottom:5px;">
-                <option value="">Seçiniz...</option>
-                <option value="1">1. Sınıf</option>
-                <option value="2">2. Sınıf</option>
-                <option value="3">3. Sınıf</option>
-                <option value="4">4. Sınıf</option>
-                <option value="5">5. Sınıf</option>
-                <option value="6">6. Sınıf</option>
-                <option value="7">7. Sınıf</option>
-                <option value="8">8. Sınıf</option>
-                <option value="9">9. Sınıf</option>
-                <option value="10">10. Sınıf</option>
-                <option value="11">11. Sınıf</option>
-                <option value="12">12. Sınıf</option>
-            </select>
-            <div id="ai-worksheet-list" style="max-height: 150px; overflow-y:auto;"></div>
-        </div>
-
-        <div style="padding:10px; display:flex; gap:5px; background:var(--card);">
-            <button class="btn-main" style="width:50px; background:#2ecc71; margin:0;" onclick="document.getElementById('ai-worksheet-selector').classList.toggle('hidden')"><i class="fas fa-plus"></i></button>
-            <input type="text" id="ai-msg-input" placeholder="Yapay zekaya sor..." style="margin:0; flex:1;">
-            <button class="btn-main" style="width:60px; background:#8e44ad; margin:0;" onclick="app.sendAIMessage()"><i class="fas fa-paper-plane"></i></button>
-        </div>
-    </div>
-
     <div id="verify-modal" class="modal-bg hidden">
         <div class="modal">
             <h3>Doğrulama</h3>
             <input type="text" id="verify-code" maxlength="4" style="text-align:center; font-size:24px;">
             <button class="btn-main" onclick="app.verifyAndFinish()">Onayla</button>
-        </div>
-    </div>
-
-    <div id="ai-modal" class="modal-bg hidden">
-        <div class="modal">
-            <h3 style="color:#8e44ad;"><i class="fas fa-magic"></i> Künefe AI Analizi</h3>
-            <div id="ai-loading" class="hidden" style="text-align:center; margin: 20px 0;">
-                <i class="fas fa-spinner fa-spin" style="font-size:30px; color:#8e44ad;"></i>
-                <p style="margin-top:10px; font-weight:bold;">Künefe AI belgenizi okuyor ve özetliyor...<br><span style="font-size:11px; color:#666;">(Dosya boyutuna göre birkaç saniye sürebilir)</span></p>
-            </div>
-            <div id="ai-result" style="margin-top:15px; font-size:14px; max-height: 50vh; overflow-y: auto; line-height: 1.5;"></div>
-            <button class="btn-main" style="margin-top:15px; background:#333;" onclick="document.getElementById('ai-modal').classList.add('hidden')">Kapat</button>
         </div>
     </div>
 
@@ -265,6 +238,7 @@
             messagingSenderId: "144133286740",
             appId: "1:144133286740:web:5ce1ad633fed06233376c1"
         };
+
         const fApp = initializeApp(firebaseConfig);
         const db = getFirestore(fApp);
         const storage = getStorage(fApp);
@@ -278,147 +252,18 @@
             selectedEditUser: null,
             activeUsers: new Set(),
             currentStaffMode: null,
-            setupClasses: [],
-
-            currentHomeUnsub: null,
-            currentHomeUnsub2: null,
-            currentWsUnsub: null,
+            staffClasses: [],
+            socialUnsub: null,
+            openReplyBoxes: new Set(),
 
             async init() {
-                const gSelects = [document.getElementById('reg-grade'), document.getElementById('edit-grade'), document.getElementById('setup-grade-select')];
+                const gSelects = [document.getElementById('reg-grade'), document.getElementById('edit-grade'), document.getElementById('staff-grade-select'), document.getElementById('social-post-grade')];
                 gSelects.forEach(s => { if(s) { s.innerHTML = ""; for(let i=1; i<=12; i++) s.innerHTML += `<option value="${i}">${i}. Sınıf</option>`; } });
-                const sSelects = [document.getElementById('reg-section'), document.getElementById('edit-section'), document.getElementById('setup-section-select')];
+                const sSelects = [document.getElementById('reg-section'), document.getElementById('edit-section'), document.getElementById('staff-section-select'), document.getElementById('social-post-section')];
                 sSelects.forEach(s => { if(s) { s.innerHTML = ""; "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => s.innerHTML += `<option value="${char}">${char}</option>`); } });
                 await this.fetchSchools();
                 this.listenForUpdates();
                 this.listenActiveStatus();
-            },
-
-            // YENİ EKLENEN YAPAY ZEKA SOHBET FONKSİYONLARI
-            openAIChat() {
-                document.getElementById('ai-chat-window').classList.remove('hidden');
-                const cont = document.getElementById('ai-chat-messages');
-                if(cont.innerHTML === "") {
-                    cont.innerHTML = `<div class="bubble msg-them" style="background:var(--card); align-self:flex-start;">Selam kanka!
-🚀 Yeni API anahtarım aktif. Bana bir şeyler sorabilir veya + butonuna basıp sınıf kademesi seçerek bana doğrudan çalışma kağıdı verebilirsin.
-Seni dinliyorum!</div>`;
-                }
-            },
-
-            async loadAIWorksheets() {
-                const grade = document.getElementById('ai-grade-select').value;
-                const list = document.getElementById('ai-worksheet-list');
-                if(!grade) { list.innerHTML = ""; return; }
-                list.innerHTML = "<p style='font-size:12px; color:#666;'>Çalışma kağıtları yükleniyor...</p>";
-                const q = query(collection(db, "images"), where("docType", "==", "worksheet"), where("school", "==", this.currentUser.school), where("grade", "==", grade));
-                const snap = await getDocs(q);
-                list.innerHTML = "";
-                if(snap.empty) {
-                    list.innerHTML = "<p style='font-size:12px; color:#d63031;'>Bu sınıfa ait sisteme yüklenmiş çalışma kağıdı bulunamadı.</p>";
-                    return;
-                }
-                snap.forEach(d => {
-                    const data = d.data();
-                    list.innerHTML += `<div style="padding:8px; border-bottom:1px solid #eee; font-size:13px; cursor:pointer; color:#2980b9; font-weight:bold;" onclick="app.feedWorksheetToAI('${data.url}', '${data.fileType}', '${data.fileName}')">
-                        <i class="fas fa-file-alt"></i> ${data.fileName || 'Çalışma Kağıdı'} -> Yapay Zekaya Gönder
-                    </div>`;
-                });
-            },
-
-            async feedWorksheetToAI(url, fileType, fileName) {
-                document.getElementById('ai-worksheet-selector').classList.add('hidden');
-                const cont = document.getElementById('ai-chat-messages');
-                
-                cont.innerHTML += `<div class="bubble msg-me" style="background:#ff9f43; color:white; align-self:flex-end;">
-                    <b>📄 ${fileName}</b> belgesini gönderdim.
-İçeriğini özetleyip soruları çözer misin?
-                </div>`;
-                cont.scrollTop = cont.scrollHeight;
-
-                const loadingId = "ai-load-" + Date.now();
-                cont.innerHTML += `<div class="bubble msg-them" id="${loadingId}" style="background:var(--card); align-self:flex-start;">
-                    <i class="fas fa-spinner fa-spin"></i> Belgeyi alıyorum ve okuyorum kanka, bekle...
-                </div>`;
-                cont.scrollTop = cont.scrollHeight;
-
-                try {
-                    const fetchurl = "https://corsproxy.io/?" + encodeURIComponent(url);
-                    const response = await fetch(fetchurl);
-                    if (!response.ok) throw new Error("Dosya proxy üzerinden çekilemedi.");
-                    const blob = await response.blob();
-                    const reader = new FileReader();
-                    reader.readAsDataURL(blob);
-                    reader.onloadend = async () => {
-                        const base64data = reader.result.split(',')[1];
-                        const apiKey = "AIzaSyDGnSwj7m93ea57bG5hbrXxu-bsNyxA7hg";
-                        const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-                        const aiPayload = {
-                            contents: [{
-                                parts: [
-                                     { text: "Sen akıllı bir asistansın. Gönderilen bu belgenin detaylı özetini çıkar, içindeki soruları her Sınıf seviyesinde adım adım çöz." },
-                                    { inline_data: { mime_type: fileType || "application/pdf", data: base64data } }
-                                ]
-                            }]
-                        };
-                        try {
-                            const aiResponse = await fetch(apiUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(aiPayload) });
-                            const aiData = await aiResponse.json();
-                            document.getElementById(loadingId).remove();
-                            if (aiData.error) {
-                                cont.innerHTML += `<div class="bubble msg-them" style="background:var(--card); align-self:flex-start; color:#d63031;">Hata: ${aiData.error.message}</div>`;
-                            } else if (aiData.candidates && aiData.candidates[0].content) {
-                                let text = aiData.candidates[0].content.parts[0].text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
-                                cont.innerHTML += `<div class="bubble msg-them" style="background:var(--card); align-self:flex-start;">${text}</div>`;
-                            }
-                            cont.scrollTop = cont.scrollHeight;
-                        } catch (err) {
-                            document.getElementById(loadingId).remove();
-                            cont.innerHTML += `<div class="bubble msg-them" style="background:var(--card); align-self:flex-start; color:#d63031;">API Bağlantı Hatası: ${err.message}</div>`;
-                        }
-                    };
-                } catch (error) {
-                    document.getElementById(loadingId).remove();
-                    cont.innerHTML += `<div class="bubble msg-them" style="background:var(--card); align-self:flex-start; color:#d63031;">Dosya Hatası: ${error.message}</div>`;
-                }
-            },
-
-            async sendAIMessage() {
-                const input = document.getElementById('ai-msg-input');
-                const text = input.value.trim();
-                if(!text) return;
-                input.value = "";
-
-                const cont = document.getElementById('ai-chat-messages');
-                cont.innerHTML += `<div class="bubble msg-me" style="background:#ff9f43; color:white; align-self:flex-end;">${text}</div>`;
-                cont.scrollTop = cont.scrollHeight;
-
-                const loadingId = "ai-load-" + Date.now();
-                cont.innerHTML += `<div class="bubble msg-them" id="${loadingId}" style="background:var(--card); align-self:flex-start;">
-                    <i class="fas fa-spinner fa-spin"></i> Düşünüyorum...
-                </div>`;
-                cont.scrollTop = cont.scrollHeight;
-
-                try {
-                    const apiKey = "AIzaSyDGnSwj7m93ea57bG5hbrXxu-bsNyxA7hg";
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-                    const aiPayload = {
-                        contents: [{ parts: [{ text: text }] }]
-                    };
-                    const aiResponse = await fetch(apiUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(aiPayload) });
-                    const aiData = await aiResponse.json();
-                    document.getElementById(loadingId).remove();
-
-                    if (aiData.error) {
-                        cont.innerHTML += `<div class="bubble msg-them" style="background:var(--card); align-self:flex-start; color:#d63031;">Hata: ${aiData.error.message}</div>`;
-                    } else if (aiData.candidates && aiData.candidates[0].content) {
-                        let respText = aiData.candidates[0].content.parts[0].text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
-                        cont.innerHTML += `<div class="bubble msg-them" style="background:var(--card); align-self:flex-start;">${respText}</div>`;
-                    }
-                    cont.scrollTop = cont.scrollHeight;
-                } catch(err) {
-                    document.getElementById(loadingId).remove();
-                    cont.innerHTML += `<div class="bubble msg-them" style="background:var(--card); align-self:flex-start; color:#d63031;">Hata: ${err.message}</div>`;
-                }
             },
 
             listenForUpdates() {
@@ -480,6 +325,8 @@ Seni dinliyorum!</div>`;
                     document.getElementById('staff-code1').placeholder = mode === 'teacher' ? "Öğretmen Kodu" : "İdareci Kodu";
                     document.getElementById('staff-code2').classList.toggle('hidden', mode === 'teacher');
                     
+                    document.getElementById('staff-class-area').classList.toggle('hidden', mode === 'manager');
+                    
                     if (mode === 'manager') {
                         const savedCode1 = localStorage.getItem('saved_manager_code1');
                         const savedCode2 = localStorage.getItem('saved_manager_code2');
@@ -489,45 +336,39 @@ Seni dinliyorum!</div>`;
                         document.getElementById('staff-code1').value = "";
                         document.getElementById('staff-code2').value = "";
                     }
+                    
+                    this.staffClasses = [];
+                    const addedCont = document.getElementById('staff-added-classes');
+                    if(addedCont) addedCont.innerHTML = "";
                 }
             },
 
-            // ÖĞRETMEN SINIF EKLEME FONKSİYONLARI (KAYITTAN SONRA)
-            addSetupClass() {
-                const g = document.getElementById('setup-grade-select').value;
-                const s = document.getElementById('setup-section-select').value;
+            addStaffClass() {
+                const g = document.getElementById('staff-grade-select').value;
+                const s = document.getElementById('staff-section-select').value;
                 if(!g || !s) return;
                 const classStr = `${g}-${s}`;
-                if(this.setupClasses.includes(classStr)) return alert("Bu sınıf zaten eklendi!");
-                this.setupClasses.push(classStr);
-                this.renderSetupClasses();
+                if(this.staffClasses.includes(classStr)) return alert("Bu sınıf zaten eklendi!");
+                this.staffClasses.push(classStr);
+                this.renderStaffClasses();
             },
 
-            removeSetupClass(c) {
-                this.setupClasses = this.setupClasses.filter(x => x !== c);
-                this.renderSetupClasses();
+            removeStaffClass(c) {
+                this.staffClasses = this.staffClasses.filter(x => x !== c);
+                this.renderStaffClasses();
             },
 
-            renderSetupClasses() {
-                const cont = document.getElementById('setup-added-classes');
+            renderStaffClasses() {
+                const cont = document.getElementById('staff-added-classes');
                 if(!cont) return;
                 cont.innerHTML = "";
-                this.setupClasses.forEach(c => {
+                this.staffClasses.forEach(c => {
                     const [g, s] = c.split('-');
                     cont.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; border-radius:5px; font-size:12px;">
                         <span><b>Sınıf:</b> ${g}. Sınıf - ${s} Şubesi</span>
-                        <i class="fas fa-times" style="color:#d63031; cursor:pointer;" onclick="app.removeSetupClass('${c}')"></i>
+                        <i class="fas fa-times" style="color:#d63031; cursor:pointer;" onclick="app.removeStaffClass('${c}')"></i>
                     </div>`;
                 });
-            },
-
-            async finishTeacherSetup() {
-                if (this.setupClasses.length === 0) return alert("Devam etmek için en az bir sınıf eklemelisiniz!");
-                const grades = this.setupClasses.map(c => c.split('-')[0]);
-                const sections = this.setupClasses.map(c => c.split('-')[1]);
-                this.tempUser.grade = grades.join(',');
-                this.tempUser.section = sections.join(',');
-                await this.finalizeRegistration();
             },
 
             async startRegister() {
@@ -553,18 +394,22 @@ Seni dinliyorum!</div>`;
                 const school = document.getElementById('staff-school').value;
                 const code1 = document.getElementById('staff-code1').value.trim();
                 const code2 = document.getElementById('staff-code2').value.trim();
+
+                if (this.currentStaffMode === 'teacher' && this.staffClasses.length === 0) return alert("Lütfen en az bir sınıf ve şube ekleyin!");
                 
-                const grades = ['Tümü'];
-                const sections = ['Tümü'];
+                const grades = this.currentStaffMode === 'manager' ? ['Tümü'] : this.staffClasses.map(c => c.split('-')[0]);
+                const sections = this.currentStaffMode === 'manager' ? ['Tümü'] : this.staffClasses.map(c => c.split('-')[1]);
 
                 if (!username || !pass || !email || !code1) return alert("Lütfen tüm alanları doldurun!");
                 if (this.currentStaffMode === 'manager' && !code2) return alert("İdareci için 2. şifre zorunludur!");
 
                 const userDoc = await getDoc(doc(db, "users", username));
+
                 if (userDoc.exists()) {
                     const uData = userDoc.data();
                     if (uData.password !== pass) return alert("Hatalı şifre!");
                     if (uData.isBlocked) return alert("Cezalı olduğunuz için giriş yapamazsınız!");
+                    
                     if (this.currentStaffMode === 'manager' && uData.isMod) {
                         let count = (uData.managerLoginCount || 0) + 1;
                         await updateDoc(doc(db, "users", username), { managerLoginCount: count });
@@ -615,9 +460,11 @@ Seni dinliyorum!</div>`;
                         isAdmin: false, rank: "", rankColor: "#ff9f43",
                         managerLoginCount: 0
                     };
+                    
                     this.tempCodeIdToBurn = validDoc.id;
                     this.tempAction = 'register';
                     this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
+                    
                     if (this.currentStaffMode === 'manager') {
                         localStorage.setItem('saved_manager_code1', code1);
                         localStorage.setItem('saved_manager_code2', code2);
@@ -635,25 +482,15 @@ Seni dinliyorum!</div>`;
                         this.currentUser = this.tempUser;
                         this.launch();
                     } else {
-                        if (this.tempUser.isTeacher) {
-                            document.getElementById('verify-modal').classList.add('hidden');
-                            document.getElementById('teacher-setup-modal').classList.remove('hidden');
-                            this.setupClasses = [];
-                            return; 
+                        await setDoc(doc(db, "users", this.tempUser.username), this.tempUser);
+                        if (this.tempCodeIdToBurn) {
+                            await updateDoc(doc(db, "registration_codes", this.tempCodeIdToBurn), { usedBy: this.tempUser.username });
                         }
-                        await this.finalizeRegistration();
+                        location.reload();
                     }
                 } else {
                     alert("Doğrulama kodu hatalı!");
                 }
-            },
-
-            async finalizeRegistration() {
-                await setDoc(doc(db, "users", this.tempUser.username), this.tempUser);
-                if (this.tempCodeIdToBurn) {
-                    await updateDoc(doc(db, "registration_codes", this.tempCodeIdToBurn), { usedBy: this.tempUser.username });
-                }
-                location.reload();
             },
 
             async login() {
@@ -692,15 +529,11 @@ Seni dinliyorum!</div>`;
                     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
                     el.classList.add('active');
                 }
-                
-                if(this.currentHomeUnsub) { this.currentHomeUnsub();
-                    this.currentHomeUnsub = null; }
-                if(this.currentHomeUnsub2) { this.currentHomeUnsub2();
-                    this.currentHomeUnsub2 = null; }
-                if(this.currentWsUnsub) { this.currentWsUnsub();
-                    this.currentWsUnsub = null; }
+                document.getElementById('social-add-btn').classList.add('hidden');
+                if(this.socialUnsub) { this.socialUnsub(); this.socialUnsub = null; }
 
                 if(page === 'home') this.renderHome();
+                if(page === 'social') this.renderSocial();
                 if(page === 'messages') this.renderMessageList();
                 if(page === 'leader') this.renderLeaderPanel();
                 if(page === 'teacher') this.renderTeacherPanel();
@@ -709,234 +542,269 @@ Seni dinliyorum!</div>`;
                 if(page === 'admin') this.renderAdminPanel();
             },
 
-            renderHome() {
+            async renderHome() {
                 const main = document.getElementById('main-content');
                 main.innerHTML = `<h3>Ana Sayfa</h3>
-                    <div id="home-buttons" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px; margin-top:15px;">
-                        <button class="btn-main" onclick="app.showHomeTab('homeworks')"><i class="fas fa-book"></i> Ödevler</button>
-                        <button class="btn-main" style="background:#3498db;"
-                            onclick="app.showHomeTab('announcements')"><i class="fas fa-bullhorn"></i> Duyurular</button>
-                        <button class="btn-main" style="background:#2ecc71;"
-                            onclick="app.showHomeTab('worksheets')"><i class="fas fa-file-alt"></i> Çalışma Kağıtları</button>
-                        <button class="btn-main" style="background:#e67e22;"
-                            onclick="app.showHomeTab('exams')"><i class="fas fa-calendar-alt"></i> Sınav Tarihleri</button>
-                    </div>
-                    <div id="home-content-area">
-                        <p style="text-align:center; color:#999; font-size:13px; margin-top:20px;">Lütfen görmek istediğiniz kategoriyi seçin.</p>
-                    </div>`;
-            },
-
-            showHomeTab(tab) {
-                if(this.currentHomeUnsub) { this.currentHomeUnsub();
-                    this.currentHomeUnsub = null; }
-                if(this.currentHomeUnsub2) { this.currentHomeUnsub2();
-                    this.currentHomeUnsub2 = null; }
-                if(this.currentWsUnsub) { this.currentWsUnsub();
-                    this.currentWsUnsub = null; }
+                                  <div id="announcement-list" style="margin-bottom:15px;"></div>
+                                  <div id="image-list" style="margin-bottom:15px;"></div>
+                                  <div id="homework-list"></div>`;
                 
-                const area = document.getElementById('home-content-area');
-                area.innerHTML = "<p style='font-size:13px; color:#666;'>Yükleniyor...</p>";
-
-                if(tab === 'homeworks') {
-                    area.innerHTML = '<div id="homework-list"></div>';
-                    this.currentHomeUnsub = onSnapshot(collection(db, "homeworks"), (snap) => {
-                        const list = document.getElementById('homework-list');
-                        if(!list) return;
-                        list.innerHTML = "";
-                
-                        const now = new Date().getTime();
-                        snap.forEach(docSnap => {
-                            const h = docSnap.data();
-               
-                            if(this.checkAccess(h)) {
-                                const deadline = new Date(h.deadline).getTime();
-                                if(now > deadline) 
-                                    { deleteDoc(doc(db, "homeworks", docSnap.id)); } 
-                                else {
-                                    const isUrgent = ((deadline - now) / (1000 * 60 * 60)) <= 24;
-                                    list.innerHTML += `<div class="homework-card">${isUrgent ? '<div class="warning-icon">!</div>' : ''}<h4>${h.title}</h4><p><b>Ders:</b> ${h.subject}</p><p><b>Kitap:</b> ${h.book}</p><p><b>Sayfalar:</b> ${h.pages}</p><p style="margin-top:5px;
-                                        font-size:11px; color:#666;"><b>Bitiş:</b> ${h.deadline.replace('T', ' ')}</p></div>`;
-                                }
-                            }
-                        });
-            
-                        if(list.innerHTML === "") list.innerHTML = "<p style='font-size:13px; color:#999;'>Şu an aktif ödev yok.</p>";
-                    });
-                }
-                else if(tab === 'announcements') {
-                    area.innerHTML = '<div id="announcement-list"></div><div id="general-image-list"></div>';
-                
-                    this.currentHomeUnsub = onSnapshot(collection(db, "announcements"), (snap) => {
-                        const list = document.getElementById('announcement-list');
-                        if(!list) return;
-                        list.innerHTML = "";
-            
-                        snap.forEach(d => {
-                            const data = d.data();
-                            if(this.checkAccess(data)) {
-                                list.innerHTML += `<div class="homework-card" style="border-left-color: #3498db;"><h4 style="color:#3498db;"><i class="fas fa-bullhorn"></i> Duyuru</h4><p style="margin-top:5px; font-size:15px;">${data.text}</p></div>`;
-                            }
-                        });
-                    });
-                    this.currentHomeUnsub2 = onSnapshot(collection(db, "images"), (snap) => {
-                        const list = document.getElementById('general-image-list');
-                        if(!list) return;
-                        list.innerHTML = "";
-               
-                        snap.forEach(d => {
-                            const data = d.data();
-                            if((!data.docType || data.docType === 'general') && this.checkAccess(data)) {
-                                list.innerHTML += this.renderMediaCard(data, 'Yayınlanan İçerik', '#3498db');
-                            }
-                        });
-                   
-                     });
-                }
-                else if(tab === 'worksheets') {
-                    let gradeOpts = '<option value="">Kaçıncı Sınıfsınız? (Seçiniz)</option>';
-                    for(let i=1; i<=12; i++) gradeOpts += `<option value="${i}">${i}. Sınıf</option>`;
-                    area.innerHTML = `
-                        <select id="home-ws-grade" onchange="app.loadWorksheets()">${gradeOpts}</select>
-                        <div id="worksheet-list"></div>
-                    `;
-                }
-                else if(tab === 'exams') {
-                    area.innerHTML = '<div id="exam-list"></div>';
-                    const q = query(collection(db, "images"), where("docType", "==", "exam_date"), where("school", "==", this.currentUser.school));
-                    this.currentHomeUnsub = onSnapshot(q, (snap) => {
-                        const list = document.getElementById('exam-list');
-                        if(!list) return;
-                        list.innerHTML = "";
-                 
-                        snap.forEach(d => {
-                            const data = d.data();
-                            list.innerHTML += this.renderMediaCard(data, 'Sınav Tarihleri', '#e67e22');
-                        });
-   
-                         if(list.innerHTML === "") list.innerHTML = "<p style='font-size:13px; color:#999;'>Okulunuza ait sınav tarihi dosyası bulunmuyor.</p>";
-                    });
-                }
-            },
-
-            loadWorksheets() {
-                const grade = document.getElementById('home-ws-grade').value;
-                const list = document.getElementById('worksheet-list');
-                if(!grade) { list.innerHTML = ""; return; }
-                
-                if(this.currentWsUnsub) this.currentWsUnsub();
-                const q = query(collection(db, "images"), where("docType", "==", "worksheet"), where("school", "==", this.currentUser.school), where("grade", "==", grade));
-                this.currentWsUnsub = onSnapshot(q, (snap) => {
-                    list.innerHTML = "";
+                onSnapshot(collection(db, "announcements"), (snap) => {
+                    const cont = document.getElementById('announcement-list');
+                    if(!cont) return;
+                    cont.innerHTML = "";
                     snap.forEach(d => {
                         const data = d.data();
-                        list.innerHTML += this.renderMediaCard(data, 'Çalışma Kağıdı', '#2ecc71');
+                        if(this.checkAccess(data)) {
+                            cont.innerHTML += `<div class="homework-card" style="border-left-color: #3498db;">
+                                                <h4 style="color:#3498db;"><i class="fas fa-bullhorn"></i> Duyuru</h4>
+                                                <p style="margin-top:5px; font-size:15px;">${data.text}</p>
+                                               </div>`;
+                        }
                     });
-                    if(list.innerHTML === "") list.innerHTML = "<p style='font-size:13px; color:#999;'>Bu sınıf için çalışma kağıdı bulunmuyor.</p>";
                 });
-            },
 
-            renderMediaCard(data, title, color) {
-                let mediaHtml = "";
-                if(data.fileType && data.fileType.startsWith("image/")) {
-                    mediaHtml = `<img src="${data.url}" class="media-preview">`;
-                } else if(data.fileType && data.fileType.startsWith("video/")) {
-                    mediaHtml = `<video src="${data.url}" controls class="media-preview"></video>`;
-                } else if(data.fileType && data.fileType.startsWith("audio/")) {
-                    mediaHtml = `<audio src="${data.url}" controls style="width:100%; margin-top:10px;"></audio>`;
-                } else {
-                    mediaHtml = `<a href="${data.url}" target="_blank" style="display:block; margin-top:10px; color:${color}; font-weight:bold;"><i class="fas fa-file-download"></i> Dosyayı İndir (${data.fileName || 'Belge'})</a>`;
-                }
+                onSnapshot(collection(db, "images"), (snap) => {
+                    const cont = document.getElementById('image-list');
+                    if(!cont) return;
+                    cont.innerHTML = "";
+                    snap.forEach(d => {
+                        const data = d.data();
+                        if(this.checkAccess(data)) {
+                            let mediaHtml = "";
+                            if(data.fileType && data.fileType.startsWith("image/")) {
+                                mediaHtml = `<img src="${data.url}" class="media-preview">`;
+                            } else if(data.fileType && data.fileType.startsWith("video/")) {
+                                mediaHtml = `<video src="${data.url}" controls class="media-preview"></video>`;
+                            } else if(data.fileType && data.fileType.startsWith("audio/")) {
+                                mediaHtml = `<audio src="${data.url}" controls style="width:100%; margin-top:10px;"></audio>`;
+                            } else {
+                                mediaHtml = `<a href="${data.url}" target="_blank" style="display:block; margin-top:10px; color:#2ecc71; font-weight:bold;"><i class="fas fa-file-download"></i> Dosyayı İndir (${data.fileName || 'Belge'})</a>`;
+                            }
 
-                let aiButtonHtml = "";
-                if (data.fileType && (data.fileType.startsWith("image/") || data.fileType === "application/pdf")) {
-                    aiButtonHtml = `<button class="btn-main" style="background: #8e44ad; margin-top: 10px; font-size: 13px;"
-                        onclick="app.scanWithAI('${data.url}', '${data.fileType}')"><i class="fas fa-robot"></i> Künefe AI ile Tara ve Özetle</button>`;
-                }
+                            cont.innerHTML += `<div class="homework-card" style="border-left-color: #2ecc71;">
+                                                <h4 style="color:#2ecc71;"><i class="fas fa-paperclip"></i> Yayınlanan İçerik</h4>
+                                                ${data.text ? `<p style="margin-bottom:5px;">${data.text}</p>` : ''}
+                                                ${mediaHtml}
+                                               </div>`;
+                        }
+                    });
+                });
 
-                return `<div class="homework-card" style="border-left-color: ${color};">
-                            <h4 style="color:${color};"><i class="fas fa-paperclip"></i> ${title}</h4>
-                            ${data.text ? `<p style="margin-bottom:5px;">${data.text}</p>` : ''}
-                            ${mediaHtml}
-                            ${aiButtonHtml}
-                        </div>`;
+                onSnapshot(collection(db, "homeworks"), (snap) => {
+                    const list = document.getElementById('homework-list');
+                    if(!list) return;
+                    list.innerHTML = "";
+                    const now = new Date().getTime();
+                    snap.forEach(docSnap => {
+                        const h = docSnap.data();
+                        if(this.checkAccess(h)) {
+                            const deadline = new Date(h.deadline).getTime();
+                            if(now > deadline) { 
+                                deleteDoc(doc(db, "homeworks", docSnap.id)); 
+                            } else {
+                                const isUrgent = ((deadline - now) / (1000 * 60 * 60)) <= 24;
+                                list.innerHTML += `<div class="homework-card">${isUrgent ? '<div class="warning-icon">!</div>' : ''}<h4>${h.title}</h4><p><b>Ders:</b> ${h.subject}</p><p><b>Kitap:</b> ${h.book}</p><p><b>Sayfalar:</b> ${h.pages}</p><p style="margin-top:5px; font-size:11px; color:#666;"><b>Bitiş:</b> ${h.deadline.replace('T', ' ')}</p></div>`;
+                            }
+                        }
+                    });
+                    if(list.innerHTML === "" && document.getElementById('announcement-list').innerHTML === "" && document.getElementById('image-list').innerHTML === "") {
+                        list.innerHTML = "<p>Şu an herhangi bir akış yok!</p>";
+                    }
+                });
             },
 
             checkAccess(data) {
                 if(data.targetType === "all-schools") return true;
                 if(data.targetType === "school-all" && data.school === this.currentUser.school) return true;
-                
-                const myGrades = this.currentUser.grade ? this.currentUser.grade.split(',') : [];
-                const mySections = this.currentUser.section ? this.currentUser.section.split(',') : [];
-                const myClasses = [];
-                for(let i=0; i<myGrades.length; i++) {
-                    if(myGrades[i] && mySections[i]) myClasses.push(`${myGrades[i]}-${mySections[i]}`);
-                }
-                
-                const dataClass = `${data.grade}-${data.section}`;
-                if(data.school === this.currentUser.school && myClasses.includes(dataClass)) return true;
-                
                 if(data.school === this.currentUser.school && data.grade === this.currentUser.grade && data.section === this.currentUser.section) return true;
                 return false;
             },
 
-            async scanWithAI(url, fileType) {
-                const modal = document.getElementById('ai-modal');
-                const loading = document.getElementById('ai-loading');
-                const resultDiv = document.getElementById('ai-result');
+            /* Forum / Sosyal Medya Fonksiyonları kanka */
+            renderSocial() {
+                document.getElementById('social-add-btn').classList.remove('hidden');
+                const main = document.getElementById('main-content');
+                main.innerHTML = `<h3>Sosyal Akış</h3><div id="social-feed" style="margin-top:10px;"></div>`;
                 
-                modal.classList.remove('hidden');
-                loading.classList.remove('hidden');
-                resultDiv.innerHTML = "";
-                try {
-                    const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(url);
-                    const response = await fetch(proxyUrl);
+                const q = query(collection(db, "social_posts"), orderBy("createdAt", "desc"));
+                this.socialUnsub = onSnapshot(q, (snap) => {
+                    const feed = document.getElementById('social-feed');
+                    if(!feed) return;
+                    feed.innerHTML = "";
                     
-                    if (!response.ok) throw new Error("Dosya proxy üzerinden çekilemedi.");
-                    
-                    const blob = await response.blob();
-                    const reader = new FileReader();
-                    reader.readAsDataURL(blob);
-                    reader.onloadend = async () => {
-                        const base64data = reader.result.split(',')[1];
-                        const apiKey = "AIzaSyDGnSwj7m93ea57bG5hbrXxu-bsNyxA7hg"; // YENİ API KEY BURADA
-                        const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-001:generateContent?key=${apiKey}`;
-                        const aiPayload = {
-                            contents: [{
-                                parts: [
-                                   { text: "Sen 'Künefe AI' adında akıllı ve yardımcı bir yapay zekasın. Bu dosyadaki ders notlarının detaylı ama anlaşılır bir özetini çıkar. Eğer bu dosyada sorular varsa adım adım çözümünü ve açıklamasını yap. Yanıtını tamamen Türkçe ve 7. sınıf seviyesindeki bir öğrencinin anlayabileceği akıcılıkta ver." },
-                                    { inline_data: { mime_type: fileType, data: base64data } }
-                                ]
-                            }]
-                        };
-                        try {
-                            const aiResponse = await fetch(apiUrl, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify(aiPayload)
-                            });
-                            const aiData = await aiResponse.json();
-                            loading.classList.add('hidden');
-
-                            if (aiData.error) {
-                                resultDiv.innerHTML = `<span style="color:#d63031;"><b>Hata:</b> ${aiData.error.message}</span>`;
-                            } else if (aiData.candidates && aiData.candidates[0].content) {
-                                let text = aiData.candidates[0].content.parts[0].text;
-                                text = text.replace(/\*\*(.*?)\*\*/g, '<b style="color:#8e44ad;">$1</b>')
-                                           .replace(/\*(.*?)\*/g, '<i>$1</i>')
-                                           .replace(/\n/g, '<br>');
-                                resultDiv.innerHTML = text;
+                    snap.forEach(docSnap => {
+                        const post = docSnap.data();
+                        const postId = docSnap.id;
+                        
+                        // Kapsam / Filtreleme Kontrolleri
+                        if(post.scope === 'school' && post.school !== this.currentUser.school) return;
+                        if(post.scope === 'class' && (post.school !== this.currentUser.school || post.grade !== this.currentUser.grade || post.section !== this.currentUser.section)) return;
+                        if(post.scope === 'other-class' && (post.school !== this.currentUser.school || post.grade !== this.currentUser.grade || post.section !== this.currentUser.section)) return;
+                        
+                        let mediaHtml = "";
+                        if(post.fileUrl) {
+                            if(post.fileType && post.fileType.startsWith("image/")) {
+                                mediaHtml = `<img src="${post.fileUrl}" class="media-preview">`;
+                            } else if(post.fileType && post.fileType.startsWith("video/")) {
+                                mediaHtml = `<video src="${post.fileUrl}" controls class="media-preview"></video>`;
                             } else {
-                                resultDiv.innerHTML = "Sonuç alınamadı veya dosya okunamadı.";
+                                mediaHtml = `<a href="${post.fileUrl}" target="_blank" style="display:block; margin-top:5px; color:#ff9f43; font-weight:bold;"><i class="fas fa-file-download"></i> ${post.fileName || 'Eklenti Dosyası'}</a>`;
                             }
-                        } catch (err) {
-                            loading.classList.add('hidden');
-                            resultDiv.innerHTML = `<span style="color:#d63031;"><b>API Bağlantı Hatası:</b> ${err.message}</span>`;
                         }
-                    };
-                } catch (error) {
-                    loading.classList.add('hidden');
-                    resultDiv.innerHTML = `<span style="color:#d63031;"><b>Dosya Okuma Hatası:</b> İçerik yüklenemedi. Dosya çok büyük olabilir veya proxy engeline takılmış olabilir. (${error.message})</span>`;
+
+                        // Silme Butonu Görünürlük Kontrolü Hiyerarşisi
+                        const lowerName = this.currentUser.username.toLowerCase();
+                        const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
+                        let canDelete = false;
+                        
+                        if(isRealAdmin) canDelete = true;
+                        else if(this.currentUser.isMod && post.school === this.currentUser.school) canDelete = true;
+                        else if(this.currentUser.isTeacher && post.school === this.currentUser.school && this.currentUser.grade.split(',').includes(post.grade) && this.currentUser.section.split(',').includes(post.section)) canDelete = true;
+                        else if(post.sender === this.currentUser.username) canDelete = true;
+
+                        let delHtml = canDelete ? `<i class="fas fa-trash del-hw" onclick="app.deleteSocialPost('${postId}', '${post.storagePath || ''}')"></i>` : "";
+
+                        let scopeText = "🌍 Herkese Açık";
+                        if(post.scope === 'school') scopeText = `🏫 ${post.school}`;
+                        if(post.scope === 'class' || post.scope === 'other-class') scopeText = `👥 ${post.grade}/${post.section}`;
+
+                        feed.innerHTML += `
+                            <div class="social-card">
+                                ${delHtml}
+                                <div class="social-header">
+                                    <span class="social-user"><i class="fas fa-user"></i> ${post.sender}</span>
+                                    <span class="social-scope">${scopeText}</span>
+                                </div>
+                                <div class="social-body">${post.text}</div>
+                                ${mediaHtml}
+                                <div class="social-footer">
+                                    <span class="social-action" onclick="app.toggleReplyBox('${postId}')"><i class="fas fa-comment"></i> Yanıtlar</span>
+                                </div>
+                                <div id="reply-box-${postId}" class="reply-box ${this.openReplyBoxes.has(postId) ? '' : 'hidden'}">
+                                    <div id="reply-list-${postId}"></div>
+                                    <div style="display:flex; gap:5px; margin-top:8px;">
+                                        <input type="text" id="reply-input-${postId}" placeholder="Yanıt yaz kanka..." style="margin:0; padding:8px;">
+                                        <button class="btn-main" style="width:auto; margin:0; padding:8px 15px;" onclick="app.submitSocialReply('${postId}')">Gönder</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        this.listenSocialReplies(postId);
+                    });
+                    if(feed.innerHTML === "") feed.innerHTML = "<p style='font-size:13px; color:#999; text-align:center;'>Henüz forumda paylaşım yok.</p>";
+                });
+            },
+
+            openSocialModal() {
+                document.getElementById('social-post-modal').classList.remove('hidden');
+                document.getElementById('social-post-text').value = "";
+                document.getElementById('social-post-file').value = "";
+                document.getElementById('social-post-scope').value = "all";
+                document.getElementById('social-post-other-class-selects').classList.add('hidden');
+            },
+
+            onSocialScopeChange() {
+                const scope = document.getElementById('social-post-scope').value;
+                document.getElementById('social-post-other-class-selects').classList.toggle('hidden', scope !== 'other-class');
+            },
+
+            async submitSocialPost() {
+                const text = document.getElementById('social-post-text').value.trim();
+                const scope = document.getElementById('social-post-scope').value;
+                const fileInput = document.getElementById('social-post-file');
+                
+                if(!text && !fileInput.files.length) return alert("Boş paylaşım yapılamaz kanka!");
+
+                let grade = this.currentUser.grade;
+                let section = this.currentUser.section;
+
+                if(scope === 'other-class') {
+                    grade = document.getElementById('social-post-grade').value;
+                    section = document.getElementById('social-post-section').value;
                 }
+
+                let postData = {
+                    text, scope,
+                    school: this.currentUser.school,
+                    grade, section,
+                    sender: this.currentUser.username,
+                    createdAt: serverTimestamp()
+                };
+
+                if(fileInput.files.length) {
+                    const file = fileInput.files[0];
+                    if(file.size > 25 * 1024 * 1024) return alert("Dosya boyutu 25MB sınırını aşamaz kanka!");
+
+                    const storagePath = `social/${Date.now()}_${file.name}`;
+                    const storageRef = ref(storage, storagePath);
+                    try {
+                        alert("Dosya yükleniyor...");
+                        const snapshot = await uploadBytes(storageRef, file);
+                        const downloadUrl = await getDownloadURL(snapshot.ref);
+                        postData.fileUrl = downloadUrl;
+                        postData.fileName = file.name;
+                        postData.fileType = file.type;
+                        postData.storagePath = storagePath;
+                    } catch(e) {
+                        return alert("Dosya yüklenirken hata oluştu!");
+                    }
+                }
+
+                await addDoc(collection(db, "social_posts"), postData);
+                document.getElementById('social-post-modal').classList.add('hidden');
+            },
+
+            async deleteSocialPost(postId, storagePath) {
+                if(confirm("Bu paylaşımı forumdan kaldırmak istiyor musun?")) {
+                    if(storagePath) {
+                        const fileRef = ref(storage, storagePath);
+                        await deleteObject(fileRef).catch(e => console.log("Dosya zaten silinmiş."));
+                    }
+                    await deleteDoc(doc(db, "social_posts", postId));
+                }
+            },
+
+            toggleReplyBox(postId) {
+                const box = document.getElementById(`reply-box-${postId}`);
+                if(box.classList.contains('hidden')) {
+                    box.classList.remove('hidden');
+                    this.openReplyBoxes.add(postId);
+                } else {
+                    box.classList.add('hidden');
+                    this.openReplyBoxes.delete(postId);
+                }
+            },
+
+            listenSocialReplies(postId) {
+                const q = query(collection(db, "social_posts", postId, "replies"), orderBy("createdAt", "asc"));
+                onSnapshot(q, (snap) => {
+                    const list = document.getElementById(`reply-list-${postId}`);
+                    if(!list) return;
+                    list.innerHTML = "";
+                    snap.forEach(d => {
+                        const reply = d.data();
+                        list.innerHTML += `
+                            <div class="reply-item">
+                                <span class="reply-user">${reply.sender}:</span> ${reply.text}
+                            </div>
+                        `;
+                    });
+                });
+            },
+
+            async submitSocialReply(postId) {
+                const input = document.getElementById(`reply-input-${postId}`);
+                const text = input.value.trim();
+                if(!text) return;
+
+                await addDoc(collection(db, "social_posts", postId, "replies"), {
+                    text,
+                    sender: this.currentUser.username,
+                    createdAt: serverTimestamp()
+                });
+                input.value = "";
             },
 
             buildUserBadges(u) {
@@ -959,6 +827,7 @@ Seni dinliyorum!</div>`;
                 const snap = await getDocs(collection(db, "users"));
                 snap.forEach(uDoc => {
                     const u = uDoc.data();
+                    if(u.username === this.currentUser.username) return; // Sosyal listesi, admin paneli değil kanka
                     const item = document.createElement('div');
                     item.className = 'user-item';
                     
@@ -967,7 +836,6 @@ Seni dinliyorum!</div>`;
                     const badgesHtml = this.buildUserBadges(u);
 
                     item.innerHTML = `<span><span class="status-dot ${dotClass}"></span><b>${u.username}</b> ${badgesHtml}</span><small>${u.school}</small>`;
-  
                     item.onclick = () => this.openChat(u.username);
                     document.getElementById('full-user-list').appendChild(item);
                 });
@@ -977,21 +845,22 @@ Seni dinliyorum!</div>`;
                 document.getElementById('main-content').innerHTML = `
                     <h3>Başkanlık Paneli</h3>
                     <div style="background:var(--card); padding:15px; border-radius:15px; margin-top:10px; margin-bottom:15px;">
-                       
                         <p style="margin-bottom:8px;"><b>1. Ödev Gönderme</b></p>
                         <input id="hw-title" placeholder="Ödevin Adı"><input id="hw-subject" placeholder="Ders"><input id="hw-book" placeholder="Kitap"><input id="hw-pages" placeholder="Sayfalar"><label style="font-size:12px;">Bitiş Tarihi:</label><input type="datetime-local" id="hw-date"><button class="btn-main" onclick="app.addHomework()">Ödev Paylaş</button>
                     </div>
+                    
                     <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
-            
                         <p style="margin-bottom:8px;"><b>2. Sınıfa Duyuru Ekle</b></p>
                         <input id="ann-text" placeholder="Duyuru metnini yazın...">
                         <button class="btn-main" style="background:#3498db;" onclick="app.addLeaderAnnouncement()">Duyuruyu Yayınla</button>
                     </div>
+
                     <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
                         <p style="margin-bottom:8px;"><b>3. Sınıfa Dosya/Görsel Yükle (Maks 100MB)</b></p>
                         <input type="file" id="leader-file-input" style="padding:5px;">
                         <button class="btn-main" style="background:#2ecc71;" onclick="app.uploadUniversalFile('leader-file-input', 'leader')">İçeriği Yükle</button>
                     </div>
+
                     <div style="background:var(--card); padding:15px; border-radius:15px;">
                         <p style="margin-bottom:10px;"><b>4. Yayınlanan İçerikleri Yönet / Kaldır</b></p>
                         <div id="leader-management-list"></div>
@@ -1015,9 +884,10 @@ Seni dinliyorum!</div>`;
                 annSnap.forEach(d => {
                     html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:13px;">
                                 <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><b>Duyuru:</b> ${d.data().text}</span>
-                               <i class="fas fa-trash" style="color:#d63031; cursor:pointer; margin-left:10px;" onclick="app.deleteItem('announcements', '${d.id}')"></i>
+                                <i class="fas fa-trash" style="color:#d63031; cursor:pointer; margin-left:10px;" onclick="app.deleteItem('announcements', '${d.id}')"></i>
                              </div>`;
                 });
+
                 const imgSnap = await getDocs(query(collection(db, "images"), ...currentFilter));
                 imgSnap.forEach(d => {
                     html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:13px;">
@@ -1025,6 +895,7 @@ Seni dinliyorum!</div>`;
                                 <i class="fas fa-trash" style="color:#d63031; cursor:pointer; margin-left:10px;" onclick="app.deleteItem('images', '${d.id}', '${d.data().storagePath || ''}')"></i>
                              </div>`;
                 });
+
                 const hwSnap = await getDocs(query(collection(db, "homeworks"), ...currentFilter));
                 hwSnap.forEach(d => {
                     html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:13px;">
@@ -1032,6 +903,7 @@ Seni dinliyorum!</div>`;
                                 <i class="fas fa-trash" style="color:#d63031; cursor:pointer; margin-left:10px;" onclick="app.deleteItem('homeworks', '${d.id}')"></i>
                              </div>`;
                 });
+
                 listCont.innerHTML = html === "" ? "<p style='font-size:12px; color:#666;'>Paylaştığınız bir duyuru, ödev veya dosya bulunmuyor.</p>" : html;
             },
 
@@ -1066,13 +938,10 @@ Seni dinliyorum!</div>`;
                 let grade = this.currentUser.grade;
                 let section = this.currentUser.section;
                 let targetType = "class";
-                let docType = "general";
-                
+
                 if(panelType === 'admin') {
                     const mode = document.getElementById('adm-target-mode').value;
                     school = document.getElementById('adm-school-select').value;
-                    docType = document.getElementById('adm-file-type').value; 
-                    
                     if(mode === 'class') {
                         grade = document.getElementById('adm-grade-select').value;
                         section = document.getElementById('adm-section-select').value;
@@ -1080,11 +949,6 @@ Seni dinliyorum!</div>`;
                     } else {
                         targetType = "school-all";
                     }
-                } else if (panelType === 'worksheet') {
-                    grade = document.getElementById('teacher-ws-grade').value;
-                    section = "Tümü"; 
-                    targetType = "grade-all";
-                    docType = "worksheet";
                 }
 
                 const storagePath = `uploads/${Date.now()}_${file.name}`;
@@ -1094,25 +958,24 @@ Seni dinliyorum!</div>`;
                     alert("Dosya yükleniyor, lütfen bekleyin...");
                     const snapshot = await uploadBytes(storageRef, file);
                     const downloadUrl = await getDownloadURL(snapshot.ref);
-                    
+
                     await addDoc(collection(db, "images"), {
                         url: downloadUrl,
                         fileName: file.name,
-                        fileType: file.type || "application/octet-stream",
+                        fileType: file.type,
                         storagePath: storagePath,
-                        school, grade, section, targetType, docType,
+                        school, grade, section, targetType,
                         sender: this.currentUser.username,
                         createdAt: serverTimestamp()
                     });
-                    
+
                     alert("Dosya başarıyla sisteme yüklendi!");
                     fileInput.value = "";
                     if(panelType === 'leader') this.renderLeaderManagementList();
                     if(panelType === 'admin') this.renderAdminControlList();
-                    if(panelType === 'worksheet') this.renderTeacherManagementList();
                 } catch (error) {
                     console.error(error);
-                    alert("Dosya yüklenirken bir hata oluştu: " + error.message);
+                    alert("Dosya yüklenirken bir hata oluştu.");
                 }
             },
 
@@ -1127,7 +990,6 @@ Seni dinliyorum!</div>`;
                         alert("İçerik başarıyla silindi!");
                         if(document.getElementById('leader-management-list')) this.renderLeaderManagementList();
                         if(document.getElementById('admin-control-list')) this.renderAdminControlList();
-                        if(document.getElementById('teacher-management-list')) this.renderTeacherManagementList();
                     } catch(e) {
                         alert("Silme işlemi sırasında hata oluştu.");
                     }
@@ -1138,6 +1000,7 @@ Seni dinliyorum!</div>`;
                 const title = document.getElementById('hw-title').value;
                 const deadline = document.getElementById('hw-date').value;
                 if(!title || !deadline) return alert("Hata! Başlık ve Tarih zorunludur.");
+                
                 await addDoc(collection(db, "homeworks"), {
                     title,
                     subject: document.getElementById('hw-subject').value,
@@ -1158,27 +1021,35 @@ Seni dinliyorum!</div>`;
                 const main = document.getElementById('main-content');
                 const lowerName = this.currentUser.username.toLowerCase();
                 const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
+                
                 main.innerHTML = `
                     <h3>${isRealAdmin ? 'Admin' : 'Moderatör'} Paneli</h3>
+                    
                     <div style="background:var(--card); padding:15px; border-radius:15px; margin-top:10px; margin-bottom:15px;">
                         <p style="margin-bottom:8px;"><b>📢 Gelişmiş İçerik & Yayın Paneli</b></p>
+                        
                         <label>Hedef Okul Seçin:</label>
                         <select id="adm-school-select" onchange="app.onAdminSchoolChange()"></select>
+
                         <label>Yayın Kapsamı:</label>
                         <select id="adm-target-mode" onchange="app.toggleAdminClassSelectors()">
                             <option value="class">Sadece Belirli Bir Sınıfa Gönder</option>
                             <option value="school">Seçili Okulun Tamamına Gönder</option>
                         </select>
+
                         <div id="adm-class-selectors" style="display:flex; gap:5px;">
                             <select id="adm-grade-select"></select>
                             <select id="adm-section-select"></select>
                         </div>
+
                         <hr style="margin:10px 0; opacity:0.2;">
+
                         <div style="margin-top:10px;">
                             <p style="font-size:13px; margin-bottom:5px;"><b>Seçenek A: Duyuru Yayınla</b></p>
                             <input id="adm-ann-text" placeholder="Duyuru metni...">
                             <button class="btn-main" style="background:#3498db;" onclick="app.adminPublishAnnouncement()">Duyuru Gönder</button>
                         </div>
+
                         <div style="margin-top:15px;">
                             <p style="font-size:13px; margin-bottom:5px;"><b>Seçenek B: Ödev Gönder</b></p>
                             <input id="adm-hw-title" placeholder="Ödev Başlığı">
@@ -1189,35 +1060,36 @@ Seni dinliyorum!</div>`;
                             <input type="datetime-local" id="adm-hw-date">
                             <button class="btn-main" onclick="app.adminPublishHomework()">Ödev Gönder</button>
                         </div>
+
                         <div style="margin-top:15px;">
-                            <p style="font-size:13px; margin-bottom:5px;"><b>Seçenek C: Dosya / Sınav Tarihi Yükle (Maks 100MB)</b></p>
-                            <select id="adm-file-type" style="margin-bottom:5px;">
-                                <option value="general">Genel Dosya (Duyuru olarak görünür)</option>
-                                <option value="exam_date">Sınav Tarihleri Dosyası (Sadece kendi okulunuzda görünür)</option>
-                            </select>
+                            <p style="font-size:13px; margin-bottom:5px;"><b>Seçenek C: Her Türlü Dosya Yükle (Maks 100MB)</b></p>
                             <input type="file" id="adm-file-input">
                             <button class="btn-main" style="background:#2ecc71;" onclick="app.uploadUniversalFile('adm-file-input', 'admin')">Dosya Yükle & Yayınla</button>
                         </div>
                     </div>
+
                     <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
                         <p style="margin-bottom:10px;"><b>Yayınlanmış İçerikleri Yönet / Sil</b></p>
                         <div id="admin-control-list"></div>
                     </div>
+
                     <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
                         <p style="margin-bottom:10px;"><b>🔑 Öğretmen & İdareci Kodu Yönetimi</b></p>
                         <div style="display:flex; gap:5px; margin-bottom:10px;">
                             <select id="adm-code-type" style="margin:0;">
                                 <option value="teacher">Öğretmen Kodu</option>
-                                ${isRealAdmin ? '<option value="manager">İdareci Kodu</option>' : ''}
+                                <option value="manager">İdareci Kodu</option>
                             </select>
                             <button class="btn-main" style="margin:0; background:#2ecc71;" onclick="app.generateRegistrationCode()">Kod Oluştur</button>
                         </div>
                         <div id="adm-generated-codes-list" style="max-height:150px; overflow-y:auto; font-size:13px;">Yükleniyor...</div>
                     </div>
+
                     <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
                         <p style="margin-bottom:10px;"><b>👤 Kullanıcı Hesap Yönetimi</b></p>
                         <div id="adm-user-list-container">Yükleniyor...</div>
                     </div>
+
                     <div id="admin-user-management-zone"></div>
                 `;
 
@@ -1230,11 +1102,10 @@ Seni dinliyorum!</div>`;
                 }
 
                 const gSel = document.getElementById('adm-grade-select');
-                gSel.innerHTML = ""; 
-                for(let i=1; i<=12; i++) gSel.innerHTML += `<option value="${i}">${i}. Sınıf</option>`;
+                gSel.innerHTML = ""; for(let i=1; i<=12; i++) gSel.innerHTML += `<option value="${i}">${i}. Sınıf</option>`;
                 const sSel = document.getElementById('adm-section-select');
-                sSel.innerHTML = "";
-                "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => sSel.innerHTML += `<option value="${char}">${char}</option>`);
+                sSel.innerHTML = ""; "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => sSel.innerHTML += `<option value="${char}">${char}</option>`);
+
                 if(isRealAdmin) {
                     document.getElementById('admin-user-management-zone').innerHTML = `
                         <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
@@ -1267,42 +1138,28 @@ Seni dinliyorum!</div>`;
                     const listCont = document.getElementById('adm-generated-codes-list');
                     if(!listCont) return;
                     listCont.innerHTML = "";
-                    const lowerName = this.currentUser.username.toLowerCase();
-                    const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
-                    let hasCodes = false;
+                    if(snap.empty) {
+                        listCont.innerHTML = "<p style='color:#999; font-size:12px;'>Kayıtlı aktif kod bulunmuyor.</p>";
+                        return;
+                    }
                     snap.forEach(d => {
                         const data = d.data();
-                        if (!isRealAdmin && data.school !== this.currentUser.school) return;
-                        
-                        hasCodes = true;
                         const typeText = data.type === 'teacher' ? '👨‍🏫 Öğretmen' : '💼 İdareci';
                         let codeDisplay = `<b>Kod:</b> ${data.code}`;
                         if(data.type === 'manager' && data.password) {
                             codeDisplay += ` | <b>Şifre:</b> ${data.password}`;
                         }
-                        
-                        if(data.usedBy) {
-                            codeDisplay += ` <span style="color:#d63031; font-size:10px;">(Kullanan: ${data.usedBy})</span>`;
-                        } else {
-                            codeDisplay += ` <span style="color:#27ae60; font-size:10px;">(Boşta)</span>`;
-                        }
-             
                         listCont.innerHTML += `
                             <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.03); padding:6px; margin-bottom:4px; border-radius:5px;">
                                 <span>[${typeText}] ${codeDisplay}</span>
                                 <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteRegistrationCode('${d.id}')"></i>
                             </div>`;
                     });
-                    
-                    if(!hasCodes) {
-                        listCont.innerHTML = "<p style='color:#999; font-size:12px;'>Kayıtlı aktif kod bulunmuyor.</p>";
-                    }
                 });
             },
 
             async generateRegistrationCode() {
                 const type = document.getElementById('adm-code-type').value;
-                const school = document.getElementById('adm-school-select').value || "Tümü";
                 const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
                 
                 const createRandomString = (length) => {
@@ -1316,9 +1173,9 @@ Seni dinliyorum!</div>`;
                 const codeData = {
                     type: type,
                     code: createRandomString(10),
-                    school: school,
                     createdAt: serverTimestamp()
                 };
+
                 if(type === 'manager') {
                     codeData.password = createRandomString(10);
                 }
@@ -1354,15 +1211,14 @@ Seni dinliyorum!</div>`;
 
                 snap.forEach(uDoc => {
                     const u = uDoc.data();
-                    if(u.username === this.currentUser.username) return;
-
+                    // Kanka, admin kendisini de artık bu listede tam yetkili düzenleyebilecek!
                     const item = document.createElement('div');
                     item.className = 'user-item';
                     const badges = this.buildUserBadges(u);
                     const isOnline = this.activeUsers.has(u.username);
                     const dotClass = u.isBlocked ? 'status-blocked' : (isOnline ? 'status-active' : 'status-offline');
 
-                    item.innerHTML = `<span><span class="status-dot ${dotClass}"></span><b>${u.username}</b> ${badges}</span><small>${u.isTeacher ? u.grade : u.grade+'/'+u.section} - ${u.school}</small>`;
+                    item.innerHTML = `<span><span class="status-dot ${dotClass}"></span><b>${u.username}</b> ${badges}</span><small>${u.grade}/${u.section} - ${u.school}</small>`;
                     item.onclick = () => this.openAdminUserModal(u);
                     listCont.appendChild(item);
                 });
@@ -1372,33 +1228,16 @@ Seni dinliyorum!</div>`;
                 this.selectedEditUser = u;
                 const lowerName = this.currentUser.username.toLowerCase();
                 const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
+
                 document.getElementById('edit-user-title').innerText = `${u.username} - Düzenle`;
                 document.getElementById('admin-user-modal').classList.remove('hidden');
 
-                if (u.isTeacher) {
-                    document.getElementById('edit-student-classes-area').classList.add('hidden');
-                    document.getElementById('edit-teacher-classes-area').classList.remove('hidden');
-                    let classStr = "";
-                    if (u.grade && u.section) {
-                        let gArr = u.grade.split(',');
-                        let sArr = u.section.split(',');
-                        let pairs = [];
-                        for(let i=0; i<gArr.length; i++) {
-                            if(gArr[i] && sArr[i] && gArr[i] !== 'Tümü') pairs.push(`${gArr[i]}-${sArr[i]}`);
-                        }
-                        classStr = pairs.join(', ');
-                    }
-                    document.getElementById('edit-teacher-classes-input').value = classStr;
-                } else {
-                    document.getElementById('edit-teacher-classes-area').classList.add('hidden');
-                    document.getElementById('edit-student-classes-area').classList.remove('hidden');
-                    document.getElementById('edit-grade').value = u.grade || "1";
-                    document.getElementById('edit-section').value = u.section || "A";
-                }
+                document.getElementById('edit-grade').value = u.grade || "1";
+                document.getElementById('edit-section').value = u.section || "A";
 
                 document.getElementById('leader-btn').classList.remove('hidden');
                 document.getElementById('teacher-btn').classList.remove('hidden');
-                
+
                 if(isRealAdmin) {
                     document.getElementById('name-edit-area').classList.remove('hidden');
                     document.getElementById('edit-username-input').value = u.username;
@@ -1455,11 +1294,14 @@ Seni dinliyorum!</div>`;
                 if(!this.selectedEditUser) return;
                 const newName = document.getElementById('edit-username-input').value.trim();
                 if(!newName || newName === this.selectedEditUser.username) return alert("Geçersiz veya aynı isim!");
+
                 const checkDoc = await getDoc(doc(db, "users", newName));
                 if(checkDoc.exists()) return alert("Bu kullanıcı adı zaten alınmış!");
+
                 const oldData = { ...this.selectedEditUser, username: newName };
                 await setDoc(doc(db, "users", newName), oldData);
                 await deleteDoc(doc(db, "users", this.selectedEditUser.username));
+                
                 alert("Kullanıcı adı başarıyla değiştirildi!");
                 document.getElementById('admin-user-modal').classList.add('hidden');
                 
@@ -1484,22 +1326,11 @@ Seni dinliyorum!</div>`;
                 if(!this.selectedEditUser) return;
                 const lowerName = this.currentUser.username.toLowerCase();
                 const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
-                
-                const updates = {};
-                
-                if (this.selectedEditUser.isTeacher) {
-                    let classInput = document.getElementById('edit-teacher-classes-input').value.split(',').map(s => s.trim()).filter(s => s);
-                    let gArr = [], sArr = [];
-                    classInput.forEach(c => {
-                        let [g, s] = c.split('-');
-                        if(g && s) { gArr.push(g); sArr.push(s); }
-                    });
-                    updates.grade = gArr.join(',') || 'Tümü';
-                    updates.section = sArr.join(',') || 'Tümü';
-                } else {
-                    updates.grade = document.getElementById('edit-grade').value;
-                    updates.section = document.getElementById('edit-section').value;
-                }
+
+                const updates = {
+                    grade: document.getElementById('edit-grade').value,
+                    section: document.getElementById('edit-section').value
+                };
 
                 if(isRealAdmin) {
                     updates.school = document.getElementById('edit-school').value;
@@ -1553,9 +1384,11 @@ Seni dinliyorum!</div>`;
 
                 const mode = document.getElementById('adm-target-mode').value;
                 const school = document.getElementById('adm-school-select').value;
+                
                 let grade = "";
                 let section = "";
                 let targetType = "school-all";
+
                 if(mode === 'class') {
                     grade = document.getElementById('adm-grade-select').value;
                     section = document.getElementById('adm-section-select').value;
@@ -1571,8 +1404,46 @@ Seni dinliyorum!</div>`;
                     sender: this.currentUser.username,
                     createdAt: serverTimestamp()
                 });
+
                 alert("Ödev başarıyla yayınlandı!");
                 document.getElementById('adm-hw-title').value = "";
+                this.renderAdminControlList();
+            },
+
+            async adminPublishFile() {
+                const fileInput = document.getElementById('adm-file-input');
+                if(!fileInput.files.length) return alert("Dosya seçiniz!");
+                const file = fileInput.files[0];
+
+                const mode = document.getElementById('adm-target-mode').value;
+                const school = document.getElementById('adm-school-select').value;
+                
+                let grade = "";
+                let section = "";
+                let targetType = "school-all";
+
+                if(mode === 'class') {
+                    grade = document.getElementById('adm-grade-select').value;
+                    section = document.getElementById('adm-section-select').value;
+                    targetType = "class";
+                }
+
+                const storageRef = ref(storage, `uploads/${Date.now()}_${file.name}`);
+                alert("Yükleniyor...");
+                const snapshot = await uploadBytes(storageRef, file);
+                const url = await getDownloadURL(snapshot.ref);
+
+                await addDoc(collection(db, "images"), {
+                    url,
+                    fileName: file.name,
+                    fileType: file.type,
+                    school, grade, section, targetType,
+                    sender: this.currentUser.username,
+                    createdAt: serverTimestamp()
+                });
+
+                alert("Dosya yayınlandı!");
+                fileInput.value = "";
                 this.renderAdminControlList();
             },
 
@@ -1593,10 +1464,11 @@ Seni dinliyorum!</div>`;
                         const targetInfo = data.targetType === 'school-all' ? 'Tüm Okul' : `${data.grade}/${data.section}`;
                         html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:12px;">
                                     <span><b>[Duyuru - ${targetInfo}]</b> ${data.text}</span>
-                                 <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteItem('announcements', '${d.id}')"></i>
+                                    <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteItem('announcements', '${d.id}')"></i>
                                  </div>`;
                     }
-                 });
+                });
+
                 const hwSnap = await getDocs(collection(db, "homeworks"));
                 hwSnap.forEach(d => {
                     const data = d.data();
@@ -1604,10 +1476,11 @@ Seni dinliyorum!</div>`;
                         const targetInfo = data.targetType === 'school-all' ? 'Tüm Okul' : `${data.grade}/${data.section}`;
                         html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:12px;">
                                     <span><b>[Ödev - ${targetInfo}]</b> ${data.title}</span>
-                                 <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteItem('homeworks', '${d.id}')"></i>
+                                    <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteItem('homeworks', '${d.id}')"></i>
                                  </div>`;
                     }
                 });
+
                 const imgSnap = await getDocs(collection(db, "images"));
                 imgSnap.forEach(d => {
                     const data = d.data();
@@ -1615,10 +1488,11 @@ Seni dinliyorum!</div>`;
                         const targetInfo = data.targetType === 'school-all' ? 'Tüm Okul' : `${data.grade}/${data.section}`;
                         html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:12px;">
                                     <span><b>[Dosya - ${targetInfo}]</b> ${data.fileName || 'Medya'}</span>
-                                   <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteItem('images', '${d.id}', '${data.storagePath || ''}')"></i>
+                                    <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteItem('images', '${d.id}')"></i>
                                  </div>`;
-                     }
+                    }
                 });
+
                 cont.innerHTML = html === "" ? "<p style='font-size:11px; color:#999;'>Bu okula ait yayınlanmış içerik yok.</p>" : html;
             },
 
@@ -1661,66 +1535,17 @@ Seni dinliyorum!</div>`;
 
             async renderTeacherPanel() {
                 const main = document.getElementById('main-content');
-                let gradeOpts = "";
-                for(let i=1; i<=12; i++) gradeOpts += `<option value="${i}">${i}. Sınıf</option>`;
-                main.innerHTML = `<h3>Öğretmen Paneli</h3>
-                    <div style="background:var(--card); padding:15px; border-radius:15px; margin-top:10px; margin-bottom:15px;">
-                        <p style="margin-bottom:8px;"><b>📄 Çalışma Kağıdı Yükle (Kendi Okuluna)</b></p>
-                        <label style="font-size:12px;">Sınıf Kademesi Seçin:</label>
-                        <select id="teacher-ws-grade">${gradeOpts}</select>
-                        <input type="file" id="teacher-ws-file" style="padding:5px;">
-                        <button class="btn-main" style="background:#2ecc71;"
-                            onclick="app.uploadUniversalFile('teacher-ws-file', 'worksheet')">Çalışma Kağıdını Yükle</button>
-                    </div>
-                    <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
-                        <p style="margin-bottom:10px;"><b>Yüklediğim Çalışma Kağıtları</b></p>
-                        <div id="teacher-management-list"></div>
-                    </div>
-                    <hr style="margin:15px 0;">
-                    <p style="font-size:13px; margin-bottom:10px;"><b>Kendi Sınıflarınızdaki Öğrenciler</b></p>
-                    <div id="teacher-student-list"></div>`;
-                
-                this.renderTeacherManagementList();
-
-                const q = query(collection(db, "users"), where("school", "==", this.currentUser.school));
+                main.innerHTML = `<h3>Öğretmen Paneli</h3><p style="font-size:13px; margin-bottom:10px;">Sınıfınız: ${this.currentUser.grade}/${this.currentUser.section}</p><div id="teacher-student-list"></div>`;
+                const q = query(collection(db, "users"), where("school", "==", this.currentUser.school), where("grade", "==", this.currentUser.grade), where("section", "==", this.currentUser.section) );
                 const snap = await getDocs(q);
-
-                const teacherGrades = this.currentUser.grade ? this.currentUser.grade.split(',') : [];
-                const teacherSections = this.currentUser.section ? this.currentUser.section.split(',') : [];
-                const teacherClasses = [];
-                for(let i=0; i<teacherGrades.length; i++) {
-                    if(teacherGrades[i] && teacherSections[i]) teacherClasses.push(`${teacherGrades[i]}-${teacherSections[i]}`);
-                }
-
                 snap.forEach(uDoc => {
                     const u = uDoc.data();
-                    if(u.username === this.currentUser.username || u.isTeacher) return;
-                    
-                    const uClass = `${u.grade}-${u.section}`;
-                    if (teacherClasses.includes(uClass) || this.currentUser.grade === 'Tümü') {
-                        const div = document.createElement('div');
-                        div.className = 'user-item';
-                        div.innerHTML = `<span><b>${u.username}</b> <small>(${u.grade}-${u.section})</small> ${u.isLeader ? '<span class="badge-tag" style="background:#ff9f43">BAŞKAN</span>':''}</span> <button class="btn-main" style="width:auto; padding:5px 10px; margin:0;" onclick="event.stopPropagation(); app.teacherToggleLeader('${u.username}', ${!u.isLeader})">${u.isLeader ? 'Başkanlığı Al':'Başkan Yap'}</button>`;
-                        document.getElementById('teacher-student-list').appendChild(div);
-                    }
+                    if(u.username === this.currentUser.username) return;
+                    const div = document.createElement('div');
+                    div.className = 'user-item';
+                    div.innerHTML = `<span><b>${u.username}</b> ${u.isLeader ? '<span class="badge-tag" style="background:#ff9f43">BAŞKAN</span>':''}</span> <button class="btn-main" style="width:auto; padding:5px 10px; margin:0;" onclick="event.stopPropagation(); app.teacherToggleLeader('${u.username}', ${!u.isLeader})">${u.isLeader ? 'Başkanlığı Al':'Başkan Yap'}</button>`;
+                    document.getElementById('teacher-student-list').appendChild(div);
                 });
-            },
-
-            async renderTeacherManagementList() {
-                const listCont = document.getElementById('teacher-management-list');
-                if(!listCont) return;
-                listCont.innerHTML = "<p style='font-size:12px; color:#666;'>Yükleniyor...</p>";
-
-                const q = query(collection(db, "images"), where("sender", "==", this.currentUser.username), where("docType", "==", "worksheet"));
-                const snap = await getDocs(q);
-                let html = "";
-                snap.forEach(d => {
-                    html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:13px;">
-                                <span style="flex:1;"><b>${d.data().grade}. Sınıf:</b> ${d.data().fileName || 'Çalışma Kağıdı'}</span>
-                                <i class="fas fa-trash" style="color:#d63031; cursor:pointer; margin-left:10px;" onclick="app.deleteItem('images', '${d.id}', '${d.data().storagePath || ''}')"></i>
-                             </div>`;
-                });
-                listCont.innerHTML = html === "" ? "<p style='font-size:12px; color:#666;'>Yüklediğiniz bir çalışma kağıdı bulunmuyor.</p>" : html;
             },
 
             async teacherToggleLeader(targetUser, status) {
@@ -1772,74 +1597,15 @@ Seni dinliyorum!</div>`;
             },
 
             renderSettings() {
-                let settingsHtml = `<h3>Ayarlar</h3><div style="margin-top:15px; background:var(--card); padding:15px; border-radius:15px;">
-                    <p style="margin-bottom:8px;"><b>Kullanıcı Adı Değiştir</b></p>
-                    <input type="text" id="up-username" placeholder="Yeni Kullanıcı Adınız">
-                    <button class="btn-main" onclick="app.updateMyUsername()">İsmi Değiştir</button>
-                    <hr style="margin:15px 0; border:0; border-top:1px solid #eee;">
-                 <p style="margin-bottom:8px;"><b>Şifre Değiştir</b></p>
-                    <input type="password" id="up-pass" placeholder="Yeni Şifre">
-                    <button class="btn-main" onclick="app.saveProfile()">Şifreyi Güncelle</button>`;
-                if (this.currentUser.isTeacher || this.currentUser.isMod) {
-                    settingsHtml += `<hr style="margin:15px 0; border:0; border-top:1px solid #eee;">
-                        <p style="margin-bottom:8px;"><b>Giriş Bilgilerini Değiştir</b></p>
-                        <input type="text" id="up-code" placeholder="Yeni Kod">`;
-                    if (this.currentUser.isMod) {
-                        settingsHtml += `<input type="password" id="up-code-pass" placeholder="Yeni 2. Şifre (İdareci)">`;
-                    }
-                    settingsHtml += `<button class="btn-success" onclick="app.updateMyCode()">Giriş Bilgilerini Güncelle</button>`;
-                }
-
-                settingsHtml += `<hr style="margin:15px 0; border:0; border-top:1px solid #eee;">
-                    <button class="btn-main" style="background:#34495e" onclick="document.body.classList.toggle('dark-mode')"><i class="fas fa-moon"></i> Tema Değiştir</button>
-                </div>`;
-                document.getElementById('main-content').innerHTML = settingsHtml;
-            },
-
-            async updateMyUsername() {
-                const newName = document.getElementById('up-username').value.trim();
-                if(!newName || newName === this.currentUser.username) return alert("Geçersiz veya aynı isim!");
-                
-                const checkDoc = await getDoc(doc(db, "users", newName));
-                if(checkDoc.exists()) return alert("Bu kullanıcı adı zaten alınmış kanka, başka bir şey bul!");
-
-                const oldData = { ...this.currentUser, username: newName };
-                await setDoc(doc(db, "users", newName), oldData);
-                await deleteDoc(doc(db, "users", this.currentUser.username));
-                await deleteDoc(doc(db, "status", this.currentUser.username));
-                const codeQ = query(collection(db, "registration_codes"), where("usedBy", "==", this.currentUser.username));
-                const codeSnap = await getDocs(codeQ);
-                codeSnap.forEach(async (d) => {
-                    await updateDoc(doc(db, "registration_codes", d.id), { usedBy: newName });
-                });
-                alert("Kullanıcı adın fıstık gibi güncellendi! Yeniden giriş yapman gerekiyor.");
-                location.reload();
-            },
-
-            async updateMyCode() {
-                const newCode = document.getElementById('up-code').value.trim();
-                const newPass = document.getElementById('up-code-pass') ? document.getElementById('up-code-pass').value.trim() : "";
-                
-                if(!newCode) return alert("Kod kısmı boş kalamaz!");
-                const q = query(collection(db, "registration_codes"), where("usedBy", "==", this.currentUser.username));
-                const snap = await getDocs(q);
-                if(snap.empty) return alert("Sisteme kayıtlı aktif bir kodun bulunamadı!");
-                
-                const updates = { code: newCode };
-                if(this.currentUser.isMod && newPass) updates.password = newPass;
-
-                await updateDoc(doc(db, "registration_codes", snap.docs[0].id), updates);
-                alert("Giriş bilgilerin başarıyla güncellendi!");
+                document.getElementById('main-content').innerHTML = `<h3>Ayarlar</h3><div style="margin-top:15px;"><input type="password" id="up-pass" placeholder="Yeni Şifre"><button class="btn-main" onclick="app.saveProfile()">Şifre Değiştir</button><hr style="margin:15px 0;\"><button class="btn-main" style="background:#34495e" onclick="document.body.classList.toggle('dark-mode')">Tema Değiştir</button></div>`;
             },
 
             async saveProfile() {
                 const pass = document.getElementById('up-pass').value;
-                if(pass) { 
-                    await updateDoc(doc(db, "users", this.currentUser.username), { password: pass });
-                    alert("Şifre başarıyla güncellendi kanka!"); 
-                }
+                if(pass) { await updateDoc(doc(db, "users", this.currentUser.username), { password: pass }); alert("Tamam!"); }
             }
         };
+
         window.app.init();
     </script>
 </body>
