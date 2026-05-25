@@ -292,7 +292,6 @@
             homeHomeworksUnsub: null,
             selectedWorksheetGrade: "",
 
-            // Yeni Toast Bildirim Metodu
             toast(msg, type = "info") {
                 const container = document.getElementById('toast-container');
                 if (!container) return;
@@ -612,7 +611,6 @@
                 this.navigate('home');
             },
 
-            // Çıkış Yap Fonksiyonu[cite: 19]
             logout() {
                 if(confirm("Çıkış yapmak istediğinize emin misiniz?")) {
                     if(this.statusInterval) clearInterval(this.statusInterval);
@@ -763,11 +761,19 @@
                         cont.innerHTML = "";
                         snap.forEach(d => {
                             const data = d.data();
+                            // Sınav tarihleri linkli kart şeklinde listeleniyor
                             if(data.school === this.currentUser.school && data.homeDocType === "exam") {
-                                cont.innerHTML += `<div class="homework-card" style="border-left-color: #e67e22;">
-                                                    <h4 style="color:#e67e22;"><i class="fas fa-calendar-alt"></i> Sınav Tarihi Duyurusu</h4>
-                                                    <p style="margin-top:5px; font-size:15px; white-space:pre-wrap;">${data.text}</p>
-                                                   </div>`;
+                                if (data.targetType === 'school-all' || (String(data.grade) === String(this.currentUser.grade) && String(data.section) === String(this.currentUser.section))) {
+                                    let linkMarkup = "";
+                                    if(data.examUrl) {
+                                        linkMarkup = `<a href="${data.examUrl}" target="_blank" style="display:block; margin-top:10px; color:#e67e22; font-weight:bold;"><i class="fas fa-external-link-alt"></i> Sınav Planı Bağlantısını Aç</a>`;
+                                    }
+                                    cont.innerHTML += `<div class="homework-card" style="border-left-color: #e67e22;">
+                                                        <h4 style="color:#e67e22;"><i class="fas fa-calendar-alt"></i> Sınav Tarihi Planı</h4>
+                                                        <p style="margin-top:5px; font-size:15px; font-weight:bold;">${data.text}</p>
+                                                        ${linkMarkup}
+                                                       </div>`;
+                                }
                             }
                         });
                         if(cont.innerHTML === "") cont.innerHTML = "<p style='font-size:13px; color:#999;'>Okulunuza ait girilmiş bir sınav tarihi planı yok.</p>";
@@ -961,7 +967,7 @@
             },
 
             async deleteSocialPost(postId, storagePath) {
-                if(confirm("Bu paylaşımı forumdan kaldıırmak istiyor musunuz?")) {
+                if(confirm("Bu paylaşımı forumdan kaldırmak istiyor musunuz?")) {
                     if(storagePath) {
                         const fileRef = ref(storage, storagePath);
                         await deleteObject(fileRef).catch(e => console.log("Dosya zaten silinmiş."));
@@ -1129,7 +1135,6 @@
                 this.renderLeaderManagementList();
             },
 
-            // Çalışma kağıdı link olarak ekleme altyapısı[cite: 19]
             async addWorksheetLink() {
                 const title = document.getElementById('teacher-ws-title').value.trim();
                 const url = document.getElementById('teacher-ws-url').value.trim();
@@ -1162,7 +1167,6 @@
                 }
             },
 
-            // Künefe Al Kısmı için Dosya Yükleme Paneli[cite: 19]
             openTeacherFileBrowser() {
                 document.getElementById('teacher-hidden-file-input').click();
             },
@@ -1268,6 +1272,21 @@
                 this.renderLeaderManagementList();
             },
 
+            // İdareci Panelinde Sınav Türüne Göre Arayüzü Değiştiren Metot
+            onAdminAnnTypeChange() {
+                const annType = document.getElementById('adm-ann-type').value;
+                const inputEl = document.getElementById('adm-ann-text');
+                const urlInputEl = document.getElementById('adm-exam-url-input');
+                
+                if(annType === 'exam') {
+                    inputEl.placeholder = "Sınav Planı / Dönem Bilgisi Başlığı Girin";
+                    urlInputEl.classList.remove('hidden');
+                } else {
+                    inputEl.placeholder = "Duyuru metni...";
+                    urlInputEl.classList.add('hidden');
+                }
+            },
+
             async renderAdminPanel() {
                 const main = document.getElementById('main-content');
                 const lowerName = this.currentUser.username.toLowerCase();
@@ -1296,13 +1315,14 @@
                         <hr style="margin:10px 0; opacity:0.2;">
 
                         <div style="margin-top:10px;">
-                            <p style="font-size:13px; margin-bottom:5px;"><b>Seçenek A: Duyuru Yayınla</b></p>
-                            <input id="adm-ann-text" placeholder="Duyuru metni...">
-                            <select id="adm-ann-type" style="margin-top:5px; margin-bottom:5px;">
+                            <p style="font-size:13px; margin-bottom:5px;"><b>Seçenek A: Duyuru / Sınav Tarihi Yayınla</b></p>
+                            <select id="adm-ann-type" style="margin-top:5px; margin-bottom:5px;" onchange="app.onAdminAnnTypeChange()">
                                 <option value="general">Genel Duyuru</option>
-                                <option value="exam">Sınav Tarihi Planı / Duyurusu</option>
+                                <option value="exam">Sınav Tarihi Planı / Duyurusu (Link İle)</option>
                             </select>
-                            <button class="btn-main" style="background:#3498db;" onclick="app.adminPublishAnnouncement()">Duyuru Gönder</button>
+                            <input id="adm-ann-text" placeholder="Duyuru metni...">
+                            <input id="adm-exam-url-input" type="url" placeholder="Sınav Planı Bağlantı Linki (URL)" class="hidden">
+                            <button class="btn-main" style="background:#3498db; margin-top:5px;" onclick="app.adminPublishAnnouncement()">Yayınla</button>
                         </div>
 
                         <div style="margin-top:15px;">
@@ -1631,9 +1651,10 @@
                 document.getElementById('adm-class-selectors').classList.toggle('hidden', mode === 'school');
             },
 
+            // Link ile Sınav Tarihi Yükleme Mantığıyla Güncellenmiş Metot
             async adminPublishAnnouncement() {
                 const text = document.getElementById('adm-ann-text').value.trim();
-                if(!text) return this.toast("Metin giriniz!", "error");
+                if(!text) return this.toast("Lütfen başlık veya metin giriniz!", "error");
 
                 const mode = document.getElementById('adm-target-mode').value;
                 const school = document.getElementById('adm-school-select').value;
@@ -1649,15 +1670,30 @@
                     targetType = "class";
                 }
 
-                await addDoc(collection(db, "announcements"), {
+                const docData = {
                     text, school, grade, section, targetType,
                     homeDocType: annType,
                     sender: this.currentUser.username,
                     createdAt: serverTimestamp()
-                });
+                };
 
-                this.toast("Duyuru başarıyla yayınlandı!", "success");
+                // Eğer sınav tarihi türü seçildiyse link bilgisini ekliyoruz
+                if(annType === 'exam') {
+                    const examUrl = document.getElementById('adm-exam-url-input').value.trim();
+                    if(!examUrl) return this.toast("Sınav takvimi için URL bağlantı linki girmek zorunludur!", "error");
+                    docData.examUrl = examUrl;
+                }
+
+                await addDoc(collection(db, "announcements"), docData);
+
+                this.toast(annType === 'exam' ? "Sınav tarihi bağlantısı başarıyla yüklendi!" : "Duyuru başarıyla yayınlandı!", "success");
                 document.getElementById('adm-ann-text').value = "";
+                const urlField = document.getElementById('adm-exam-url-input');
+                if(urlField) {
+                    urlField.value = "";
+                    urlField.classList.add('hidden');
+                }
+                document.getElementById('adm-ann-type').value = "general";
                 this.renderAdminControlList();
             },
 
@@ -1782,7 +1818,6 @@
                 }
             },
 
-            // Yenilenen Öğretmen Paneli Arayüzü (Link ile ekleme & + butonu ile dosya yükleme)[cite: 19]
             async renderTeacherPanel() {
                 const main = document.getElementById('main-content');
                 let gradeOptionsMarkup = "";
@@ -1800,7 +1835,6 @@
                             <button type="button" class="btn-main" style="width:auto; margin:0; padding:6px 12px; font-size:13px; border-radius:20px;" onclick="app.openTeacherFileBrowser()"><i class="fas fa-plus"></i></button>
                         </div>
                         
-                        <!-- Gizli Dosya Seçici Altyapısı[cite: 19] -->
                         <input type="file" id="teacher-hidden-file-input" class="hidden" onchange="app.uploadUniversalFile('teacher-hidden-file-input', 'teacher_worksheet')">
                         
                         <label style="font-size:12px;">Hedef Sınıf Kademesi:</label>
@@ -1875,7 +1909,6 @@
                 input.value = "";
             },
 
-            // Çıkış Yap Butonu Eklenmiş Ayarlar Paneli[cite: 19]
             renderSettings() {
                 let staffCodeFields = "";
                 if(this.currentUser.isTeacher || this.currentUser.isMod) {
@@ -1904,7 +1937,6 @@
                         <hr style="margin:15px 0; opacity: 0.2;">
                         <button class="btn-main" style="background:#34495e; margin-bottom:10px;" onclick="document.body.classList.toggle('dark-mode')"><i class="fas fa-moon"></i> Tema Değiştir</button>
                         
-                        <!-- Yeni Çıkış Yap Butonu[cite: 19] -->
                         <button class="btn-danger" style="margin:0;" onclick="app.logout()"><i class="fas fa-sign-out-alt"></i> Oturumu Kapat</button>
                     </div>
                 `;
