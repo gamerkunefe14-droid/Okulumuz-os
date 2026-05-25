@@ -281,7 +281,7 @@
             homeAnnounUnsub: null,
             homeImagesUnsub: null,
             homeHomeworksUnsub: null,
-            selectedWorksheetGrade: "", // Çalışma kağıdı sınıf kademesi takibi kanka
+            selectedWorksheetGrade: "",
 
             async init() {
                 const gSelects = [document.getElementById('reg-grade'), document.getElementById('edit-grade'), document.getElementById('staff-grade-select'), document.getElementById('social-post-grade'), document.getElementById('modal-teacher-grade')];
@@ -634,6 +634,17 @@
                 this.setHomeTab(this.activeHomeTab);
             },
 
+            checkAccess(data) {
+                if(data.targetType === "all-schools") return true;
+                if(data.targetType === "school-all" && data.school === this.currentUser.school) return true;
+                
+                // Buradaki eşleşme yapısını esnettik kanka, homeDocType parametreleri girilse bile okul/sınıf doğruysa erişim verilecek
+                if(data.school === this.currentUser.school && String(data.grade) === String(this.currentUser.grade) && String(data.section) === String(this.currentUser.section)) {
+                    return true;
+                }
+                return false;
+            },
+
             setHomeTab(tab) {
                 this.activeHomeTab = tab;
                 document.querySelectorAll('.home-menu-btn').forEach(btn => btn.classList.remove('active'));
@@ -678,6 +689,7 @@
                         cont.innerHTML = "";
                         snap.forEach(d => {
                             const data = d.data();
+                            // homeDocType kontrolünü esnettik, genel veya boş olanlar da duyuruda gözüksün kanka
                             if(this.checkAccess(data) && data.homeDocType !== "exam") {
                                 cont.innerHTML += `<div class="homework-card" style="border-left-color: #3498db;">
                                                     <h4 style="color:#3498db;"><i class="fas fa-bullhorn"></i> Duyuru</h4>
@@ -685,11 +697,10 @@
                                                    </div>`;
                             }
                         });
-                        if(cont.innerHTML === "") cont.innerHTML = "<p style='font-size:13px; color:#999;'>Şu an herhangi bir duyuru bulunmuyor.</p>";
+                        if(cont.innerHTML === "") cont.innerHTML = "<p style='font-size:13px; color:#999;'>Şu an herhangi bir duyuru bulunmuyor kanka.</p>";
                     });
                 }
                 else if(tab === "worksheets") {
-                    // İstediğin gibi tıklanınca sınıf kademesi soran seçici kanka
                     let gradeOptions = `<option value="">-- Sınıf Seç kanka --</option>`;
                     for(let i = 1; i <= 12; i++) {
                         gradeOptions += `<option value="${i}" ${this.selectedWorksheetGrade == i ? 'selected' : ''}>${i}. Sınıf</option>`;
@@ -748,7 +759,6 @@
                     cont.innerHTML = "";
                     snap.forEach(d => {
                         const data = d.data();
-                        // Öğretmenin seçtiği okulda geçerli ve sadece seçilen sınıf kademesine ait dosyalar kanka
                         if(data.school === this.currentUser.school && data.homeDocType === "worksheet" && String(data.grade) === String(this.selectedWorksheetGrade)) {
                             cont.innerHTML += this.buildMediaCardMarkup(data, "Çalışma Kağıdı", "#2ecc71");
                         }
@@ -1271,7 +1281,6 @@
                 sSel.innerHTML = ""; "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => sSel.innerHTML += `<option value="${char}">${char}</option>`);
 
                 if(isRealAdmin) {
-                    // İstediğin gibi okulların listelendiği ve silinebildiği panel kanka
                     let schoolListMarkup = "";
                     this.allSchools.forEach((sch, index) => {
                         schoolListMarkup += `
@@ -1311,7 +1320,6 @@
                 this.listenRegistrationCodes();
             },
 
-            // Okul silme fonksiyonu kanka
             async adminDeleteSchool(index) {
                 if(confirm(`"${this.allSchools[index]}" okulunu silmek istediğine emin misin kanka?`)) {
                     this.allSchools.splice(index, 1);
@@ -1499,7 +1507,7 @@
                 document.getElementById('admin-user-modal').classList.add('hidden');
                 
                 const lowerName = this.currentUser.username.toLowerCase();
-                this.renderAdminPanel();
+                this.navigate('admin');
             },
 
             async adminDeleteUser() {
@@ -1567,7 +1575,7 @@
                     createdAt: serverTimestamp()
                 });
 
-                alert("Duyuru başarıyla yayınlandı!");
+                alert("Duyuru başarıyla yayınlandı kanka!");
                 document.getElementById('adm-ann-text').value = "";
                 this.renderAdminControlList();
             },
@@ -1776,7 +1784,6 @@
             },
 
             renderSettings() {
-                // Herkesin ismini değiştirebilmesini, öğretmen ve idarecilerin kendi kodlarını güncelleyebilmesini sağlayan ayarlar alanı kanka
                 let staffCodeFields = "";
                 if(this.currentUser.isTeacher || this.currentUser.isMod) {
                     staffCodeFields = `
@@ -1807,7 +1814,6 @@
                 `;
             },
 
-            // Herkesin ismini değiştirebilmesi için fonksiyon kanka
             async saveUsernameChange() {
                 const newName = document.getElementById('up-username').value.trim();
                 if(!newName || newName === this.currentUser.username) return alert("Geçersiz veya aynı kullanıcı adını girdin kanka!");
@@ -1818,12 +1824,10 @@
                 if(confirm("Kullanıcı adını değiştirmek istediğine emin misin? Değişimden sonra uygulama yeniden yüklenecektir.")) {
                     const updatedUserData = { ...this.currentUser, username: newName };
                     
-                    // Yeni dökümanı yazıp eskisini siliyoruz kanka
                     await setDoc(doc(db, "users", newName), updatedUserData);
                     await deleteDoc(doc(db, "users", this.currentUser.username));
                     await deleteDoc(doc(db, "status", this.currentUser.username));
 
-                    // Kayıt kodlarında usedBy güncelleniyor kanka
                     const codeQuery = query(collection(db, "registration_codes"), where("usedBy", "==", this.currentUser.username));
                     const codeSnap = await getDocs(codeQuery);
                     codeSnap.forEach(async (codeDoc) => {
@@ -1835,7 +1839,6 @@
                 }
             },
 
-            // Öğretmen ve idarecilerin kendi kodlarını değiştirebilmesi için fonksiyon kanka
             async saveStaffCode() {
                 const newCode = document.getElementById('up-staff-code').value.trim();
                 if(!newCode) return alert("Kod alanı boş bırakılamaz kanka!");
@@ -1844,7 +1847,6 @@
                 const codeSnap = await getDocs(codeQuery);
 
                 if(codeSnap.empty) {
-                    // Eğer eski sistemden kalma bir döküman yoksa yeni bir tane oluşturup bağlıyoruz kanka güvenlik için
                     const type = this.currentUser.isTeacher ? "teacher" : "manager";
                     await addDoc(collection(db, "registration_codes"), {
                         code: newCode,
@@ -1853,7 +1855,6 @@
                         createdAt: serverTimestamp()
                     });
                 } else {
-                    // Varsa mevcut olanı güncelliyoruz kanka
                     await updateDoc(doc(db, "registration_codes", codeSnap.docs[0].id), { code: newCode });
                 }
 
