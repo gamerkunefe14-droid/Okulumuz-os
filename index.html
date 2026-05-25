@@ -62,7 +62,7 @@
         
         .media-preview { max-width: 100%; max-height: 250px; margin-top: 10px; border-radius: 8px; display: block; }
 
-        /* Forum / Social Styles kanka */
+        /* Forum / Social Styles */
         .social-card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-bottom: 2px solid #eee; position: relative; }
         .social-card .del-hw { color: #d63031; cursor: pointer; float: right; }
         .social-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
@@ -76,14 +76,23 @@
         .reply-item { font-size: 13px; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dashed #ddd; }
         .reply-user { font-weight: bold; color: #3498db; }
         
-        /* Ana Sayfa Menü Butonları kanka */
+        /* Ana Sayfa Menü Butonları */
         .home-menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .home-menu-btn { background: var(--card); color: var(--text); padding: 15px; border-radius: 12px; border: 1.5px solid #eee; font-weight: bold; font-size: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
         .home-menu-btn i { font-size: 20px; color: #ff9f43; }
         .home-menu-btn.active { border-color: #ff9f43; background: rgba(255, 159, 67, 0.05); }
+
+        /* Toast Bildirim Tasarımı */
+        #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; width: 90%; max-width: 350px; }
+        .toast-msg { background: #333; color: #fff; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 10px; animation: slideDown 0.3s ease forwards; border-left: 5px solid #ff9f43; }
+        .toast-msg.success { border-left-color: #27ae60; background: #1e272e; }
+        .toast-msg.error { border-left-color: #d63031; background: #1e272e; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
+
+    <div id="toast-container"></div>
 
     <div id="auth-screen" class="auth-card">
         <h2 id="auth-title" style="text-align:center; margin-bottom:15px;">Giriş Yap</h2>
@@ -156,7 +165,7 @@
     <div id="social-post-modal" class="modal-bg hidden">
         <div class="modal">
             <h3>Sosyal Paylaşım Yap</h3>
-            <textarea id="social-post-text" placeholder="Ne düşünüyorsun kanka?" style="width:100%; height:100px; padding:10px; margin-top:10px; margin-bottom:10px; border-radius:10px; border:1.5px solid #eee; outline:none; font-family:inherit; resize:none; background:var(--card); color:var(--text);"></textarea>
+            <textarea id="social-post-text" placeholder="Ne düşünüyorsunuz?" style="width:100%; height:100px; padding:10px; margin-top:10px; margin-bottom:10px; border-radius:10px; border:1.5px solid #eee; outline:none; font-family:inherit; resize:none; background:var(--card); color:var(--text);"></textarea>
             
             <label>Yayın Kapsamı:</label>
             <select id="social-post-scope" onchange="app.onSocialScopeChange()">
@@ -283,6 +292,20 @@
             homeHomeworksUnsub: null,
             selectedWorksheetGrade: "",
 
+            // Yeni Toast Bildirim Metodu
+            toast(msg, type = "info") {
+                const container = document.getElementById('toast-container');
+                if (!container) return;
+                const toastEl = document.createElement('div');
+                toastEl.className = `toast-msg ${type}`;
+                toastEl.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> <span>${msg}</span>`;
+                container.appendChild(toastEl);
+                setTimeout(() => {
+                    toastEl.style.animation = "slideDown 0.3s ease reverse forwards";
+                    setTimeout(() => toastEl.remove(), 300);
+                }, 3000);
+            },
+
             async init() {
                 const gSelects = [document.getElementById('reg-grade'), document.getElementById('edit-grade'), document.getElementById('staff-grade-select'), document.getElementById('social-post-grade'), document.getElementById('modal-teacher-grade')];
                 gSelects.forEach(s => { if(s) { s.innerHTML = ""; for(let i=1; i<=12; i++) s.innerHTML += `<option value="${i}">${i}. Sınıf</option>`; } });
@@ -375,7 +398,7 @@
                 const s = document.getElementById('staff-section-select').value;
                 if(!g || !s) return;
                 const classStr = `${g}-${s}`;
-                if(this.staffClasses.includes(classStr)) return alert("Bu sınıf zaten eklendi!");
+                if(this.staffClasses.includes(classStr)) return this.toast("Bu sınıf zaten eklendi!", "error");
                 this.staffClasses.push(classStr);
                 this.renderStaffClasses();
             },
@@ -403,7 +426,7 @@
                 const s = document.getElementById('modal-teacher-section').value;
                 if(!g || !s) return;
                 const classStr = `${g}-${s}`;
-                if(this.staffClasses.includes(classStr)) return alert("Bu sınıf zaten eklendi!");
+                if(this.staffClasses.includes(classStr)) return this.toast("Bu sınıf zaten eklendi!", "error");
                 this.staffClasses.push(classStr);
                 this.renderModalTeacherClasses();
             },
@@ -450,15 +473,15 @@
                 const code1 = document.getElementById('staff-code1').value.trim();
                 const code2 = document.getElementById('staff-code2').value.trim();
 
-                if (!username || !pass || !email || !code1) return alert("Lütfen tüm alanları doldurun!");
-                if (this.currentStaffMode === 'manager' && !code2) return alert("İdareci için 2. şifre zorunludur!");
+                if (!username || !pass || !email || !code1) return this.toast("Lütfen tüm alanları doldurun!", "error");
+                if (this.currentStaffMode === 'manager' && !code2) return this.toast("İdareci için 2. şifre zorunludur!", "error");
 
                 const userDoc = await getDoc(doc(db, "users", username));
 
                 if (userDoc.exists()) {
                     const uData = userDoc.data();
-                    if (uData.password !== pass) return alert("Hatalı şifre!");
-                    if (uData.isBlocked) return alert("Cezalı olduğunuz için giriş yapamazsınız!");
+                    if (uData.password !== pass) return this.toast("Hatalı şifre!", "error");
+                    if (uData.isBlocked) return this.toast("Cezalı olduğunuz için giriş yapamazsınız!", "error");
                     
                     if (this.currentStaffMode === 'manager' && uData.isMod) {
                         let count = (uData.managerLoginCount || 0) + 1;
@@ -483,12 +506,12 @@
                 } else {
                     const codeQuery = query(collection(db, "registration_codes"), where("type", "==", this.currentStaffMode), where("code", "==", code1));
                     const codeSnap = await getDocs(codeQuery);
-                    if (codeSnap.empty) return alert("Geçersiz rol kodu veya bu kod kullanılmış!");
+                    if (codeSnap.empty) return this.toast("Geçersiz rol kodu veya bu kod kullanılmış!", "error");
                     
                     let validDoc = null;
                     if (this.currentStaffMode === 'manager') {
                         codeSnap.forEach(d => { if (d.data().password === code2) validDoc = d; });
-                        if (!validDoc) return alert("2. şifre hatalı!");
+                        if (!validDoc) return this.toast("2. şifre hatalı!", "error");
                     } else {
                         validDoc = codeSnap.docs[0];
                     }
@@ -538,12 +561,12 @@
                         }
                     }
                 } else {
-                    alert("Doğrulama kodu hatalı!");
+                    this.toast("Doğrulama kodu hatalı!", "error");
                 }
             },
 
             async finishTeacherRegistrationWithClass() {
-                if (this.staffClasses.length === 0) return alert("Lütfen en az bir sınıf ve şube seçin kanka!");
+                if (this.staffClasses.length === 0) return this.toast("Lütfen en az bir sınıf ve şube seçin!", "error");
                 const grades = this.staffClasses.map(c => c.split('-')[0]);
                 const sections = this.staffClasses.map(c => c.split('-')[1]);
                 
@@ -554,8 +577,8 @@
                 if (this.tempCodeIdToBurn) {
                     await updateDoc(doc(db, "registration_codes", this.tempCodeIdToBurn), { usedBy: this.tempUser.username });
                 }
-                alert("Kayıt başarıyla tamamlandı öğretmenim!");
-                location.reload();
+                this.toast("Kaydınız başarıyla tamamlandı öğretmenim!", "success");
+                setTimeout(() => location.reload(), 1000);
             },
 
             async login() {
@@ -563,10 +586,10 @@
                 const pass = document.getElementById('login-pass').value;
                 const userDoc = await getDoc(doc(db, "users", id));
                 if(userDoc.exists() && userDoc.data().password === pass) {
-                    if(userDoc.data().isBlocked) return alert("Cezalı olduğunuz için giriş yapamazsınız!");
+                    if(userDoc.data().isBlocked) return this.toast("Cezalı olduğunuz için giriş yapamazsınız!", "error");
                     this.currentUser = userDoc.data();
                     this.launch();
-                } else alert("Hatalı Giriş!");
+                } else this.toast("Hatalı Giriş Bilgileri!", "error");
             },
 
             launch() {
@@ -584,9 +607,28 @@
                 if(this.currentUser.isTeacher) document.getElementById('nav-teacher').classList.remove('hidden');
                 
                 this.updateMyStatus();
-                setInterval(() => this.updateMyStatus(), 30000);
+                this.statusInterval = setInterval(() => this.updateMyStatus(), 30000);
                 
                 this.navigate('home');
+            },
+
+            // Çıkış Yap Fonksiyonu[cite: 19]
+            logout() {
+                if(confirm("Çıkış yapmak istediğinize emin misiniz?")) {
+                    if(this.statusInterval) clearInterval(this.statusInterval);
+                    this.currentUser = null;
+                    document.getElementById('app-container').classList.add('hidden');
+                    document.getElementById('admin-btn').classList.add('hidden');
+                    document.getElementById('nav-leader').classList.add('hidden');
+                    document.getElementById('nav-teacher').classList.add('hidden');
+                    
+                    document.getElementById('login-user').value = "";
+                    document.getElementById('login-pass').value = "";
+                    
+                    document.getElementById('auth-screen').classList.remove('hidden');
+                    this.toggleAuth('login');
+                    this.toast("Başarıyla çıkış yapıldı.", "success");
+                }
             },
 
             async navigate(page, el) {
@@ -638,7 +680,6 @@
                 if(data.targetType === "all-schools") return true;
                 if(data.targetType === "school-all" && data.school === this.currentUser.school) return true;
                 
-                // Buradaki eşleşme yapısını esnettik kanka, homeDocType parametreleri girilse bile okul/sınıf doğruysa erişim verilecek
                 if(data.school === this.currentUser.school && String(data.grade) === String(this.currentUser.grade) && String(data.section) === String(this.currentUser.section)) {
                     return true;
                 }
@@ -689,26 +730,25 @@
                         cont.innerHTML = "";
                         snap.forEach(d => {
                             const data = d.data();
-                            // homeDocType kontrolünü esnettik, genel veya boş olanlar da duyuruda gözüksün kanka
                             if(this.checkAccess(data) && data.homeDocType !== "exam") {
                                 cont.innerHTML += `<div class="homework-card" style="border-left-color: #3498db;">
-                                                    <h4 style="color:#3498db;"><i class="fas fa-bullhorn"></i> Duyuru</h4>
+                                                    <h4><i class="fas fa-bullhorn"></i> Duyuru</h4>
                                                     <p style="margin-top:5px; font-size:15px;">${data.text}</p>
                                                    </div>`;
                             }
                         });
-                        if(cont.innerHTML === "") cont.innerHTML = "<p style='font-size:13px; color:#999;'>Şu an herhangi bir duyuru bulunmuyor kanka.</p>";
+                        if(cont.innerHTML === "") cont.innerHTML = "<p style='font-size:13px; color:#999;'>Şu an herhangi bir duyuru bulunmuyor.</p>";
                     });
                 }
                 else if(tab === "worksheets") {
-                    let gradeOptions = `<option value="">-- Sınıf Seç kanka --</option>`;
+                    let gradeOptions = `<option value="">-- Sınıf Seçin --</option>`;
                     for(let i = 1; i <= 12; i++) {
                         gradeOptions += `<option value="${i}" ${this.selectedWorksheetGrade == i ? 'selected' : ''}>${i}. Sınıf</option>`;
                     }
                     
                     container.innerHTML = `
                         <div style="margin-bottom: 12px;">
-                            <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Hangi sınıfın çalışma kağıtlarına bakacaksın?</label>
+                            <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Hangi sınıfın çalışma kağıtlarına bakacaksınız?</label>
                             <select id="home-ws-grade-selector" onchange="app.onWorksheetGradeChange()" style="margin: 0;">${gradeOptions}</select>
                         </div>
                         <div id="worksheet-list"></div>
@@ -750,7 +790,7 @@
                 if(this.homeImagesUnsub) { this.homeImagesUnsub(); this.homeImagesUnsub = null; }
                 
                 if(!this.selectedWorksheetGrade) {
-                    cont.innerHTML = "<p style='font-size:13px; color:#888; text-align:center; padding: 10px;'>Lütfen yukarıdan sınıf kademesi seç kanka!</p>";
+                    cont.innerHTML = "<p style='font-size:13px; color:#888; text-align:center; padding: 10px;'>Lütfen yukarıdan sınıf kademesi seçin.</p>";
                     return;
                 }
 
@@ -763,7 +803,7 @@
                             cont.innerHTML += this.buildMediaCardMarkup(data, "Çalışma Kağıdı", "#2ecc71");
                         }
                     });
-                    if(cont.innerHTML === "") cont.innerHTML = `<p style='font-size:13px; color:#999;'>${this.selectedWorksheetGrade}. Sınıf kademesi için çalışma kağıdı bulunamadı kanka.</p>`;
+                    if(cont.innerHTML === "") cont.innerHTML = `<p style='font-size:13px; color:#999;'>${this.selectedWorksheetGrade}. Sınıf kademesi için çalışma kağıdı bulunamadı.</p>`;
                 });
             },
 
@@ -776,17 +816,17 @@
                 } else if(data.fileType && data.fileType.startsWith("audio/")) {
                     mediaHtml = `<audio src="${data.url}" controls style="width:100%; margin-top:10px;"></audio>`;
                 } else {
-                    mediaHtml = `<a href="${data.url}" target="_blank" style="display:block; margin-top:10px; color:${borderColor}; font-weight:bold;"><i class="fas fa-file-download"></i> Dosyayı İndir (${data.fileName || 'Belge'})</a>`;
+                    mediaHtml = `<a href="${data.url}" target="_blank" style="display:block; margin-top:10px; color:${borderColor}; font-weight:bold;"><i class="fas fa-external-link-alt"></i> Bağlantıyı Aç (${data.fileName || 'Çalışma Belgesi'})</a>`;
                 }
 
                 return `<div class="homework-card" style="border-left-color: ${borderColor};">
                             <h4 style="color:${borderColor};"><i class="fas fa-paperclip"></i> ${title}</h4>
-                            ${data.text ? `<p style="margin-bottom:5px;">${data.text}</p>` : ''}
+                            ${data.text ? `<p style="margin-bottom:5px; font-weight:bold;">${data.text}</p>` : ''}
                             ${mediaHtml}
                         </div>`;
             },
 
-            /* Forum / Sosyal Medya Fonksiyonları kanka */
+            /* Forum / Sosyal Medya Fonksiyonları */
             renderSocial() {
                 document.getElementById('social-add-btn').classList.remove('hidden');
                 const main = document.getElementById('main-content');
@@ -847,7 +887,7 @@
                                 <div id="reply-box-${postId}" class="reply-box ${this.openReplyBoxes.has(postId) ? '' : 'hidden'}">
                                     <div id="reply-list-${postId}"></div>
                                     <div style="display:flex; gap:5px; margin-top:8px;">
-                                        <input type="text" id="reply-input-${postId}" placeholder="Yanıt yaz kanka..." style="margin:0; padding:8px;">
+                                        <input type="text" id="reply-input-${postId}" placeholder="Yanıt yazın..." style="margin:0; padding:8px;">
                                         <button class="btn-main" style="width:auto; margin:0; padding:8px 15px;" onclick="app.submitSocialReply('${postId}')">Gönder</button>
                                     </div>
                                 </div>
@@ -856,7 +896,7 @@
                         
                         this.listenSocialReplies(postId);
                     });
-                    if(feed.innerHTML === "") feed.innerHTML = "<p style='font-size:13px; color:#999; text-align:center;'>Henüz forumda paylaşım yok kanka.</p>";
+                    if(feed.innerHTML === "") feed.innerHTML = "<p style='font-size:13px; color:#999; text-align:center;'>Henüz forumda paylaşım yok.</p>";
                 });
             },
 
@@ -878,7 +918,7 @@
                 const scope = document.getElementById('social-post-scope').value;
                 const fileInput = document.getElementById('social-post-file');
                 
-                if(!text && !fileInput.files.length) return alert("Boş paylaşım yapılmaz kanka!");
+                if(!text && !fileInput.files.length) return this.toast("Boş paylaşım yapılamaz!", "error");
 
                 let grade = this.currentUser.grade;
                 let section = this.currentUser.section;
@@ -898,12 +938,12 @@
 
                 if(fileInput.files.length) {
                     const file = fileInput.files[0];
-                    if(file.size > 25 * 1024 * 1024) return alert("Dosya boyutu 25MB sınırını aşamaz kanka!");
+                    if(file.size > 25 * 1024 * 1024) return this.toast("Dosya boyutu 25MB sınırını aşamaz!", "error");
 
                     const storagePath = `social/${Date.now()}_${file.name}`;
                     const storageRef = ref(storage, storagePath);
                     try {
-                        alert("Dosya yükleniyor...");
+                        this.toast("Dosya yükleniyor...");
                         const snapshot = await uploadBytes(storageRef, file);
                         const downloadUrl = await getDownloadURL(snapshot.ref);
                         postData.fileUrl = downloadUrl;
@@ -911,21 +951,23 @@
                         postData.fileType = file.type;
                         postData.storagePath = storagePath;
                     } catch(e) {
-                        return alert("Dosya yüklenirken hata oluştu!");
+                        return this.toast("Dosya yüklenirken hata oluştu!", "error");
                     }
                 }
 
                 await addDoc(collection(db, "social_posts"), postData);
                 document.getElementById('social-post-modal').classList.add('hidden');
+                this.toast("Paylaşım yapıldı.", "success");
             },
 
             async deleteSocialPost(postId, storagePath) {
-                if(confirm("Bu paylaşımı forumdan kaldırmak istiyor musun?")) {
+                if(confirm("Bu paylaşımı forumdan kaldıırmak istiyor musunuz?")) {
                     if(storagePath) {
                         const fileRef = ref(storage, storagePath);
                         await deleteObject(fileRef).catch(e => console.log("Dosya zaten silinmiş."));
                     }
                     await deleteDoc(doc(db, "social_posts", postId));
+                    this.toast("Paylaşım silindi.", "success");
                 }
             },
 
@@ -1053,7 +1095,7 @@
                 const imgSnap = await getDocs(query(collection(db, "images"), ...currentFilter));
                 imgSnap.forEach(d => {
                     html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:13px;">
-                                <span style="flex:1;"><b>Dosya:</b> ${d.data().fileName || 'Medya İçeriği'}</span>
+                                <span style="flex:1;"><b>Dosya/Bağlantı:</b> ${d.data().fileName || 'İçerik'}</span>
                                 <i class="fas fa-trash" style="color:#d63031; cursor:pointer; margin-left:10px;" onclick="app.deleteItem('images', '${d.id}', '${d.data().storagePath || ''}')"></i>
                              </div>`;
                 });
@@ -1071,7 +1113,7 @@
 
             async addLeaderAnnouncement() {
                 const text = document.getElementById('ann-text').value.trim();
-                if(!text) return alert("Duyuru metni boş olamaz!");
+                if(!text) return this.toast("Duyuru metni boş olamaz!", "error");
                 await addDoc(collection(db, "announcements"), { 
                     text, 
                     school: this.currentUser.school, 
@@ -1082,19 +1124,57 @@
                     sender: this.currentUser.username,
                     createdAt: serverTimestamp() 
                 });
-                alert("Duyuru yayınlandı!");
+                this.toast("Duyuru yayınlandı!", "success");
                 document.getElementById('ann-text').value = "";
                 this.renderLeaderManagementList();
             },
 
+            // Çalışma kağıdı link olarak ekleme altyapısı[cite: 19]
+            async addWorksheetLink() {
+                const title = document.getElementById('teacher-ws-title').value.trim();
+                const url = document.getElementById('teacher-ws-url').value.trim();
+                const grade = document.getElementById('teacher-ws-grade-select').value;
+
+                if(!title || !url) return this.toast("Lütfen Başlık ve Link alanlarını doldurun!", "error");
+
+                try {
+                    await addDoc(collection(db, "images"), {
+                        url: url,
+                        fileName: title,
+                        fileType: "text/html",
+                        storagePath: "",
+                        school: this.currentUser.school,
+                        grade: grade,
+                        section: "Tümü",
+                        targetType: "class",
+                        homeDocType: "worksheet",
+                        text: title,
+                        sender: this.currentUser.username,
+                        createdAt: serverTimestamp()
+                    });
+
+                    this.toast("Çalışma kağıdı bağlantısı başarıyla eklendi!", "success");
+                    document.getElementById('teacher-ws-title').value = "";
+                    document.getElementById('teacher-ws-url').value = "";
+                    this.renderTeacherPanel();
+                } catch(e) {
+                    this.toast("Bağlantı eklenirken bir sorun oluştu.", "error");
+                }
+            },
+
+            // Künefe Al Kısmı için Dosya Yükleme Paneli[cite: 19]
+            openTeacherFileBrowser() {
+                document.getElementById('teacher-hidden-file-input').click();
+            },
+
             async uploadUniversalFile(inputId, panelType) {
                 const fileInput = document.getElementById(inputId);
-                if(!fileInput.files.length) return alert("Lütfen bir dosya seçin!");
+                if(!fileInput.files.length) return this.toast("Lütfen bir dosya seçin!", "error");
                 const file = fileInput.files[0];
 
                 const maxSize = 100 * 1024 * 1024;
                 if(file.size > maxSize) {
-                    return alert("Hata: Yüklemek istediğiniz dosya 100 MB sınırını aşamaz!");
+                    return this.toast("Hata: Yüklemek istediğiniz dosya 100 MB sınırını aşamaz!", "error");
                 }
 
                 let school = this.currentUser.school;
@@ -1124,7 +1204,7 @@
                 const storageRef = ref(storage, storagePath);
 
                 try {
-                    alert("Dosya yükleniyor, lütfen bekleyin...");
+                    this.toast("Dosya sisteme yükleniyor, lütfen bekleyin...");
                     const snapshot = await uploadBytes(storageRef, file);
                     const downloadUrl = await getDownloadURL(snapshot.ref);
 
@@ -1134,18 +1214,19 @@
                         fileType: file.type,
                         storagePath: storagePath,
                         school, grade, section, targetType, homeDocType,
+                        text: file.name,
                         sender: this.currentUser.username,
                         createdAt: serverTimestamp()
                     });
 
-                    alert("Dosya başarıyla sisteme yüklendi!");
+                    this.toast("Dosya başarıyla sisteme yüklendi!", "success");
                     fileInput.value = "";
                     if(panelType === 'leader') this.renderLeaderManagementList();
                     if(panelType === 'admin') this.renderAdminControlList();
                     if(panelType === 'teacher_worksheet') this.renderTeacherPanel();
                 } catch (error) {
                     console.error(error);
-                    alert("Dosya yüklenirken bir hata oluştu.");
+                    this.toast("Dosya yüklenirken bir hata oluştu.", "error");
                 }
             },
 
@@ -1157,11 +1238,11 @@
                             await deleteObject(fileRef).catch(e => console.log("Dosya storage'da bulunamadı veya zaten silinmiş."));
                         }
                         await deleteDoc(doc(db, colName, id));
-                        alert("İçerik başarıyla silindi!");
+                        this.toast("İçerik başarıyla silindi!", "success");
                         if(document.getElementById('leader-management-list')) this.renderLeaderManagementList();
                         if(document.getElementById('admin-control-list')) this.renderAdminControlList();
                     } catch(e) {
-                        alert("Silme işlemi sırasında hata oluştu.");
+                        this.toast("Silme işlemi sırasında hata oluştu.", "error");
                     }
                 }
             },
@@ -1169,7 +1250,7 @@
             async addHomework() {
                 const title = document.getElementById('hw-title').value;
                 const deadline = document.getElementById('hw-date').value;
-                if(!title || !deadline) return alert("Hata! Başlık ve Tarih zorunludur.");
+                if(!title || !deadline) return this.toast("Hata! Başlık ve Tarih zorunludur.", "error");
                 
                 await addDoc(collection(db, "homeworks"), {
                     title,
@@ -1183,7 +1264,7 @@
                     targetType: "class",
                     createdAt: serverTimestamp()
                 });
-                alert("Ödev Paylaşıldı!");
+                this.toast("Ödev Paylaşıldı!", "success");
                 this.renderLeaderManagementList();
             },
 
@@ -1298,7 +1379,7 @@
                             <button class="btn-success" onclick="app.adminAddSchool()">Okul Ekle</button>
                             <hr style="margin: 12px 0; opacity: 0.2;">
                             <p style="font-size:12px; font-weight:bold; margin-bottom:8px;">Kayıtlı Okullar Listesi:</p>
-                            <div id="admin-schools-panel-list">${schoolListMarkup || '<p style="color:#888; font-size:11px;">Kayıtlı okul yok kanka.</p>'}</div>
+                            <div id="admin-schools-panel-list">${schoolListMarkup || '<p style="color:#888; font-size:11px;">Kayıtlı okul yok.</p>'}</div>
                         </div>
                         <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
                             <p><b>Sistemi Sıfırla (Yeni Eğitim Yılı)</b></p>
@@ -1321,10 +1402,10 @@
             },
 
             async adminDeleteSchool(index) {
-                if(confirm(`"${this.allSchools[index]}" okulunu silmek istediğine emin misin kanka?`)) {
+                if(confirm(`"${this.allSchools[index]}" okulunu silmek istediğinize emin misiniz?`)) {
                     this.allSchools.splice(index, 1);
                     await setDoc(doc(db, "config", "schools"), { list: this.allSchools });
-                    alert("Okul listeden başarıyla silindi kanka!");
+                    this.toast("Okul listeden başarıyla silindi!", "success");
                     this.renderAdminPanel();
                 }
             },
@@ -1383,13 +1464,13 @@
                 }
 
                 await addDoc(collection(db, "registration_codes"), codeData);
-                alert(`${type === 'teacher' ? 'Öğretmen' : 'İdareci'} kodu başarıyla üretildi!`);
+                this.toast(`${type === 'teacher' ? 'Öğretmen' : 'İdareci'} kodu başarıyla üretildi!`, "success");
             },
 
             async deleteRegistrationCode(id) {
                 if(confirm("Bu kodu tamamen silmek istediğinize emin misiniz?")) {
                     await deleteDoc(doc(db, "registration_codes", id));
-                    alert("Kod başarıyla silindi!");
+                    this.toast("Kod başarıyla silindi!", "success");
                 }
             },
 
@@ -1473,7 +1554,7 @@
                 
                 await updateDoc(doc(db, "users", this.selectedEditUser.username), { [roleField]: newStatus });
                 this.selectedEditUser[roleField] = newStatus;
-                alert("Rol durumu başarıyla güncellendi!");
+                this.toast("Rol durumu başarıyla güncellendi!", "success");
                 
                 const lowerName = this.currentUser.username.toLowerCase();
                 this.renderAdminUserList(lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin);
@@ -1483,7 +1564,7 @@
                 if(!this.selectedEditUser) return;
                 await updateDoc(doc(db, "users", this.selectedEditUser.username), { isBlocked: blockStatus });
                 this.selectedEditUser.isBlocked = blockStatus;
-                alert(blockStatus ? "Kullanıcı engellendi!" : "Kullanıcının cezası kaldırıldı!");
+                this.toast(blockStatus ? "Kullanıcı engellendi!" : "Kullanıcının cezası kaldırıldı!", "success");
                 document.getElementById('block-btn').classList.toggle('hidden', blockStatus);
                 document.getElementById('unblock-btn').classList.toggle('hidden', !blockStatus);
                 
@@ -1494,16 +1575,16 @@
             async adminChangeUsername() {
                 if(!this.selectedEditUser) return;
                 const newName = document.getElementById('edit-username-input').value.trim();
-                if(!newName || newName === this.selectedEditUser.username) return alert("Geçersiz veya aynı isim!");
+                if(!newName || newName === this.selectedEditUser.username) return this.toast("Geçersiz veya aynı isim!", "error");
 
                 const checkDoc = await getDoc(doc(db, "users", newName));
-                if(checkDoc.exists()) return alert("Bu kullanıcı adı zaten alınmış!");
+                if(checkDoc.exists()) return this.toast("Bu kullanıcı adı zaten alınmış!", "error");
 
                 const oldData = { ...this.selectedEditUser, username: newName };
                 await setDoc(doc(db, "users", newName), oldData);
                 await deleteDoc(doc(db, "users", this.selectedEditUser.username));
                 
-                alert("Kullanıcı adı başarıyla değiştirildi!");
+                this.toast("Kullanıcı adı başarıyla değiştirildi!", "success");
                 document.getElementById('admin-user-modal').classList.add('hidden');
                 
                 const lowerName = this.currentUser.username.toLowerCase();
@@ -1515,7 +1596,7 @@
                 if(confirm(`${this.selectedEditUser.username} isimli hesabı tamamen silmek istediğinize emin misiniz?`)) {
                     await deleteDoc(doc(db, "users", this.selectedEditUser.username));
                     await deleteDoc(doc(db, "status", this.selectedEditUser.username));
-                    alert("Hesap sistemden silindi.");
+                    this.toast("Hesap sistemden silindi.", "success");
                     document.getElementById('admin-user-modal').classList.add('hidden');
                     
                     const lowerName = this.currentUser.username.toLowerCase();
@@ -1540,7 +1621,7 @@
                 }
 
                 await updateDoc(doc(db, "users", this.selectedEditUser.username), updates);
-                alert("Değişiklikler başarıyla kaydedildi!");
+                this.toast("Değişiklikler başarıyla kaydedildi!", "success");
                 document.getElementById('admin-user-modal').classList.add('hidden');
                 this.renderAdminPanel();
             },
@@ -1552,7 +1633,7 @@
 
             async adminPublishAnnouncement() {
                 const text = document.getElementById('adm-ann-text').value.trim();
-                if(!text) return alert("Metin giriniz!");
+                if(!text) return this.toast("Metin giriniz!", "error");
 
                 const mode = document.getElementById('adm-target-mode').value;
                 const school = document.getElementById('adm-school-select').value;
@@ -1575,7 +1656,7 @@
                     createdAt: serverTimestamp()
                 });
 
-                alert("Duyuru başarıyla yayınlandı kanka!");
+                this.toast("Duyuru başarıyla yayınlandı!", "success");
                 document.getElementById('adm-ann-text').value = "";
                 this.renderAdminControlList();
             },
@@ -1583,7 +1664,7 @@
             async adminPublishHomework() {
                 const title = document.getElementById('adm-hw-title').value.trim();
                 const deadline = document.getElementById('adm-hw-date').value;
-                if(!title || !deadline) return alert("Başlık ve Tarih zorunludur!");
+                if(!title || !deadline) return this.toast("Başlık ve Tarih zorunludur!", "error");
 
                 const mode = document.getElementById('adm-target-mode').value;
                 const school = document.getElementById('adm-school-select').value;
@@ -1608,7 +1689,7 @@
                     createdAt: serverTimestamp()
                 });
 
-                alert("Ödev başarıyla yayınlandı!");
+                this.toast("Ödev başarıyla yayınlandı!", "success");
                 document.getElementById('adm-hw-title').value = "";
                 this.renderAdminControlList();
             },
@@ -1673,14 +1754,14 @@
                 if(!name) return;
                 this.allSchools.push(name);
                 await setDoc(doc(db, "config", "schools"), { list: this.allSchools });
-                alert("Okul Ekleme Başarılı kanka!");
+                this.toast("Okul Ekleme Başarılı!", "success");
                 this.renderAdminPanel();
             },
 
             async adminSaveUpdate(active) {
                 const link = document.getElementById('cfg-link').value;
                 await setDoc(doc(db, "config", "updates"), { active, link });
-                alert("Güncelleme Ayarı Kaydedildi!");
+                this.toast("Güncelleme Ayarı Kaydedildi!", "success");
             },
 
             async resetSystemData() {
@@ -1696,11 +1777,12 @@
                             await deleteDoc(doc(db, "status", u.username));
                         }
                     });
-                    alert("Sistem başarıyla sıfırlandı! Yeni eğitim yılı hazırlığı tamamlandı.");
-                    location.reload();
+                    this.toast("Sistem başarıyla sıfırlandı!", "success");
+                    setTimeout(() => location.reload(), 1000);
                 }
             },
 
+            // Yenilenen Öğretmen Paneli Arayüzü (Link ile ekleme & + butonu ile dosya yükleme)[cite: 19]
             async renderTeacherPanel() {
                 const main = document.getElementById('main-content');
                 let gradeOptionsMarkup = "";
@@ -1713,11 +1795,21 @@
                     <p style="font-size:13px; margin-bottom:10px;">Sınıfınız: ${this.currentUser.grade}/${this.currentUser.section}</p>
                     
                     <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px; border: 1.5px solid #eee;">
-                        <p style="margin-bottom:8px; font-weight:bold; color:#2ecc71;"><i class="fas fa-file-upload"></i> Çalışma Kağıdı Yükle</p>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <p style="font-weight:bold; color:#2ecc71; margin:0;"><i class="fas fa-file-upload"></i> Künefe Al - Çalışma Kağıdı Ekle</p>
+                            <button type="button" class="btn-main" style="width:auto; margin:0; padding:6px 12px; font-size:13px; border-radius:20px;" onclick="app.openTeacherFileBrowser()"><i class="fas fa-plus"></i></button>
+                        </div>
+                        
+                        <!-- Gizli Dosya Seçici Altyapısı[cite: 19] -->
+                        <input type="file" id="teacher-hidden-file-input" class="hidden" onchange="app.uploadUniversalFile('teacher-hidden-file-input', 'teacher_worksheet')">
+                        
                         <label style="font-size:12px;">Hedef Sınıf Kademesi:</label>
                         <select id="teacher-ws-grade-select" style="margin-bottom:10px;">${gradeOptionsMarkup}</select>
-                        <input type="file" id="teacher-worksheet-file" style="padding:5px; margin-bottom:10px;">
-                        <button class="btn-success" onclick="app.uploadUniversalFile('teacher-worksheet-file', 'teacher_worksheet')">Sınıf Kademesine Yayınla</button>
+                        
+                        <input type="text" id="teacher-ws-title" placeholder="Çalışma Kağıdı Başlığı">
+                        <input type="url" id="teacher-ws-url" placeholder="Çalışma Kağıdı Linki (URL)">
+                        
+                        <button class="btn-success" onclick="app.addWorksheetLink()">Bağlantıyı Yayınla</button>
                     </div>
 
                     <div id="teacher-student-list"></div>
@@ -1737,7 +1829,7 @@
 
             async teacherToggleLeader(targetUser, status) {
                 await updateDoc(doc(db, "users", targetUser), { isLeader: status });
-                alert(status ? "Sınıf başkanı atandı!" : "Sınıf başkanlığı geri alındı!");
+                this.toast(status ? "Sınıf başkanı atandı!" : "Sınıf başkanlığı geri alındı!", "success");
                 this.renderTeacherPanel();
             },
 
@@ -1783,6 +1875,7 @@
                 input.value = "";
             },
 
+            // Çıkış Yap Butonu Eklenmiş Ayarlar Paneli[cite: 19]
             renderSettings() {
                 let staffCodeFields = "";
                 if(this.currentUser.isTeacher || this.currentUser.isMod) {
@@ -1809,19 +1902,22 @@
                         ${staffCodeFields}
                         
                         <hr style="margin:15px 0; opacity: 0.2;">
-                        <button class="btn-main" style="background:#34495e; margin: 0;" onclick="document.body.classList.toggle('dark-mode')"><i class="fas fa-moon"></i> Tema Değiştir</button>
+                        <button class="btn-main" style="background:#34495e; margin-bottom:10px;" onclick="document.body.classList.toggle('dark-mode')"><i class="fas fa-moon"></i> Tema Değiştir</button>
+                        
+                        <!-- Yeni Çıkış Yap Butonu[cite: 19] -->
+                        <button class="btn-danger" style="margin:0;" onclick="app.logout()"><i class="fas fa-sign-out-alt"></i> Oturumu Kapat</button>
                     </div>
                 `;
             },
 
             async saveUsernameChange() {
                 const newName = document.getElementById('up-username').value.trim();
-                if(!newName || newName === this.currentUser.username) return alert("Geçersiz veya aynı kullanıcı adını girdin kanka!");
+                if(!newName || newName === this.currentUser.username) return this.toast("Geçersiz veya aynı kullanıcı adını girdiniz!", "error");
 
                 const checkDoc = await getDoc(doc(db, "users", newName));
-                if(checkDoc.exists()) return alert("Bu kullanıcı adı başka birisi tarafından kapılmış kanka!");
+                if(checkDoc.exists()) return this.toast("Bu kullanıcı adı başka birisi tarafından alınmış!", "error");
 
-                if(confirm("Kullanıcı adını değiştirmek istediğine emin misin? Değişimden sonra uygulama yeniden yüklenecektir.")) {
+                if(confirm("Kullanıcı adını değiştirmek istediğinize emin misiniz? Değişimden sonra uygulama yeniden yüklenecektir.")) {
                     const updatedUserData = { ...this.currentUser, username: newName };
                     
                     await setDoc(doc(db, "users", newName), updatedUserData);
@@ -1834,14 +1930,14 @@
                         await updateDoc(doc(db, "registration_codes", codeDoc.id), { usedBy: newName });
                     });
 
-                    alert("Kullanıcı adın fıstık gibi değiştirildi kanka!");
-                    location.reload();
+                    this.toast("Kullanıcı adınız başarıyla değiştirildi!", "success");
+                    setTimeout(() => location.reload(), 1000);
                 }
             },
 
             async saveStaffCode() {
                 const newCode = document.getElementById('up-staff-code').value.trim();
-                if(!newCode) return alert("Kod alanı boş bırakılamaz kanka!");
+                if(!newCode) return this.toast("Kod alanı boş bırakılamaz!", "error");
 
                 const codeQuery = query(collection(db, "registration_codes"), where("usedBy", "==", this.currentUser.username));
                 const codeSnap = await getDocs(codeQuery);
@@ -1858,7 +1954,7 @@
                     await updateDoc(doc(db, "registration_codes", codeSnap.docs[0].id), { code: newCode });
                 }
 
-                alert("Giriş kodun başarıyla güncellendi kanka!");
+                this.toast("Giriş kodunuz başarıyla güncellendi!", "success");
                 document.getElementById('up-staff-code').value = "";
             },
 
@@ -1866,10 +1962,10 @@
                 const pass = document.getElementById('up-pass').value;
                 if(pass) { 
                     await updateDoc(doc(db, "users", this.currentUser.username), { password: pass }); 
-                    alert("Şifre güncellendi kanka!"); 
+                    this.toast("Şifre güncellendi!", "success"); 
                     document.getElementById('up-pass').value = "";
                 } else {
-                    alert("Lütfen yeni bir şifre gir kanka!");
+                    this.toast("Lütfen yeni bir şifre girin!", "error");
                 }
             }
         };
