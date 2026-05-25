@@ -64,6 +64,7 @@
 
         /* Forum / Social Styles kanka */
         .social-card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-bottom: 2px solid #eee; position: relative; }
+        .social-card .del-hw { color: #d63031; cursor: pointer; float: right; }
         .social-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
         .social-user { font-weight: bold; color: #ff9f43; }
         .social-scope { font-size: 11px; background: #e0e0e0; color: #333; padding: 2px 6px; border-radius: 5px; }
@@ -74,6 +75,12 @@
         .reply-box { margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px; background: rgba(0,0,0,0.02); padding: 8px; border-radius: 8px; }
         .reply-item { font-size: 13px; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dashed #ddd; }
         .reply-user { font-weight: bold; color: #3498db; }
+        
+        /* Ana Sayfa Menü Butonları kanka */
+        .home-menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .home-menu-btn { background: var(--card); color: var(--text); padding: 15px; border-radius: 12px; border: 1.5px solid #eee; font-weight: bold; font-size: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        .home-menu-btn i { font-size: 20px; color: #ff9f43; }
+        .home-menu-btn.active { border-color: #ff9f43; background: rgba(255, 159, 67, 0.05); }
     </style>
 </head>
 <body>
@@ -107,7 +114,7 @@
             <input type="email" id="staff-email" placeholder="E-posta">
             <select id="staff-school"></select>
             
-            <div id="staff-class-area">
+            <div id="staff-class-area" class="hidden">
                 <p style="font-size:11px; margin-bottom:5px; font-weight:bold;">Sınıf(lar)ınızı Ekleyin:</p>
                 <div style="display:flex; gap:5px; margin-bottom:5px;">
                     <select id="staff-grade-select"></select>
@@ -169,6 +176,20 @@
 
             <button class="btn-main" onclick="app.submitSocialPost()">Paylaş</button>
             <button class="btn-danger" style="background:#888;" onclick="document.getElementById('social-post-modal').classList.add('hidden')">İptal</button>
+        </div>
+    </div>
+
+    <div id="teacher-class-modal" class="modal-bg hidden">
+        <div class="modal">
+            <h3>Öğretmen Sınıf Seçimi</h3>
+            <p style="font-size: 12px; margin-bottom: 10px; color:#666;">E-posta doğrulamanız başarıyla tamamlandı. Lütfen dersine girdiğiniz sınıf ve şubeleri ekleyin:</p>
+            <div style="display:flex; gap:5px; margin-bottom:5px;">
+                <select id="modal-teacher-grade"></select>
+                <select id="modal-teacher-section"></select>
+                <button type="button" class="btn-main" style="width:auto; margin:0; padding:10px 15px;" onclick="app.addModalTeacherClass()"><i class="fas fa-plus"></i></button>
+            </div>
+            <div id="modal-teacher-added-classes" style="display:flex; flex-direction:column; gap:5px; margin-bottom:12px;"></div>
+            <button class="btn-main" onclick="app.finishTeacherRegistrationWithClass()">Kaydı Tamamla</button>
         </div>
     </div>
 
@@ -255,11 +276,17 @@
             staffClasses: [],
             socialUnsub: null,
             openReplyBoxes: new Set(),
+            
+            activeHomeTab: "homeworks",
+            homeAnnounUnsub: null,
+            homeImagesUnsub: null,
+            homeHomeworksUnsub: null,
+            selectedWorksheetGrade: "", // Çalışma kağıdı sınıf kademesi takibi kanka
 
             async init() {
-                const gSelects = [document.getElementById('reg-grade'), document.getElementById('edit-grade'), document.getElementById('staff-grade-select'), document.getElementById('social-post-grade')];
+                const gSelects = [document.getElementById('reg-grade'), document.getElementById('edit-grade'), document.getElementById('staff-grade-select'), document.getElementById('social-post-grade'), document.getElementById('modal-teacher-grade')];
                 gSelects.forEach(s => { if(s) { s.innerHTML = ""; for(let i=1; i<=12; i++) s.innerHTML += `<option value="${i}">${i}. Sınıf</option>`; } });
-                const sSelects = [document.getElementById('reg-section'), document.getElementById('edit-section'), document.getElementById('staff-section-select'), document.getElementById('social-post-section')];
+                const sSelects = [document.getElementById('reg-section'), document.getElementById('edit-section'), document.getElementById('staff-section-select'), document.getElementById('social-post-section'), document.getElementById('modal-teacher-section')];
                 sSelects.forEach(s => { if(s) { s.innerHTML = ""; "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => s.innerHTML += `<option value="${char}">${char}</option>`); } });
                 await this.fetchSchools();
                 this.listenForUpdates();
@@ -325,7 +352,7 @@
                     document.getElementById('staff-code1').placeholder = mode === 'teacher' ? "Öğretmen Kodu" : "İdareci Kodu";
                     document.getElementById('staff-code2').classList.toggle('hidden', mode === 'teacher');
                     
-                    document.getElementById('staff-class-area').classList.toggle('hidden', mode === 'manager');
+                    document.getElementById('staff-class-area').classList.add('hidden');
                     
                     if (mode === 'manager') {
                         const savedCode1 = localStorage.getItem('saved_manager_code1');
@@ -371,6 +398,34 @@
                 });
             },
 
+            addModalTeacherClass() {
+                const g = document.getElementById('modal-teacher-grade').value;
+                const s = document.getElementById('modal-teacher-section').value;
+                if(!g || !s) return;
+                const classStr = `${g}-${s}`;
+                if(this.staffClasses.includes(classStr)) return alert("Bu sınıf zaten eklendi!");
+                this.staffClasses.push(classStr);
+                this.renderModalTeacherClasses();
+            },
+
+            removeModalTeacherClass(c) {
+                this.staffClasses = this.staffClasses.filter(x => x !== c);
+                this.renderModalTeacherClasses();
+            },
+
+            renderModalTeacherClasses() {
+                const cont = document.getElementById('modal-teacher-added-classes');
+                if(!cont) return;
+                cont.innerHTML = "";
+                this.staffClasses.forEach(c => {
+                    const [g, s] = c.split('-');
+                    cont.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; border-radius:5px; font-size:12px;">
+                        <span><b>Sınıf:</b> ${g}. Sınıf - ${s} Şubesi</span>
+                        <i class="fas fa-times" style="color:#d63031; cursor:pointer;" onclick="app.removeModalTeacherClass('${c}')"></i>
+                    </div>`;
+                });
+            },
+
             async startRegister() {
                 const email = document.getElementById('reg-email').value;
                 this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
@@ -394,11 +449,6 @@
                 const school = document.getElementById('staff-school').value;
                 const code1 = document.getElementById('staff-code1').value.trim();
                 const code2 = document.getElementById('staff-code2').value.trim();
-
-                if (this.currentStaffMode === 'teacher' && this.staffClasses.length === 0) return alert("Lütfen en az bir sınıf ve şube ekleyin!");
-                
-                const grades = this.currentStaffMode === 'manager' ? ['Tümü'] : this.staffClasses.map(c => c.split('-')[0]);
-                const sections = this.currentStaffMode === 'manager' ? ['Tümü'] : this.staffClasses.map(c => c.split('-')[1]);
 
                 if (!username || !pass || !email || !code1) return alert("Lütfen tüm alanları doldurun!");
                 if (this.currentStaffMode === 'manager' && !code2) return alert("İdareci için 2. şifre zorunludur!");
@@ -433,7 +483,7 @@
                 } else {
                     const codeQuery = query(collection(db, "registration_codes"), where("type", "==", this.currentStaffMode), where("code", "==", code1));
                     const codeSnap = await getDocs(codeQuery);
-                    if (codeSnap.empty) return alert("Geçersiz rol kodu veya bu kod hatalı!");
+                    if (codeSnap.empty) return alert("Geçersiz rol kodu veya bu kod kullanılmış!");
                     
                     let validDoc = null;
                     if (this.currentStaffMode === 'manager') {
@@ -442,25 +492,17 @@
                     } else {
                         validDoc = codeSnap.docs[0];
                     }
-                    
-                    if (validDoc.data().usedBy && validDoc.data().usedBy !== username) {
-                        return alert("Bu kod daha önce başka biri tarafından kullanılmış!");
-                    }
-                    
-                    if (validDoc.data().school && validDoc.data().school !== "Tümü" && validDoc.data().school !== school) {
-                        return alert("Bu kod seçtiğiniz okul için geçerli değil!");
-                    }
 
                     this.tempUser = {
                         username, email, password: pass, school, 
-                        grade: grades.join(','), section: sections.join(','),
+                        grade: this.currentStaffMode === 'manager' ? "Tümü" : "",
+                        section: this.currentStaffMode === 'manager' ? "Tümü" : "",
                         isBlocked: false, isLeader: false,
                         isMod: this.currentStaffMode === 'manager',
                         isTeacher: this.currentStaffMode === 'teacher',
                         isAdmin: false, rank: "", rankColor: "#ff9f43",
                         managerLoginCount: 0
                     };
-                    
                     this.tempCodeIdToBurn = validDoc.id;
                     this.tempAction = 'register';
                     this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
@@ -482,15 +524,38 @@
                         this.currentUser = this.tempUser;
                         this.launch();
                     } else {
-                        await setDoc(doc(db, "users", this.tempUser.username), this.tempUser);
-                        if (this.tempCodeIdToBurn) {
-                            await updateDoc(doc(db, "registration_codes", this.tempCodeIdToBurn), { usedBy: this.tempUser.username });
+                        document.getElementById('verify-modal').classList.add('hidden');
+                        if (this.tempUser.isTeacher) {
+                            this.staffClasses = [];
+                            document.getElementById('modal-teacher-added-classes').innerHTML = "";
+                            document.getElementById('teacher-class-modal').classList.remove('hidden');
+                        } else {
+                            await setDoc(doc(db, "users", this.tempUser.username), this.tempUser);
+                            if (this.tempCodeIdToBurn) {
+                                await updateDoc(doc(db, "registration_codes", this.tempCodeIdToBurn), { usedBy: this.tempUser.username });
+                            }
+                            location.reload();
                         }
-                        location.reload();
                     }
                 } else {
                     alert("Doğrulama kodu hatalı!");
                 }
+            },
+
+            async finishTeacherRegistrationWithClass() {
+                if (this.staffClasses.length === 0) return alert("Lütfen en az bir sınıf ve şube seçin kanka!");
+                const grades = this.staffClasses.map(c => c.split('-')[0]);
+                const sections = this.staffClasses.map(c => c.split('-')[1]);
+                
+                this.tempUser.grade = grades.join(',');
+                this.tempUser.section = sections.join(',');
+
+                await setDoc(doc(db, "users", this.tempUser.username), this.tempUser);
+                if (this.tempCodeIdToBurn) {
+                    await updateDoc(doc(db, "registration_codes", this.tempCodeIdToBurn), { usedBy: this.tempUser.username });
+                }
+                alert("Kayıt başarıyla tamamlandı öğretmenim!");
+                location.reload();
             },
 
             async login() {
@@ -531,6 +596,10 @@
                 }
                 document.getElementById('social-add-btn').classList.add('hidden');
                 if(this.socialUnsub) { this.socialUnsub(); this.socialUnsub = null; }
+                
+                if(this.homeAnnounUnsub) { this.homeAnnounUnsub(); this.homeAnnounUnsub = null; }
+                if(this.homeImagesUnsub) { this.homeImagesUnsub(); this.homeImagesUnsub = null; }
+                if(this.homeHomeworksUnsub) { this.homeHomeworksUnsub(); this.homeHomeworksUnsub = null; }
 
                 if(page === 'home') this.renderHome();
                 if(page === 'social') this.renderSocial();
@@ -542,83 +611,169 @@
                 if(page === 'admin') this.renderAdminPanel();
             },
 
-            async renderHome() {
+            renderHome() {
                 const main = document.getElementById('main-content');
-                main.innerHTML = `<h3>Ana Sayfa</h3>
-                                  <div id="announcement-list" style="margin-bottom:15px;"></div>
-                                  <div id="image-list" style="margin-bottom:15px;"></div>
-                                  <div id="homework-list"></div>`;
-                
-                onSnapshot(collection(db, "announcements"), (snap) => {
-                    const cont = document.getElementById('announcement-list');
-                    if(!cont) return;
-                    cont.innerHTML = "";
-                    snap.forEach(d => {
-                        const data = d.data();
-                        if(this.checkAccess(data)) {
-                            cont.innerHTML += `<div class="homework-card" style="border-left-color: #3498db;">
-                                                <h4 style="color:#3498db;"><i class="fas fa-bullhorn"></i> Duyuru</h4>
-                                                <p style="margin-top:5px; font-size:15px;">${data.text}</p>
-                                               </div>`;
-                        }
-                    });
-                });
+                main.innerHTML = `
+                    <h3>Ana Sayfa</h3>
+                    <div class="home-menu-grid" style="margin-top: 15px;">
+                        <div id="tab-btn-homeworks" class="home-menu-btn" onclick="app.setHomeTab('homeworks')">
+                            <i class="fas fa-book"></i><span>Ödevler</span>
+                        </div>
+                        <div id="tab-btn-announcements" class="home-menu-btn" onclick="app.setHomeTab('announcements')">
+                            <i class="fas fa-bullhorn"></i><span>Duyurular</span>
+                        </div>
+                        <div id="tab-btn-worksheets" class="home-menu-btn" onclick="app.setHomeTab('worksheets')">
+                            <i class="fas fa-file-alt"></i><span>Çalışma Kağıtları</span>
+                        </div>
+                        <div id="tab-btn-exams" class="home-menu-btn" onclick="app.setHomeTab('exams')">
+                            <i class="fas fa-calendar-check"></i><span>Sınav Tarihleri</span>
+                        </div>
+                    </div>
+                    <div id="home-tab-content"></div>
+                `;
+                this.setHomeTab(this.activeHomeTab);
+            },
 
-                onSnapshot(collection(db, "images"), (snap) => {
-                    const cont = document.getElementById('image-list');
-                    if(!cont) return;
-                    cont.innerHTML = "";
-                    snap.forEach(d => {
-                        const data = d.data();
-                        if(this.checkAccess(data)) {
-                            let mediaHtml = "";
-                            if(data.fileType && data.fileType.startsWith("image/")) {
-                                mediaHtml = `<img src="${data.url}" class="media-preview">`;
-                            } else if(data.fileType && data.fileType.startsWith("video/")) {
-                                mediaHtml = `<video src="${data.url}" controls class="media-preview"></video>`;
-                            } else if(data.fileType && data.fileType.startsWith("audio/")) {
-                                mediaHtml = `<audio src="${data.url}" controls style="width:100%; margin-top:10px;"></audio>`;
-                            } else {
-                                mediaHtml = `<a href="${data.url}" target="_blank" style="display:block; margin-top:10px; color:#2ecc71; font-weight:bold;"><i class="fas fa-file-download"></i> Dosyayı İndir (${data.fileName || 'Belge'})</a>`;
+            setHomeTab(tab) {
+                this.activeHomeTab = tab;
+                document.querySelectorAll('.home-menu-btn').forEach(btn => btn.classList.remove('active'));
+                const activeBtn = document.getElementById(`tab-btn-${tab}`);
+                if(activeBtn) activeBtn.classList.add('active');
+
+                if(this.homeAnnounUnsub) { this.homeAnnounUnsub(); this.homeAnnounUnsub = null; }
+                if(this.homeImagesUnsub) { this.homeImagesUnsub(); this.homeImagesUnsub = null; }
+                if(this.homeHomeworksUnsub) { this.homeHomeworksUnsub(); this.homeHomeworksUnsub = null; }
+
+                const container = document.getElementById('home-tab-content');
+                if(!container) return;
+                container.innerHTML = "";
+
+                if(tab === "homeworks") {
+                    container.innerHTML = `<div id="homework-list"></div>`;
+                    this.homeHomeworksUnsub = onSnapshot(collection(db, "homeworks"), (snap) => {
+                        const list = document.getElementById('homework-list');
+                        if(!list) return;
+                        list.innerHTML = "";
+                        const now = new Date().getTime();
+                        snap.forEach(docSnap => {
+                            const h = docSnap.data();
+                            if(this.checkAccess(h)) {
+                                const deadline = new Date(h.deadline).getTime();
+                                if(now > deadline) { 
+                                    deleteDoc(doc(db, "homeworks", docSnap.id)); 
+                                } else {
+                                    const isUrgent = ((deadline - now) / (1000 * 60 * 60)) <= 24;
+                                    list.innerHTML += `<div class="homework-card">${isUrgent ? '<div class="warning-icon">!</div>' : ''}<h4>${h.title}</h4><p><b>Ders:</b> ${h.subject}</p><p><b>Kitap:</b> ${h.book}</p><p><b>Sayfalar:</b> ${h.pages}</p><p style="margin-top:5px; font-size:11px; color:#666;"><b>Bitiş:</b> ${h.deadline.replace('T', ' ')}</p></div>`;
+                                }
                             }
-
-                            cont.innerHTML += `<div class="homework-card" style="border-left-color: #2ecc71;">
-                                                <h4 style="color:#2ecc71;"><i class="fas fa-paperclip"></i> Yayınlanan İçerik</h4>
-                                                ${data.text ? `<p style="margin-bottom:5px;">${data.text}</p>` : ''}
-                                                ${mediaHtml}
-                                               </div>`;
-                        }
+                        });
+                        if(list.innerHTML === "") list.innerHTML = "<p style='font-size:13px; color:#999;'>Şu an güncel bir ödev akışı bulunmuyor.</p>";
                     });
-                });
-
-                onSnapshot(collection(db, "homeworks"), (snap) => {
-                    const list = document.getElementById('homework-list');
-                    if(!list) return;
-                    list.innerHTML = "";
-                    const now = new Date().getTime();
-                    snap.forEach(docSnap => {
-                        const h = docSnap.data();
-                        if(this.checkAccess(h)) {
-                            const deadline = new Date(h.deadline).getTime();
-                            if(now > deadline) { 
-                                deleteDoc(doc(db, "homeworks", docSnap.id)); 
-                            } else {
-                                const isUrgent = ((deadline - now) / (1000 * 60 * 60)) <= 24;
-                                list.innerHTML += `<div class="homework-card">${isUrgent ? '<div class="warning-icon">!</div>' : ''}<h4>${h.title}</h4><p><b>Ders:</b> ${h.subject}</p><p><b>Kitap:</b> ${h.book}</p><p><b>Sayfalar:</b> ${h.pages}</p><p style="margin-top:5px; font-size:11px; color:#666;"><b>Bitiş:</b> ${h.deadline.replace('T', ' ')}</p></div>`;
+                } 
+                else if(tab === "announcements") {
+                    container.innerHTML = `<div id="announcement-list"></div>`;
+                    this.homeAnnounUnsub = onSnapshot(collection(db, "announcements"), (snap) => {
+                        const cont = document.getElementById('announcement-list');
+                        if(!cont) return;
+                        cont.innerHTML = "";
+                        snap.forEach(d => {
+                            const data = d.data();
+                            if(this.checkAccess(data) && data.homeDocType !== "exam") {
+                                cont.innerHTML += `<div class="homework-card" style="border-left-color: #3498db;">
+                                                    <h4 style="color:#3498db;"><i class="fas fa-bullhorn"></i> Duyuru</h4>
+                                                    <p style="margin-top:5px; font-size:15px;">${data.text}</p>
+                                                   </div>`;
                             }
-                        }
+                        });
+                        if(cont.innerHTML === "") cont.innerHTML = "<p style='font-size:13px; color:#999;'>Şu an herhangi bir duyuru bulunmuyor.</p>";
                     });
-                    if(list.innerHTML === "" && document.getElementById('announcement-list').innerHTML === "" && document.getElementById('image-list').innerHTML === "") {
-                        list.innerHTML = "<p>Şu an herhangi bir akış yok!</p>";
+                }
+                else if(tab === "worksheets") {
+                    // İstediğin gibi tıklanınca sınıf kademesi soran seçici kanka
+                    let gradeOptions = `<option value="">-- Sınıf Seç kanka --</option>`;
+                    for(let i = 1; i <= 12; i++) {
+                        gradeOptions += `<option value="${i}" ${this.selectedWorksheetGrade == i ? 'selected' : ''}>${i}. Sınıf</option>`;
                     }
+                    
+                    container.innerHTML = `
+                        <div style="margin-bottom: 12px;">
+                            <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Hangi sınıfın çalışma kağıtlarına bakacaksın?</label>
+                            <select id="home-ws-grade-selector" onchange="app.onWorksheetGradeChange()" style="margin: 0;">${gradeOptions}</select>
+                        </div>
+                        <div id="worksheet-list"></div>
+                    `;
+                    this.renderWorksheetsFeed();
+                }
+                else if(tab === "exams") {
+                    container.innerHTML = `<div id="exam-list"></div>`;
+                    this.homeAnnounUnsub = onSnapshot(collection(db, "announcements"), (snap) => {
+                        const cont = document.getElementById('exam-list');
+                        if(!cont) return;
+                        cont.innerHTML = "";
+                        snap.forEach(d => {
+                            const data = d.data();
+                            if(data.school === this.currentUser.school && data.homeDocType === "exam") {
+                                cont.innerHTML += `<div class="homework-card" style="border-left-color: #e67e22;">
+                                                    <h4 style="color:#e67e22;"><i class="fas fa-calendar-alt"></i> Sınav Tarihi Duyurusu</h4>
+                                                    <p style="margin-top:5px; font-size:15px; white-space:pre-wrap;">${data.text}</p>
+                                                   </div>`;
+                            }
+                        });
+                        if(cont.innerHTML === "") cont.innerHTML = "<p style='font-size:13px; color:#999;'>Okulunuza ait girilmiş bir sınav tarihi planı yok.</p>";
+                    });
+                }
+            },
+
+            onWorksheetGradeChange() {
+                const selectEl = document.getElementById('home-ws-grade-selector');
+                if(selectEl) {
+                    this.selectedWorksheetGrade = selectEl.value;
+                    this.renderWorksheetsFeed();
+                }
+            },
+
+            renderWorksheetsFeed() {
+                const cont = document.getElementById('worksheet-list');
+                if(!cont) return;
+                
+                if(this.homeImagesUnsub) { this.homeImagesUnsub(); this.homeImagesUnsub = null; }
+                
+                if(!this.selectedWorksheetGrade) {
+                    cont.innerHTML = "<p style='font-size:13px; color:#888; text-align:center; padding: 10px;'>Lütfen yukarıdan sınıf kademesi seç kanka!</p>";
+                    return;
+                }
+
+                cont.innerHTML = "<p style='font-size:12px; color:#666;'>Yükleniyor...</p>";
+                this.homeImagesUnsub = onSnapshot(collection(db, "images"), (snap) => {
+                    cont.innerHTML = "";
+                    snap.forEach(d => {
+                        const data = d.data();
+                        // Öğretmenin seçtiği okulda geçerli ve sadece seçilen sınıf kademesine ait dosyalar kanka
+                        if(data.school === this.currentUser.school && data.homeDocType === "worksheet" && String(data.grade) === String(this.selectedWorksheetGrade)) {
+                            cont.innerHTML += this.buildMediaCardMarkup(data, "Çalışma Kağıdı", "#2ecc71");
+                        }
+                    });
+                    if(cont.innerHTML === "") cont.innerHTML = `<p style='font-size:13px; color:#999;'>${this.selectedWorksheetGrade}. Sınıf kademesi için çalışma kağıdı bulunamadı kanka.</p>`;
                 });
             },
 
-            checkAccess(data) {
-                if(data.targetType === "all-schools") return true;
-                if(data.targetType === "school-all" && data.school === this.currentUser.school) return true;
-                if(data.school === this.currentUser.school && data.grade === this.currentUser.grade && data.section === this.currentUser.section) return true;
-                return false;
+            buildMediaCardMarkup(data, title, borderColor) {
+                let mediaHtml = "";
+                if(data.fileType && data.fileType.startsWith("image/")) {
+                    mediaHtml = `<img src="${data.url}" class="media-preview">`;
+                } else if(data.fileType && data.fileType.startsWith("video/")) {
+                    mediaHtml = `<video src="${data.url}" controls class="media-preview"></video>`;
+                } else if(data.fileType && data.fileType.startsWith("audio/")) {
+                    mediaHtml = `<audio src="${data.url}" controls style="width:100%; margin-top:10px;"></audio>`;
+                } else {
+                    mediaHtml = `<a href="${data.url}" target="_blank" style="display:block; margin-top:10px; color:${borderColor}; font-weight:bold;"><i class="fas fa-file-download"></i> Dosyayı İndir (${data.fileName || 'Belge'})</a>`;
+                }
+
+                return `<div class="homework-card" style="border-left-color: ${borderColor};">
+                            <h4 style="color:${borderColor};"><i class="fas fa-paperclip"></i> ${title}</h4>
+                            ${data.text ? `<p style="margin-bottom:5px;">${data.text}</p>` : ''}
+                            ${mediaHtml}
+                        </div>`;
             },
 
             /* Forum / Sosyal Medya Fonksiyonları kanka */
@@ -637,7 +792,6 @@
                         const post = docSnap.data();
                         const postId = docSnap.id;
                         
-                        // Kapsam / Filtreleme Kontrolleri
                         if(post.scope === 'school' && post.school !== this.currentUser.school) return;
                         if(post.scope === 'class' && (post.school !== this.currentUser.school || post.grade !== this.currentUser.grade || post.section !== this.currentUser.section)) return;
                         if(post.scope === 'other-class' && (post.school !== this.currentUser.school || post.grade !== this.currentUser.grade || post.section !== this.currentUser.section)) return;
@@ -653,7 +807,6 @@
                             }
                         }
 
-                        // Silme Butonu Görünürlük Kontrolü Hiyerarşisi
                         const lowerName = this.currentUser.username.toLowerCase();
                         const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
                         let canDelete = false;
@@ -693,7 +846,7 @@
                         
                         this.listenSocialReplies(postId);
                     });
-                    if(feed.innerHTML === "") feed.innerHTML = "<p style='font-size:13px; color:#999; text-align:center;'>Henüz forumda paylaşım yok.</p>";
+                    if(feed.innerHTML === "") feed.innerHTML = "<p style='font-size:13px; color:#999; text-align:center;'>Henüz forumda paylaşım yok kanka.</p>";
                 });
             },
 
@@ -715,7 +868,7 @@
                 const scope = document.getElementById('social-post-scope').value;
                 const fileInput = document.getElementById('social-post-file');
                 
-                if(!text && !fileInput.files.length) return alert("Boş paylaşım yapılamaz kanka!");
+                if(!text && !fileInput.files.length) return alert("Boş paylaşım yapılmaz kanka!");
 
                 let grade = this.currentUser.grade;
                 let section = this.currentUser.section;
@@ -827,7 +980,6 @@
                 const snap = await getDocs(collection(db, "users"));
                 snap.forEach(uDoc => {
                     const u = uDoc.data();
-                    if(u.username === this.currentUser.username) return; // Sosyal listesi, admin paneli değil kanka
                     const item = document.createElement('div');
                     item.className = 'user-item';
                     
@@ -916,6 +1068,7 @@
                     grade: this.currentUser.grade, 
                     section: this.currentUser.section,
                     targetType: "class",
+                    homeDocType: "general",
                     sender: this.currentUser.username,
                     createdAt: serverTimestamp() 
                 });
@@ -931,13 +1084,14 @@
 
                 const maxSize = 100 * 1024 * 1024;
                 if(file.size > maxSize) {
-                    return alert("Hata: Yüklemek istediğiniz dosya 100 MB sınırını aşamaz! (Firebase alanınızı koruyoruz)");
+                    return alert("Hata: Yüklemek istediğiniz dosya 100 MB sınırını aşamaz!");
                 }
 
                 let school = this.currentUser.school;
                 let grade = this.currentUser.grade;
                 let section = this.currentUser.section;
                 let targetType = "class";
+                let homeDocType = "general";
 
                 if(panelType === 'admin') {
                     const mode = document.getElementById('adm-target-mode').value;
@@ -949,6 +1103,11 @@
                     } else {
                         targetType = "school-all";
                     }
+                } else if(panelType === 'teacher_worksheet') {
+                    grade = document.getElementById('teacher-ws-grade-select').value;
+                    section = "Tümü";
+                    targetType = "class"; 
+                    homeDocType = "worksheet";
                 }
 
                 const storagePath = `uploads/${Date.now()}_${file.name}`;
@@ -964,7 +1123,7 @@
                         fileName: file.name,
                         fileType: file.type,
                         storagePath: storagePath,
-                        school, grade, section, targetType,
+                        school, grade, section, targetType, homeDocType,
                         sender: this.currentUser.username,
                         createdAt: serverTimestamp()
                     });
@@ -973,6 +1132,7 @@
                     fileInput.value = "";
                     if(panelType === 'leader') this.renderLeaderManagementList();
                     if(panelType === 'admin') this.renderAdminControlList();
+                    if(panelType === 'teacher_worksheet') this.renderTeacherPanel();
                 } catch (error) {
                     console.error(error);
                     alert("Dosya yüklenirken bir hata oluştu.");
@@ -1047,6 +1207,10 @@
                         <div style="margin-top:10px;">
                             <p style="font-size:13px; margin-bottom:5px;"><b>Seçenek A: Duyuru Yayınla</b></p>
                             <input id="adm-ann-text" placeholder="Duyuru metni...">
+                            <select id="adm-ann-type" style="margin-top:5px; margin-bottom:5px;">
+                                <option value="general">Genel Duyuru</option>
+                                <option value="exam">Sınav Tarihi Planı / Duyurusu</option>
+                            </select>
                             <button class="btn-main" style="background:#3498db;" onclick="app.adminPublishAnnouncement()">Duyuru Gönder</button>
                         </div>
 
@@ -1107,11 +1271,25 @@
                 sSel.innerHTML = ""; "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => sSel.innerHTML += `<option value="${char}">${char}</option>`);
 
                 if(isRealAdmin) {
+                    // İstediğin gibi okulların listelendiği ve silinebildiği panel kanka
+                    let schoolListMarkup = "";
+                    this.allSchools.forEach((sch, index) => {
+                        schoolListMarkup += `
+                            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.03); padding:8px; margin-bottom:5px; border-radius:6px; font-size:13px;">
+                                <span><i class="fas fa-school"></i> ${sch}</span>
+                                <i class="fas fa-trash-alt" style="color:#d63031; cursor:pointer;" onclick="app.adminDeleteSchool(${index})"></i>
+                            </div>
+                        `;
+                    });
+
                     document.getElementById('admin-user-management-zone').innerHTML = `
                         <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
-                            <p><b>Okul Yönetimi</b></p>
+                            <p style="margin-bottom: 10px;"><b>🏫 Okul Yönetimi Paneliniz</b></p>
                             <input type="text" id="new-school-name" placeholder="Yeni Okul Adı">
                             <button class="btn-success" onclick="app.adminAddSchool()">Okul Ekle</button>
+                            <hr style="margin: 12px 0; opacity: 0.2;">
+                            <p style="font-size:12px; font-weight:bold; margin-bottom:8px;">Kayıtlı Okullar Listesi:</p>
+                            <div id="admin-schools-panel-list">${schoolListMarkup || '<p style="color:#888; font-size:11px;">Kayıtlı okul yok kanka.</p>'}</div>
                         </div>
                         <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
                             <p><b>Sistemi Sıfırla (Yeni Eğitim Yılı)</b></p>
@@ -1133,6 +1311,16 @@
                 this.listenRegistrationCodes();
             },
 
+            // Okul silme fonksiyonu kanka
+            async adminDeleteSchool(index) {
+                if(confirm(`"${this.allSchools[index]}" okulunu silmek istediğine emin misin kanka?`)) {
+                    this.allSchools.splice(index, 1);
+                    await setDoc(doc(db, "config", "schools"), { list: this.allSchools });
+                    alert("Okul listeden başarıyla silindi kanka!");
+                    this.renderAdminPanel();
+                }
+            },
+
             listenRegistrationCodes() {
                 onSnapshot(collection(db, "registration_codes"), (snap) => {
                     const listCont = document.getElementById('adm-generated-codes-list');
@@ -1148,6 +1336,11 @@
                         let codeDisplay = `<b>Kod:</b> ${data.code}`;
                         if(data.type === 'manager' && data.password) {
                             codeDisplay += ` | <b>Şifre:</b> ${data.password}`;
+                        }
+                        if(data.usedBy) {
+                            codeDisplay += ` <span style="color:#d63031; font-size:11px;">(Kullanan: ${data.usedBy})</span>`;
+                        } else {
+                            codeDisplay += ` <span style="color:#27ae60; font-size:11px;">(Kullanılmadı)</span>`;
                         }
                         listCont.innerHTML += `
                             <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.03); padding:6px; margin-bottom:4px; border-radius:5px;">
@@ -1173,7 +1366,8 @@
                 const codeData = {
                     type: type,
                     code: createRandomString(10),
-                    createdAt: serverTimestamp()
+                    createdAt: serverTimestamp(),
+                    usedBy: ""
                 };
 
                 if(type === 'manager') {
@@ -1211,7 +1405,6 @@
 
                 snap.forEach(uDoc => {
                     const u = uDoc.data();
-                    // Kanka, admin kendisini de artık bu listede tam yetkili düzenleyebilecek!
                     const item = document.createElement('div');
                     item.className = 'user-item';
                     const badges = this.buildUserBadges(u);
@@ -1355,6 +1548,7 @@
 
                 const mode = document.getElementById('adm-target-mode').value;
                 const school = document.getElementById('adm-school-select').value;
+                const annType = document.getElementById('adm-ann-type').value;
                 
                 let grade = "";
                 let section = "";
@@ -1368,6 +1562,7 @@
 
                 await addDoc(collection(db, "announcements"), {
                     text, school, grade, section, targetType,
+                    homeDocType: annType,
                     sender: this.currentUser.username,
                     createdAt: serverTimestamp()
                 });
@@ -1410,43 +1605,6 @@
                 this.renderAdminControlList();
             },
 
-            async adminPublishFile() {
-                const fileInput = document.getElementById('adm-file-input');
-                if(!fileInput.files.length) return alert("Dosya seçiniz!");
-                const file = fileInput.files[0];
-
-                const mode = document.getElementById('adm-target-mode').value;
-                const school = document.getElementById('adm-school-select').value;
-                
-                let grade = "";
-                let section = "";
-                let targetType = "school-all";
-
-                if(mode === 'class') {
-                    grade = document.getElementById('adm-grade-select').value;
-                    section = document.getElementById('adm-section-select').value;
-                    targetType = "class";
-                }
-
-                const storageRef = ref(storage, `uploads/${Date.now()}_${file.name}`);
-                alert("Yükleniyor...");
-                const snapshot = await uploadBytes(storageRef, file);
-                const url = await getDownloadURL(snapshot.ref);
-
-                await addDoc(collection(db, "images"), {
-                    url,
-                    fileName: file.name,
-                    fileType: file.type,
-                    school, grade, section, targetType,
-                    sender: this.currentUser.username,
-                    createdAt: serverTimestamp()
-                });
-
-                alert("Dosya yayınlandı!");
-                fileInput.value = "";
-                this.renderAdminControlList();
-            },
-
             async renderAdminControlList() {
                 const cont = document.getElementById('admin-control-list');
                 if(!cont) return;
@@ -1462,8 +1620,9 @@
                     const data = d.data();
                     if(isRealAdmin || data.school === school) {
                         const targetInfo = data.targetType === 'school-all' ? 'Tüm Okul' : `${data.grade}/${data.section}`;
+                        const subType = data.homeDocType === 'exam' ? 'Sınav Planı' : 'Duyuru';
                         html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:12px;">
-                                    <span><b>[Duyuru - ${targetInfo}]</b> ${data.text}</span>
+                                    <span><b>[${subType} - ${targetInfo}]</b> ${data.text}</span>
                                     <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteItem('announcements', '${d.id}')"></i>
                                  </div>`;
                     }
@@ -1486,9 +1645,10 @@
                     const data = d.data();
                     if(isRealAdmin || data.school === school) {
                         const targetInfo = data.targetType === 'school-all' ? 'Tüm Okul' : `${data.grade}/${data.section}`;
+                        const subType = data.homeDocType === 'worksheet' ? 'Çalışma Kağıdı' : 'Dosya';
                         html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:12px;">
-                                    <span><b>[Dosya - ${targetInfo}]</b> ${data.fileName || 'Medya'}</span>
-                                    <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteItem('images', '${d.id}')"></i>
+                                    <span><b>[${subType} - ${targetInfo}]</b> ${data.fileName || 'Medya'}</span>
+                                    <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteItem('images', '${d.id}', '${data.storagePath || ''}')"></i>
                                  </div>`;
                     }
                 });
@@ -1505,8 +1665,8 @@
                 if(!name) return;
                 this.allSchools.push(name);
                 await setDoc(doc(db, "config", "schools"), { list: this.allSchools });
-                alert("Okul Ekleme Başarılı!");
-                location.reload();
+                alert("Okul Ekleme Başarılı kanka!");
+                this.renderAdminPanel();
             },
 
             async adminSaveUpdate(active) {
@@ -1535,7 +1695,26 @@
 
             async renderTeacherPanel() {
                 const main = document.getElementById('main-content');
-                main.innerHTML = `<h3>Öğretmen Paneli</h3><p style="font-size:13px; margin-bottom:10px;">Sınıfınız: ${this.currentUser.grade}/${this.currentUser.section}</p><div id="teacher-student-list"></div>`;
+                let gradeOptionsMarkup = "";
+                for(let i=1; i<=12; i++) {
+                    gradeOptionsMarkup += `<option value="${i}">${i}. Sınıf Kademesi</option>`;
+                }
+
+                main.innerHTML = `
+                    <h3>Öğretmen Paneli</h3>
+                    <p style="font-size:13px; margin-bottom:10px;">Sınıfınız: ${this.currentUser.grade}/${this.currentUser.section}</p>
+                    
+                    <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px; border: 1.5px solid #eee;">
+                        <p style="margin-bottom:8px; font-weight:bold; color:#2ecc71;"><i class="fas fa-file-upload"></i> Çalışma Kağıdı Yükle</p>
+                        <label style="font-size:12px;">Hedef Sınıf Kademesi:</label>
+                        <select id="teacher-ws-grade-select" style="margin-bottom:10px;">${gradeOptionsMarkup}</select>
+                        <input type="file" id="teacher-worksheet-file" style="padding:5px; margin-bottom:10px;">
+                        <button class="btn-success" onclick="app.uploadUniversalFile('teacher-worksheet-file', 'teacher_worksheet')">Sınıf Kademesine Yayınla</button>
+                    </div>
+
+                    <div id="teacher-student-list"></div>
+                `;
+                
                 const q = query(collection(db, "users"), where("school", "==", this.currentUser.school), where("grade", "==", this.currentUser.grade), where("section", "==", this.currentUser.section) );
                 const snap = await getDocs(q);
                 snap.forEach(uDoc => {
@@ -1597,12 +1776,100 @@
             },
 
             renderSettings() {
-                document.getElementById('main-content').innerHTML = `<h3>Ayarlar</h3><div style="margin-top:15px;"><input type="password" id="up-pass" placeholder="Yeni Şifre"><button class="btn-main" onclick="app.saveProfile()">Şifre Değiştir</button><hr style="margin:15px 0;\"><button class="btn-main" style="background:#34495e" onclick="document.body.classList.toggle('dark-mode')">Tema Değiştir</button></div>`;
+                // Herkesin ismini değiştirebilmesini, öğretmen ve idarecilerin kendi kodlarını güncelleyebilmesini sağlayan ayarlar alanı kanka
+                let staffCodeFields = "";
+                if(this.currentUser.isTeacher || this.currentUser.isMod) {
+                    staffCodeFields = `
+                        <hr style="margin: 15px 0; opacity: 0.2;">
+                        <p style="margin-bottom:8px; font-weight: bold;">🔑 Giriş Kodu Değiştirme Paneli</p>
+                        <input type="text" id="up-staff-code" placeholder="Yeni Giriş Kodunuz">
+                        <button class="btn-success" onclick="app.saveStaffCode()">Giriş Kodunu Güncelle</button>
+                    `;
+                }
+
+                document.getElementById('main-content').innerHTML = `
+                    <h3>Ayarlar</h3>
+                    <div style="margin-top:15px; background: var(--card); padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+                        <p style="margin-bottom:8px; font-weight: bold;">👤 Profil Bilgilerini Güncelle</p>
+                        <input type="text" id="up-username" placeholder="Yeni Kullanıcı Adınız" value="${this.currentUser.username}">
+                        <button class="btn-main" onclick="app.saveUsernameChange()">Kullanıcı Adını Değiştir</button>
+                        
+                        <hr style="margin: 15px 0; opacity: 0.2;">
+                        
+                        <input type="password" id="up-pass" placeholder="Yeni Şifre">
+                        <button class="btn-main" onclick="app.saveProfile()">Şifre Değiştir</button>
+                        
+                        ${staffCodeFields}
+                        
+                        <hr style="margin:15px 0; opacity: 0.2;">
+                        <button class="btn-main" style="background:#34495e; margin: 0;" onclick="document.body.classList.toggle('dark-mode')"><i class="fas fa-moon"></i> Tema Değiştir</button>
+                    </div>
+                `;
+            },
+
+            // Herkesin ismini değiştirebilmesi için fonksiyon kanka
+            async saveUsernameChange() {
+                const newName = document.getElementById('up-username').value.trim();
+                if(!newName || newName === this.currentUser.username) return alert("Geçersiz veya aynı kullanıcı adını girdin kanka!");
+
+                const checkDoc = await getDoc(doc(db, "users", newName));
+                if(checkDoc.exists()) return alert("Bu kullanıcı adı başka birisi tarafından kapılmış kanka!");
+
+                if(confirm("Kullanıcı adını değiştirmek istediğine emin misin? Değişimden sonra uygulama yeniden yüklenecektir.")) {
+                    const updatedUserData = { ...this.currentUser, username: newName };
+                    
+                    // Yeni dökümanı yazıp eskisini siliyoruz kanka
+                    await setDoc(doc(db, "users", newName), updatedUserData);
+                    await deleteDoc(doc(db, "users", this.currentUser.username));
+                    await deleteDoc(doc(db, "status", this.currentUser.username));
+
+                    // Kayıt kodlarında usedBy güncelleniyor kanka
+                    const codeQuery = query(collection(db, "registration_codes"), where("usedBy", "==", this.currentUser.username));
+                    const codeSnap = await getDocs(codeQuery);
+                    codeSnap.forEach(async (codeDoc) => {
+                        await updateDoc(doc(db, "registration_codes", codeDoc.id), { usedBy: newName });
+                    });
+
+                    alert("Kullanıcı adın fıstık gibi değiştirildi kanka!");
+                    location.reload();
+                }
+            },
+
+            // Öğretmen ve idarecilerin kendi kodlarını değiştirebilmesi için fonksiyon kanka
+            async saveStaffCode() {
+                const newCode = document.getElementById('up-staff-code').value.trim();
+                if(!newCode) return alert("Kod alanı boş bırakılamaz kanka!");
+
+                const codeQuery = query(collection(db, "registration_codes"), where("usedBy", "==", this.currentUser.username));
+                const codeSnap = await getDocs(codeQuery);
+
+                if(codeSnap.empty) {
+                    // Eğer eski sistemden kalma bir döküman yoksa yeni bir tane oluşturup bağlıyoruz kanka güvenlik için
+                    const type = this.currentUser.isTeacher ? "teacher" : "manager";
+                    await addDoc(collection(db, "registration_codes"), {
+                        code: newCode,
+                        type: type,
+                        usedBy: this.currentUser.username,
+                        createdAt: serverTimestamp()
+                    });
+                } else {
+                    // Varsa mevcut olanı güncelliyoruz kanka
+                    await updateDoc(doc(db, "registration_codes", codeSnap.docs[0].id), { code: newCode });
+                }
+
+                alert("Giriş kodun başarıyla güncellendi kanka!");
+                document.getElementById('up-staff-code').value = "";
             },
 
             async saveProfile() {
                 const pass = document.getElementById('up-pass').value;
-                if(pass) { await updateDoc(doc(db, "users", this.currentUser.username), { password: pass }); alert("Tamam!"); }
+                if(pass) { 
+                    await updateDoc(doc(db, "users", this.currentUser.username), { password: pass }); 
+                    alert("Şifre güncellendi kanka!"); 
+                    document.getElementById('up-pass').value = "";
+                } else {
+                    alert("Lütfen yeni bir şifre gir kanka!");
+                }
             }
         };
 
