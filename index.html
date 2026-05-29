@@ -822,7 +822,8 @@
                 } else if(data.fileType && data.fileType.startsWith("audio/")) {
                     mediaHtml = `<audio src="${data.url}" controls style="width:100%; margin-top:10px;"></audio>`;
                 } else {
-                    mediaHtml = `<a href="${data.url}" target="_blank" style="display:block; margin-top:10px; color:${borderColor}; font-weight:bold;"><i class="fas fa-external-link-alt"></i> Bağlantıyı Aç (${data.fileName || 'Çalışma Belgesi'})</a>`;
+                    const safeUrl = (data.url && !data.url.match(/^https?:\/\//i)) ? 'https://' + data.url : data.url;
+                    mediaHtml = `<a href="${safeUrl}" target="_blank" style="display:block; margin-top:10px; color:${borderColor}; font-weight:bold;"><i class="fas fa-external-link-alt"></i> Bağlantıyı Aç (${data.fileName || 'Çalışma Belgesi'})</a>`;
                 }
 
                 return `<div class="homework-card" style="border-left-color: ${borderColor};">
@@ -1137,8 +1138,9 @@
 
             async addWorksheetLink() {
                 const title = document.getElementById('teacher-ws-title').value.trim();
-                const url = document.getElementById('teacher-ws-url').value.trim();
+                const rawUrl = document.getElementById('teacher-ws-url').value.trim();
                 const grade = document.getElementById('teacher-ws-grade-select').value;
+                const url = (rawUrl && !rawUrl.match(/^https?:\/\//i)) ? 'https://' + rawUrl : rawUrl;
 
                 if(!title || !url) return this.toast("Lütfen Başlık ve Link alanlarını doldurun!", "error");
 
@@ -1846,9 +1848,16 @@
                         <button class="btn-success" onclick="app.addWorksheetLink()">Bağlantıyı Yayınla</button>
                     </div>
 
+                    <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px; border: 1.5px solid #eee;">
+                        <p style="font-weight:bold; color:#d63031; margin-bottom:10px;"><i class="fas fa-trash-alt"></i> Yüklediğim Çalışma Kağıtları</p>
+                        <div id="teacher-my-worksheets"><p style="font-size:12px; color:#999;">Yükleniyor...</p></div>
+                    </div>
+
                     <div id="teacher-student-list"></div>
                 `;
                 
+                this.renderTeacherWorksheetList();
+
                 const q = query(collection(db, "users"), where("school", "==", this.currentUser.school), where("grade", "==", this.currentUser.grade), where("section", "==", this.currentUser.section) );
                 const snap = await getDocs(q);
                 snap.forEach(uDoc => {
@@ -1859,6 +1868,52 @@
                     div.innerHTML = `<span><b>${u.username}</b> ${u.isLeader ? '<span class="badge-tag" style="background:#ff9f43">BAŞKAN</span>':''}</span> <button class="btn-main" style="width:auto; padding:5px 10px; margin:0;" onclick="event.stopPropagation(); app.teacherToggleLeader('${u.username}', ${!u.isLeader})">${u.isLeader ? 'Başkanlığı Al':'Başkan Yap'}</button>`;
                     document.getElementById('teacher-student-list').appendChild(div);
                 });
+            },
+
+            async renderTeacherWorksheetList() {
+                const listCont = document.getElementById('teacher-my-worksheets');
+                if(!listCont) return;
+                listCont.innerHTML = "<p style='font-size:12px; color:#666;'>Yükleniyor...</p>";
+
+                const q = query(collection(db, "images"), where("sender", "==", this.currentUser.username), where("homeDocType", "==", "worksheet"));
+                const snap = await getDocs(q);
+
+                if(snap.empty) {
+                    listCont.innerHTML = "<p style='font-size:12px; color:#999;'>Henüz çalışma kağıdı yüklemediniz.</p>";
+                    return;
+                }
+
+                let html = "";
+                snap.forEach(d => {
+                    const data = d.data();
+                    const safeUrl = (data.url && !data.url.match(/^https?:\/\//i)) ? 'https://' + data.url : data.url;
+                    html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.04); padding:10px; margin-bottom:6px; border-radius:8px; font-size:13px;">
+                                <div style="flex:1; overflow:hidden;">
+                                    <span style="font-weight:bold; color:#2ecc71;">${data.grade}. Sınıf</span>
+                                    <span style="margin-left:8px;">${data.text || data.fileName || 'Çalışma Kağıdı'}</span>
+                                    <br>
+                                    <a href="${safeUrl}" target="_blank" style="font-size:11px; color:#3498db; word-break:break-all;"><i class="fas fa-link"></i> ${safeUrl}</a>
+                                </div>
+                                <i class="fas fa-trash" style="color:#d63031; cursor:pointer; margin-left:12px; font-size:16px;" onclick="app.deleteTeacherWorksheet('${d.id}', '${data.storagePath || ''}')"></i>
+                             </div>`;
+                });
+                listCont.innerHTML = html;
+            },
+
+            async deleteTeacherWorksheet(docId, storagePath) {
+                if(confirm("Bu çalışma kağıdını silmek istediğinize emin misiniz?")) {
+                    try {
+                        if(storagePath) {
+                            const fileRef = ref(storage, storagePath);
+                            await deleteObject(fileRef).catch(e => console.log("Dosya storage'da bulunamadı veya zaten silinmiş."));
+                        }
+                        await deleteDoc(doc(db, "images", docId));
+                        this.toast("Çalışma kağıdı başarıyla silindi!", "success");
+                        this.renderTeacherWorksheetList();
+                    } catch(e) {
+                        this.toast("Silme işlemi sırasında hata oluştu.", "error");
+                    }
+                }
             },
 
             async teacherToggleLeader(targetUser, status) {
