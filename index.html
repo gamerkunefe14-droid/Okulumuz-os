@@ -374,6 +374,16 @@
                     document.getElementById('staff-code1').placeholder = mode === 'teacher' ? "Öğretmen Kodu" : "İdareci Kodu";
                     document.getElementById('staff-code2').classList.toggle('hidden', mode === 'teacher');
                     
+                    // Manager modunda okul seçimi gereksiz (okul koddan geliyor)
+                    const staffSchoolEl = document.getElementById('staff-school');
+                    if(staffSchoolEl) {
+                        if(mode === 'manager') {
+                            staffSchoolEl.classList.add('hidden');
+                        } else {
+                            staffSchoolEl.classList.remove('hidden');
+                        }
+                    }
+                    
                     document.getElementById('staff-class-area').classList.add('hidden');
                     
                     if (mode === 'manager') {
@@ -513,10 +523,26 @@
                         if (!validDoc) return this.toast("2. şifre hatalı!", "error");
                     } else {
                         validDoc = codeSnap.docs[0];
+                        // Öğretmen kodunun okul kısıtlaması varsa, seçilen okul ile eşleşmeli
+                        const codeSchool = validDoc.data().school;
+                        if (codeSchool && codeSchool !== school) {
+                            return this.toast("Bu öğretmen kodu yalnızca '" + codeSchool + "' okulu için geçerlidir!", "error");
+                        }
+                    }
+
+                    // Manager için okul bilgisini koddan al; öğretmen için form'daki okul seçimini kullan
+                    let resolvedSchool = school;
+                    if (this.currentStaffMode === 'manager') {
+                        const codeSchool = validDoc.data().school;
+                        if (codeSchool) {
+                            resolvedSchool = codeSchool;
+                        } else {
+                            return this.toast("Bu kod herhangi bir okula atanmamış. Lütfen yöneticiye başvurun!", "error");
+                        }
                     }
 
                     this.tempUser = {
-                        username, email, password: pass, school, 
+                        username, email, password: pass, school: resolvedSchool, 
                         grade: this.currentStaffMode === 'manager' ? "Tümü" : "",
                         section: this.currentStaffMode === 'manager' ? "Tümü" : "",
                         isBlocked: false, isLeader: false,
@@ -1352,12 +1378,16 @@
 
                     <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
                         <p style="margin-bottom:10px;"><b>🔑 Öğretmen & İdareci Kodu Yönetimi</b></p>
-                        <div style="display:flex; gap:5px; margin-bottom:10px;">
-                            <select id="adm-code-type" style="margin:0;">
+                        <div style="display:flex; gap:5px; margin-bottom:10px; flex-wrap:wrap;">
+                            <select id="adm-code-type" style="margin:0; flex:1;" onchange="app.onAdmCodeTypeChange()">
                                 <option value="teacher">Öğretmen Kodu</option>
                                 <option value="manager">İdareci Kodu</option>
                             </select>
-                            <button class="btn-main" style="margin:0; background:#2ecc71;" onclick="app.generateRegistrationCode()">Kod Oluştur</button>
+                            <button class="btn-main" style="margin:0; background:#2ecc71; flex:0 0 auto;" onclick="app.generateRegistrationCode()">Kod Oluştur</button>
+                        </div>
+                        <div id="adm-code-school-selector" class="hidden" style="margin-bottom:10px;">
+                            <label style="font-size:12px; font-weight:bold;">Bu İdareci Kodunun Geçerli Olacağı Okul:</label>
+                            <select id="adm-code-school" style="margin-top:5px;"></select>
                         </div>
                         <div id="adm-generated-codes-list" style="max-height:150px; overflow-y:auto; font-size:13px;">Yükleniyor...</div>
                     </div>
@@ -1376,6 +1406,17 @@
                     this.allSchools.forEach(sch => { schoolSelect.innerHTML += `<option value="${sch}">${sch}</option>`; });
                 } else {
                     schoolSelect.innerHTML = `<option value="${this.currentUser.school}">${this.currentUser.school}</option>`;
+                }
+
+                // İdareciler (moderatörler) yalnızca öğretmen kodu oluşturabilir; manager seçeneği gizleniyor
+                const admCodeTypeEl = document.getElementById('adm-code-type');
+                if(admCodeTypeEl && !isRealAdmin) {
+                    Array.from(admCodeTypeEl.options).forEach(opt => {
+                        if(opt.value === 'manager') opt.style.display = 'none';
+                    });
+                    admCodeTypeEl.value = 'teacher';
+                    const schoolSelectorDiv = document.getElementById('adm-code-school-selector');
+                    if(schoolSelectorDiv) schoolSelectorDiv.classList.add('hidden');
                 }
 
                 const gSel = document.getElementById('adm-grade-select');
@@ -1421,6 +1462,17 @@
                 this.renderAdminControlList();
                 this.renderAdminUserList(isRealAdmin);
                 this.listenRegistrationCodes();
+
+                // İdareci kodu için okul seçici doldur
+                const admCodeSchoolSel = document.getElementById('adm-code-school');
+                if(admCodeSchoolSel) {
+                    admCodeSchoolSel.innerHTML = "";
+                    if(isRealAdmin) {
+                        this.allSchools.forEach(sch => { admCodeSchoolSel.innerHTML += `<option value="${sch}">${sch}</option>`; });
+                    } else {
+                        admCodeSchoolSel.innerHTML = `<option value="${this.currentUser.school}">${this.currentUser.school}</option>`;
+                    }
+                }
             },
 
             async adminDeleteSchool(index) {
@@ -1448,6 +1500,9 @@
                         if(data.type === 'manager' && data.password) {
                             codeDisplay += ` | <b>Şifre:</b> ${data.password}`;
                         }
+                        if(data.type === 'manager' && data.school) {
+                            codeDisplay += ` | <b>Okul:</b> <span style="color:#2980b9;">${data.school}</span>`;
+                        }
                         if(data.usedBy) {
                             codeDisplay += ` <span style="color:#d63031; font-size:11px;">(Kullanan: ${data.usedBy})</span>`;
                         } else {
@@ -1462,6 +1517,18 @@
                 });
             },
 
+            onAdmCodeTypeChange() {
+                const type = document.getElementById('adm-code-type').value;
+                const schoolSelectorDiv = document.getElementById('adm-code-school-selector');
+                if(schoolSelectorDiv) {
+                    if(type === 'manager') {
+                        schoolSelectorDiv.classList.remove('hidden');
+                    } else {
+                        schoolSelectorDiv.classList.add('hidden');
+                    }
+                }
+            },
+
             async generateRegistrationCode() {
                 const type = document.getElementById('adm-code-type').value;
                 const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -1474,6 +1541,14 @@
                     return result;
                 };
 
+                const lowerName = this.currentUser.username.toLowerCase();
+                const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
+
+                // İdareciler (moderatörler) yalnızca öğretmen kodu oluşturabilir, idareci kodu oluşturamaz
+                if (!isRealAdmin && type === 'manager') {
+                    return this.toast("İdareciler yalnızca kendi okulları için öğretmen kodu oluşturabilir!", "error");
+                }
+
                 const codeData = {
                     type: type,
                     code: createRandomString(10),
@@ -1483,6 +1558,34 @@
 
                 if(type === 'manager') {
                     codeData.password = createRandomString(10);
+                    const admCodeSchoolSel = document.getElementById('adm-code-school');
+                    if(isRealAdmin) {
+                        // Gerçek admin istediği okul için idareci kodu oluşturabilir
+                        if(admCodeSchoolSel && admCodeSchoolSel.value) {
+                            codeData.school = admCodeSchoolSel.value;
+                        } else {
+                            codeData.school = this.currentUser.school;
+                        }
+                    } else {
+                        // Moderatör (idareci) sadece kendi okulu için idareci kodu oluşturabilir
+                        codeData.school = this.currentUser.school;
+                    }
+                }
+
+                if(type === 'teacher') {
+                    // İdareci (moderatör) öğretmen kodu oluştururken yalnızca kendi okuluna geçerli kod oluşturabilir
+                    if(isRealAdmin) {
+                        // Gerçek admin: seçilen hedef okul için öğretmen kodu oluştur
+                        const admSchoolSel = document.getElementById('adm-code-school');
+                        if(admSchoolSel && admSchoolSel.value) {
+                            codeData.school = admSchoolSel.value;
+                        } else {
+                            codeData.school = this.currentUser.school;
+                        }
+                    } else {
+                        // Moderatör (idareci): sadece kendi okuluna geçerli öğretmen kodu üretebilir
+                        codeData.school = this.currentUser.school;
+                    }
                 }
 
                 await addDoc(collection(db, "registration_codes"), codeData);
