@@ -96,6 +96,11 @@
         .toast-msg.success { border-left-color: #27ae60; background: #1e272e; }
         .toast-msg.error { border-left-color: #d63031; background: #1e272e; }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Ders Ekleme Kademeli Seçim Listesi */
+        .grade-checkbox-container { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; max-height: 120px; overflow-y: auto; padding: 8px; border: 1.5px solid #eee; border-radius: 10px; margin-bottom: 12px; background: var(--card); }
+        .grade-checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; }
+        .grade-checkbox-item input { width: auto; margin: 0; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -299,6 +304,7 @@
             homeImagesUnsub: null,
             homeHomeworksUnsub: null,
             selectedWorksheetGrade: "",
+            selectedWorksheetSubject: "",
 
             toast(msg, type = "info") {
                 const container = document.getElementById('toast-container');
@@ -779,12 +785,21 @@
                     }
                     
                     container.innerHTML = `
-                        <div style="margin-bottom: 12px;">
-                            <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Hangi sınıfın çalışma kağıtlarına bakacaksınız?</label>
-                            <select id="home-ws-grade-selector" onchange="app.onWorksheetGradeChange()" style="margin: 0;">${gradeOptions}</select>
+                        <div style="margin-bottom: 12px; display: flex; gap: 8px;">
+                            <div style="flex: 1;">
+                                <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Sınıf Kademesi:</label>
+                                <select id="home-ws-grade-selector" onchange="app.onWorksheetGradeChange()" style="margin: 0;">${gradeOptions}</select>
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Ders Kategorisi:</label>
+                                <select id="home-ws-subject-selector" onchange="app.onWorksheetSubjectChange()" style="margin: 0;">
+                                    <option value="">-- Tüm Dersler --</option>
+                                </select>
+                            </div>
                         </div>
                         <div id="worksheet-list"></div>
                     `;
+                    this.updateHomeWorksheetSubjectsDropdown();
                     this.renderWorksheetsFeed();
                 }
                 else if(tab === "exams") {
@@ -815,10 +830,34 @@
                 }
             },
 
+            async updateHomeWorksheetSubjectsDropdown() {
+                const selectEl = document.getElementById('home-ws-subject-selector');
+                if(!selectEl) return;
+                selectEl.innerHTML = `<option value="">-- Tüm Dersler --</option>`;
+                if(!this.selectedWorksheetGrade) return;
+
+                const q = query(collection(db, "subjects"), where("grades", "array-contains", String(this.selectedWorksheetGrade)));
+                const snap = await getDocs(q);
+                snap.forEach(d => {
+                    const data = d.data();
+                    selectEl.innerHTML += `<option value="${data.name}" ${this.selectedWorksheetSubject === data.name ? 'selected' : ''}>${data.name}</option>`;
+                });
+            },
+
             onWorksheetGradeChange() {
                 const selectEl = document.getElementById('home-ws-grade-selector');
                 if(selectEl) {
                     this.selectedWorksheetGrade = selectEl.value;
+                    this.selectedWorksheetSubject = ""; 
+                    this.updateHomeWorksheetSubjectsDropdown();
+                    this.renderWorksheetsFeed();
+                }
+            },
+
+            onWorksheetSubjectChange() {
+                const selectEl = document.getElementById('home-ws-subject-selector');
+                if(selectEl) {
+                    this.selectedWorksheetSubject = selectEl.value;
                     this.renderWorksheetsFeed();
                 }
             },
@@ -840,10 +879,13 @@
                     snap.forEach(d => {
                         const data = d.data();
                         if(data.school === this.currentUser.school && data.homeDocType === "worksheet" && String(data.grade) === String(this.selectedWorksheetGrade)) {
-                            cont.innerHTML += this.buildMediaCardMarkup(data, "Çalışma Kağıdı", "#2ecc71");
+                            if(this.selectedWorksheetSubject && data.subjectCategory !== this.selectedWorksheetSubject) {
+                                return;
+                            }
+                            cont.innerHTML += this.buildMediaCardMarkup(data, `Çalışma Kağıdı ${data.subjectCategory ? '[' + data.subjectCategory + ']' : ''}`, "#2ecc71");
                         }
                     });
-                    if(cont.innerHTML === "") cont.innerHTML = `<p style='font-size:13px; color:#999;'>${this.selectedWorksheetGrade}. Sınıf kademesi için çalışma kağıdı bulunamadı.</p>`;
+                    if(cont.innerHTML === "") cont.innerHTML = `<p style='font-size:13px; color:#999;'>Seçilen kriterlere uygun çalışma kağıdı bulunamadı.</p>`;
                 });
             },
 
@@ -1174,9 +1216,11 @@
                 const title = document.getElementById('teacher-ws-title').value.trim();
                 const rawUrl = document.getElementById('teacher-ws-url').value.trim();
                 const grade = document.getElementById('teacher-ws-grade-select').value;
+                const subject = document.getElementById('teacher-ws-subject-select').value;
                 const url = (rawUrl && !rawUrl.match(/^https?:\/\//i)) ? 'https://' + rawUrl : rawUrl;
 
                 if(!title || !url) return this.toast("Lütfen Başlık ve Link alanlarını doldurun!", "error");
+                if(!subject) return this.toast("Lütfen bir ders kategorisi seçin!", "error");
 
                 try {
                     await addDoc(collection(db, "images"), {
@@ -1189,6 +1233,7 @@
                         section: "Tümü",
                         targetType: "class",
                         homeDocType: "worksheet",
+                        subjectCategory: subject,
                         text: title,
                         sender: this.currentUser.username,
                         createdAt: serverTimestamp()
@@ -1222,6 +1267,7 @@
                 let section = this.currentUser.section;
                 let targetType = "class";
                 let homeDocType = "general";
+                let subjectCategory = "";
 
                 if(panelType === 'admin') {
                     const mode = document.getElementById('adm-target-mode').value;
@@ -1235,6 +1281,8 @@
                     }
                 } else if(panelType === 'teacher_worksheet') {
                     grade = document.getElementById('teacher-ws-grade-select').value;
+                    subjectCategory = document.getElementById('teacher-ws-subject-select').value;
+                    if(!subjectCategory) return this.toast("Lütfen bir ders kategorisi seçin!", "error");
                     section = "Tümü";
                     targetType = "class"; 
                     homeDocType = "worksheet";
@@ -1253,7 +1301,7 @@
                         fileName: file.name,
                         fileType: file.type,
                         storagePath: storagePath,
-                        school, grade, section, targetType, homeDocType,
+                        school, grade, section, targetType, homeDocType, subjectCategory,
                         text: file.name,
                         sender: this.currentUser.username,
                         createdAt: serverTimestamp()
@@ -1328,6 +1376,16 @@
                 const lowerName = this.currentUser.username.toLowerCase();
                 const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
                 
+                let gradeCheckboxMarkup = "";
+                for(let i=1; i<=12; i++) {
+                    gradeCheckboxMarkup += `
+                        <label class="grade-checkbox-item">
+                            <input type="checkbox" name="adm-subject-grades" value="${i}">
+                            <span>${i}. Sınıf</span>
+                        </label>
+                    `;
+                }
+
                 main.innerHTML = `
                     <h3>${isRealAdmin ? 'Admin' : 'Moderatör'} Paneli</h3>
                     
@@ -1356,7 +1414,7 @@
                                 <option value="general">Genel Duyuru</option>
                                 <option value="exam">Sınav Tarihi Planı / Duyurusu (Link İle)</option>
                             </select>
-                            <input id="adm-ann-text" placeholder="Duyuru metni...">
+                            <input id="adm-ann-text" placeholder="Duyuru metni...";>
                             <input id="adm-exam-url-input" type="url" placeholder="Sınav Planı Bağlantı Linki (URL)" class="hidden">
                             <button class="btn-main" style="background:#3498db; margin-top:5px;" onclick="app.adminPublishAnnouncement()">Yayınla</button>
                         </div>
@@ -1403,6 +1461,17 @@
                     <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
                         <p style="margin-bottom:10px;"><b>👤 Kullanıcı Hesap Yönetimi</b></p>
                         <div id="adm-user-list-container">Yükleniyor...</div>
+                    </div>
+
+                    <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
+                        <p style="margin-bottom:10px;"><b>📚 Ders Kategorisi Oluşturma</b></p>
+                        <label style="font-size:12px; font-weight:bold;">Uygun Sınıf Kademeleri:</label>
+                        <div class="grade-checkbox-container">${gradeCheckboxMarkup}</div>
+                        <input type="text" id="adm-subject-name" placeholder="Ders Adı (Örn: Matematik, Türkçe)">
+                        <button class="btn-main" style="background:#9b59b6;" onclick="app.adminCreateSubject()">Ders Oluştur</button>
+                        <hr style="margin: 12px 0; opacity: 0.2;">
+                        <p style="font-size:12px; font-weight:bold; margin-bottom:8px;">Kayıtlı Dersler:</p>
+                        <div id="admin-subjects-list" style="max-height:150px; overflow-y:auto; font-size:13px;">Yükleniyor...</div>
                     </div>
 
                     <div id="admin-user-management-zone"></div>
@@ -1470,6 +1539,7 @@
                 this.renderAdminControlList();
                 this.renderAdminUserList(isRealAdmin);
                 this.listenRegistrationCodes();
+                this.listenSubjectsList();
 
                 // İdareci kodu için okul seçici doldur
                 const admCodeSchoolSel = document.getElementById('adm-code-school');
@@ -1480,6 +1550,58 @@
                     } else {
                         admCodeSchoolSel.innerHTML = `<option value="${this.currentUser.school}">${this.currentUser.school}</option>`;
                     }
+                }
+            },
+
+            async adminCreateSubject() {
+                const nameInput = document.getElementById('adm-subject-name');
+                const name = nameInput ? nameInput.value.trim() : "";
+                if(!name) return this.toast("Lütfen ders adı girin!", "error");
+
+                const checkedBoxes = document.querySelectorAll('input[name="adm-subject-grades"]:checked');
+                if(checkedBoxes.length === 0) return this.toast("Lütfen en az bir sınıf kademesi seçin!", "error");
+
+                const grades = Array.from(checkedBoxes).map(cb => cb.value);
+
+                try {
+                    await addDoc(collection(db, "subjects"), {
+                        name: name,
+                        grades: grades,
+                        createdAt: serverTimestamp()
+                    });
+                    this.toast("Ders başarıyla oluşturuldu!", "success");
+                    nameInput.value = "";
+                    document.querySelectorAll('input[name="adm-subject-grades"]').forEach(cb => cb.checked = false);
+                } catch(e) {
+                    this.toast("Ders oluşturulurken hata oluştu.", "error");
+                }
+            },
+
+            listenSubjectsList() {
+                onSnapshot(query(collection(db, "subjects"), orderBy("createdAt", "desc")), (snap) => {
+                    const cont = document.getElementById('admin-subjects-list');
+                    if(!cont) return;
+                    cont.innerHTML = "";
+                    if(snap.empty) {
+                        cont.innerHTML = "<p style='color:#999; font-size:12px;'>Kayıtlı ders bulunmuyor.</p>";
+                        return;
+                    }
+                    snap.forEach(d => {
+                        const data = d.data();
+                        cont.innerHTML += `
+                            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.03); padding:6px; margin-bottom:4px; border-radius:5px;">
+                                <span><b>${data.name}</b> <small style="color:#7f8c8d;">(Kademeler: ${data.grades.join(', ')})</small></span>
+                                <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteSubject('${d.id}')"></i>
+                            </div>
+                        `;
+                    });
+                });
+            },
+
+            async deleteSubject(id) {
+                if(confirm("Bu ders kategorisini silmek istediğinize emin misiniz?")) {
+                    await deleteDoc(doc(db, "subjects", id));
+                    this.toast("Ders başarıyla silindi.", "success");
                 }
             },
 
@@ -1951,117 +2073,119 @@
                         <input type="file" id="teacher-hidden-file-input" class="hidden" onchange="app.uploadUniversalFile('teacher-hidden-file-input', 'teacher_worksheet')">
                         
                         <label style="font-size:12px;">Hedef Sınıf Kademesi:</label>
-                        <select id="teacher-ws-grade-select" style="margin-bottom:10px;">${gradeOptionsMarkup}</select>
+                        <select id="teacher-ws-grade-select" onchange="app.onTeacherGradeSelectChange()" style="margin-bottom:10px;">${gradeOptionsMarkup}</select>
                         
+                        <label style="font-size:12px;">Ders Kategorisi:</label>
+                        <select id="teacher-ws-subject-select" style="margin-bottom:10px;">
+                            <option value="">-- Ders Seçin --</option>
+                        </select>
+
                         <input type="text" id="teacher-ws-title" placeholder="Çalışma Kağıdı Başlığı">
                         <input type="url" id="teacher-ws-url" placeholder="Çalışma Kağıdı Linki (URL)">
                         
                         <button class="btn-success" onclick="app.addWorksheetLink()">Bağlantıyı Yayınla</button>
                     </div>
 
-                    <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px; border: 1.5px solid #eee;">
-                        <p style="font-weight:bold; color:#d63031; margin-bottom:10px;"><i class="fas fa-trash-alt"></i> Yüklediğim Çalışma Kağıtları</p>
-                        <div id="teacher-my-worksheets"><p style="font-size:12px; color:#999;">Yükleniyor...</p></div>
+                    <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
+                        <p style="margin-bottom:10px;"><b>Yayınladığınız Çalışma Kağıtları</b></p>
+                        <div id="teacher-worksheets-list">Yükleniyor...</div>
                     </div>
-
-                    <div id="teacher-student-list"></div>
                 `;
-                
-                this.renderTeacherWorksheetList();
+                this.onTeacherGradeSelectChange();
+                this.renderTeacherWorksheetsList();
+            },
 
-                const q = query(collection(db, "users"), where("school", "==", this.currentUser.school), where("grade", "==", this.currentUser.grade), where("section", "==", this.currentUser.section) );
+            async onTeacherGradeSelectChange() {
+                const gradeSelect = document.getElementById('teacher-ws-grade-select');
+                const subjectSelect = document.getElementById('teacher-ws-subject-select');
+                if(!gradeSelect || !subjectSelect) return;
+
+                subjectSelect.innerHTML = `<option value="">-- Ders Seçin --</option>`;
+                const selectedGrade = gradeSelect.value;
+                if(!selectedGrade) return;
+
+                const q = query(collection(db, "subjects"), where("grades", "array-contains", String(selectedGrade)));
                 const snap = await getDocs(q);
-                snap.forEach(uDoc => {
-                    const u = uDoc.data();
-                    if(u.username === this.currentUser.username) return;
-                    const div = document.createElement('div');
-                    div.className = 'user-item';
-                    div.innerHTML = `<span><b>${u.username}</b> ${u.isLeader ? '<span class="badge-tag" style="background:#ff9f43">BAŞKAN</span>':''}</span> <button class="btn-main" style="width:auto; padding:5px 10px; margin:0;" onclick="event.stopPropagation(); app.teacherToggleLeader('${u.username}', ${!u.isLeader})">${u.isLeader ? 'Başkanlığı Al':'Başkan Yap'}</button>`;
-                    document.getElementById('teacher-student-list').appendChild(div);
+                snap.forEach(d => {
+                    const data = d.data();
+                    subjectSelect.innerHTML += `<option value="${data.name}">${data.name}</option>`;
                 });
             },
 
-            async renderTeacherWorksheetList() {
-                const listCont = document.getElementById('teacher-my-worksheets');
-                if(!listCont) return;
-                listCont.innerHTML = "<p style='font-size:12px; color:#666;'>Yükleniyor...</p>";
+            async renderTeacherWorksheetsList() {
+                const cont = document.getElementById('teacher-worksheets-list');
+                if(!cont) return;
+                cont.innerHTML = "";
 
                 const q = query(collection(db, "images"), where("sender", "==", this.currentUser.username), where("homeDocType", "==", "worksheet"));
                 const snap = await getDocs(q);
-
                 if(snap.empty) {
-                    listCont.innerHTML = "<p style='font-size:12px; color:#999;'>Henüz çalışma kağıdı yüklemediniz.</p>";
+                    cont.innerHTML = "<p style='font-size:12px; color:#999;'>Henüz bir çalışma kağıdı yüklemediniz.</p>";
                     return;
                 }
 
-                let html = "";
                 snap.forEach(d => {
                     const data = d.data();
-                    const safeUrl = (data.url && !data.url.match(/^https?:\/\//i)) ? 'https://' + data.url : data.url;
-                    html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.04); padding:10px; margin-bottom:6px; border-radius:8px; font-size:13px;">
-                                <div style="flex:1; overflow:hidden;">
-                                    <span style="font-weight:bold; color:#2ecc71;">${data.grade}. Sınıf</span>
-                                    <span style="margin-left:8px;">${data.text || data.fileName || 'Çalışma Kağıdı'}</span>
-                                    <br>
-                                    <a href="${safeUrl}" target="_blank" style="font-size:11px; color:#3498db; word-break:break-all;"><i class="fas fa-link"></i> ${safeUrl}</a>
-                                </div>
-                                <i class="fas fa-trash" style="color:#d63031; cursor:pointer; margin-left:12px; font-size:16px;" onclick="app.deleteTeacherWorksheet('${d.id}', '${data.storagePath || ''}')"></i>
-                             </div>`;
+                    cont.innerHTML += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:12px;">
+                            <span><b>[${data.grade}. Sınıf - ${data.subjectCategory || 'Genel'}]</b> ${data.fileName}</span>
+                            <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteTeacherItem('${d.id}', '${data.storagePath || ''}')"></i>
+                        </div>
+                    `;
                 });
-                listCont.innerHTML = html;
             },
 
-            async deleteTeacherWorksheet(docId, storagePath) {
-                if(confirm("Bu çalışma kağıdını silmek istediğinize emin misiniz?")) {
-                    try {
-                        if(storagePath) {
-                            const fileRef = ref(storage, storagePath);
-                            await deleteObject(fileRef).catch(e => console.log("Dosya storage'da bulunamadı veya zaten silinmiş."));
-                        }
-                        await deleteDoc(doc(db, "images", docId));
-                        this.toast("Çalışma kağıdı başarıyla silindi!", "success");
-                        this.renderTeacherWorksheetList();
-                    } catch(e) {
-                        this.toast("Silme işlemi sırasında hata oluştu.", "error");
+            async deleteTeacherItem(id, storagePath) {
+                if(confirm("Bu çalışma kağıdını kaldırmak istediğinize emin misiniz?")) {
+                    if(storagePath) {
+                        const fileRef = ref(storage, storagePath);
+                        await deleteObject(fileRef).catch(e => console.log("Dosya bulunamadı."));
                     }
+                    await deleteDoc(doc(db, "images", id));
+                    this.toast("İçerik kaldırıldı.", "success");
+                    this.renderTeacherWorksheetsList();
                 }
             },
 
-            async teacherToggleLeader(targetUser, status) {
-                await updateDoc(doc(db, "users", targetUser), { isLeader: status });
-                this.toast(status ? "Sınıf başkanı atandı!" : "Sınıf başkanlığı geri alındı!", "success");
-                this.renderTeacherPanel();
-            },
-
-            async renderMessageList() {
+            renderSettings() {
                 const main = document.getElementById('main-content');
-                main.innerHTML = '<h3>Mesajlar</h3><div id="msg-list"></div>';
-                const snap = await getDocs(collection(db, "users"));
-                snap.forEach(uDoc => {
-                    const u = uDoc.data();
-                    if(u.username === this.currentUser.username) return;
-                    const div = document.createElement('div');
-                    div.className = 'user-item';
-                    div.innerHTML = `<b>${u.username}</b> <small>${u.school}</small>`;
-                    div.onclick = () => this.openChat(u.username);
-                    document.getElementById('msg-list').appendChild(div);
-                });
+                main.innerHTML = `
+                    <h3>Ayarlar</h3>
+                    <div style="background:var(--card); padding:15px; border-radius:15px; margin-top:15px;">
+                        <button class="btn-main" style="background:#34495e; margin-bottom:10px;" onclick="document.body.classList.toggle('dark-mode')"><i class="fas fa-moon"></i> Görünüm Modu Değiştir</button>
+                        <button class="btn-danger" onclick="app.logout()"><i class="fas fa-sign-out-alt"></i> Güvenli Çıkış Yap</button>
+                    </div>
+                `;
             },
 
-            openChat(target) {
-                this.activeChat = target;
+            openChat(targetUsername) {
+                if(targetUsername === this.currentUser.username) return this.toast("Kendinizle mesajlaşamazsınız!", "error");
+                this.activeChat = targetUsername;
+                document.getElementById('chat-target-name').innerText = targetUsername;
                 document.getElementById('chat-window').classList.remove('hidden');
-                document.getElementById('chat-target-name').innerText = target;
-                const chatId = [this.currentUser.username, target].sort().join("_");
+                document.getElementById('chat-messages').innerHTML = "Yükleniyor...";
+                this.listenMessages();
+            },
+
+            listenMessages() {
                 if(this.unsubscribeChat) this.unsubscribeChat();
-                const q = query(collection(db, "chats", chatId, "messages"), orderBy("time", "asc"));
+                
+                const cont = document.getElementById('chat-messages');
+                const q = query(collection(db, "messages"), orderBy("createdAt", "asc"));
+                
                 this.unsubscribeChat = onSnapshot(q, (snap) => {
-                    const cont = document.getElementById('chat-messages');
                     cont.innerHTML = "";
-                    snap.forEach(m => {
-                        const d = m.data();
-                        const cls = d.sender === this.currentUser.username ? 'msg-me' : 'msg-them';
-                        cont.innerHTML += `<div class="bubble ${cls}">${d.text}</div>`;
+                    snap.forEach(d => {
+                        const m = d.data();
+                        const isMe = m.sender === this.currentUser.username && m.receiver === this.activeChat;
+                        const isThem = m.sender === this.activeChat && m.receiver === this.currentUser.username;
+                        
+                        if(isMe || isThem) {
+                            const bubble = document.createElement('div');
+                            bubble.className = `bubble ${isMe ? 'msg-me' : 'msg-them'}`;
+                            bubble.innerText = m.text;
+                            cont.appendChild(bubble);
+                        }
                     });
                     cont.scrollTop = cont.scrollHeight;
                 });
@@ -2069,106 +2193,44 @@
 
             async sendMessage() {
                 const input = document.getElementById('msg-input');
-                if(!input.value) return;
-                const chatId = [this.currentUser.username, this.activeChat].sort().join("_");
-                await addDoc(collection(db, "chats", chatId, "messages"), { text: input.value, sender: this.currentUser.username, time: serverTimestamp() });
+                const text = input.value.trim();
+                if(!text || !this.activeChat) return;
+
+                await addDoc(collection(db, "messages"), {
+                    sender: this.currentUser.username,
+                    receiver: this.activeChat,
+                    text: text,
+                    createdAt: serverTimestamp()
+                });
                 input.value = "";
             },
 
-            renderSettings() {
-                let staffCodeFields = "";
-                if(this.currentUser.isTeacher || this.currentUser.isMod) {
-                    staffCodeFields = `
-                        <hr style="margin: 15px 0; opacity: 0.2;">
-                        <p style="margin-bottom:8px; font-weight: bold;">🔑 Giriş Kodu Değiştirme Paneli</p>
-                        <input type="text" id="up-staff-code" placeholder="Yeni Giriş Kodunuz">
-                        <button class="btn-success" onclick="app.saveStaffCode()">Giriş Kodunu Güncelle</button>
-                    `;
-                }
+            async renderMessageList() {
+                const main = document.getElementById('main-content');
+                main.innerHTML = `<h3>Mesajlar</h3><div id="msg-inbox-list" style="margin-top:10px;">Yükleniyor...</div>`;
+                
+                const snap = await getDocs(collection(db, "users"));
+                const inboxCont = document.getElementById('msg-inbox-list');
+                inboxCont.innerHTML = "";
 
-                document.getElementById('main-content').innerHTML = `
-                    <h3>Ayarlar</h3>
-                    <div style="margin-top:15px; background: var(--card); padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
-                        <p style="margin-bottom:8px; font-weight: bold;">👤 Profil Bilgilerini Güncelle</p>
-                        <input type="text" id="up-username" placeholder="Yeni Kullanıcı Adınız" value="${this.currentUser.username}">
-                        <button class="btn-main" onclick="app.saveUsernameChange()">Kullanıcı Adını Değiştir</button>
+                snap.forEach(uDoc => {
+                    const u = uDoc.data();
+                    if(u.username !== this.currentUser.username) {
+                        const item = document.createElement('div');
+                        item.className = 'user-item';
+                        const isOnline = this.activeUsers.has(u.username);
+                        const dotClass = isOnline ? 'status-active' : 'status-offline';
                         
-                        <hr style="margin: 15px 0; opacity: 0.2;">
-                        
-                        <input type="password" id="up-pass" placeholder="Yeni Şifre">
-                        <button class="btn-main" onclick="app.saveProfile()">Şifre Değiştir</button>
-                        
-                        ${staffCodeFields}
-                        
-                        <hr style="margin:15px 0; opacity: 0.2;">
-                        <button class="btn-main" style="background:#34495e; margin-bottom:10px;" onclick="document.body.classList.toggle('dark-mode')"><i class="fas fa-moon"></i> Tema Değiştir</button>
-                        
-                        <button class="btn-danger" style="margin:0;" onclick="app.logout()"><i class="fas fa-sign-out-alt"></i> Oturumu Kapat</button>
-                    </div>
-                `;
-            },
-
-            async saveUsernameChange() {
-                const newName = document.getElementById('up-username').value.trim();
-                if(!newName || newName === this.currentUser.username) return this.toast("Geçersiz veya aynı kullanıcı adını girdiniz!", "error");
-
-                const checkDoc = await getDoc(doc(db, "users", newName));
-                if(checkDoc.exists()) return this.toast("Bu kullanıcı adı başka birisi tarafından alınmış!", "error");
-
-                if(confirm("Kullanıcı adını değiştirmek istediğinize emin misiniz? Değişimden sonra uygulama yeniden yüklenecektir.")) {
-                    const updatedUserData = { ...this.currentUser, username: newName };
-                    
-                    await setDoc(doc(db, "users", newName), updatedUserData);
-                    await deleteDoc(doc(db, "users", this.currentUser.username));
-                    await deleteDoc(doc(db, "status", this.currentUser.username));
-
-                    const codeQuery = query(collection(db, "registration_codes"), where("usedBy", "==", this.currentUser.username));
-                    const codeSnap = await getDocs(codeQuery);
-                    codeSnap.forEach(async (codeDoc) => {
-                        await updateDoc(doc(db, "registration_codes", codeDoc.id), { usedBy: newName });
-                    });
-
-                    this.toast("Kullanıcı adınız başarıyla değiştirildi!", "success");
-                    setTimeout(() => location.reload(), 1000);
-                }
-            },
-
-            async saveStaffCode() {
-                const newCode = document.getElementById('up-staff-code').value.trim();
-                if(!newCode) return this.toast("Kod alanı boş bırakılamaz!", "error");
-
-                const codeQuery = query(collection(db, "registration_codes"), where("usedBy", "==", this.currentUser.username));
-                const codeSnap = await getDocs(codeQuery);
-
-                if(codeSnap.empty) {
-                    const type = this.currentUser.isTeacher ? "teacher" : "manager";
-                    await addDoc(collection(db, "registration_codes"), {
-                        code: newCode,
-                        type: type,
-                        usedBy: this.currentUser.username,
-                        createdAt: serverTimestamp()
-                    });
-                } else {
-                    await updateDoc(doc(db, "registration_codes", codeSnap.docs[0].id), { code: newCode });
-                }
-
-                this.toast("Giriş kodunuz başarıyla güncellendi!", "success");
-                document.getElementById('up-staff-code').value = "";
-            },
-
-            async saveProfile() {
-                const pass = document.getElementById('up-pass').value;
-                if(pass) { 
-                    await updateDoc(doc(db, "users", this.currentUser.username), { password: pass }); 
-                    this.toast("Şifre güncellendi!", "success"); 
-                    document.getElementById('up-pass').value = "";
-                } else {
-                    this.toast("Lütfen yeni bir şifre girin!", "error");
-                }
+                        item.innerHTML = `<span><span class="status-dot ${dotClass}"></span><b>${u.username}</b></span><i class="fas fa-chevron-right" style="color:#ccc;"></i>`;
+                        item.onclick = () => this.openChat(u.username);
+                        inboxCont.appendChild(item);
+                    }
+                });
+                if(inboxCont.innerHTML === "") inboxCont.innerHTML = "<p style='font-size:12px; color:#999;'>Mesajlaşabileceğiniz kimse bulunmuyor.</p>";
             }
         };
 
-        window.app.init();
+        window.addEventListener('DOMContentLoaded', () => { app.init(); });
     </script>
 </body>
 </html>
