@@ -3161,7 +3161,7 @@
                         `<small style="font-size:11px;color:#888;">Tarayıcı ayarlarından manuel açabilirsiniz</small>` :
                         ``);
 
-                return \`
+                return `
                     <div class="notif-pref-section-title"><i class="fas fa-bell"></i> Bildirim İzni</div>
                     <div class="notif-pref-row">
                         <div class="notif-pref-label">
@@ -3169,10 +3169,10 @@
                             <small>Yerel bildirim gönderim durumu</small>
                         </div>
                         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
-                            <span class="notif-status-badge \${permClass}">
-                                <i class="fas \${permIcon}"></i> \${permLabel}
+                            <span class="notif-status-badge ${permClass}">
+                                <i class="fas ${permIcon}"></i> ${permLabel}
                             </span>
-                            \${reAskBtn}
+                            ${reAskBtn}
                         </div>
                     </div>
 
@@ -3184,21 +3184,21 @@
                             <small>Sana gelen özel mesajlarda bildirim al</small>
                         </div>
                         <label class="notif-toggle-wrap">
-                            <input type="checkbox" \${prefs.msgEnabled ? 'checked' : ''}
+                            <input type="checkbox" ${prefs.msgEnabled ? 'checked' : ''}
                                 onchange="app.toggleNotifPref('msgEnabled', this.checked); document.getElementById('notif-scope-row').style.display = this.checked ? 'flex' : 'none';">
                             <span class="notif-toggle-slider"></span>
                         </label>
                     </div>
 
-                    <div class="notif-pref-row" id="notif-scope-row" style="display:\${prefs.msgEnabled ? 'flex' : 'none'};">
+                    <div class="notif-pref-row" id="notif-scope-row" style="display:${prefs.msgEnabled ? 'flex' : 'none'};">
                         <div class="notif-pref-label">
                             🏫 Mesaj Filtresi
                             <small>Hangi kullanıcılardan bildirim alacaksın?</small>
                         </div>
                         <select class="notif-scope-select" onchange="app.toggleNotifPref('msgScope', this.value)">
-                            <option value="all"    \${prefs.msgScope === 'all'    ? 'selected' : ''}>Herkesten</option>
-                            <option value="school" \${prefs.msgScope === 'school' ? 'selected' : ''}>Sadece Okulumdan</option>
-                            <option value="class"  \${prefs.msgScope === 'class'  ? 'selected' : ''}>Sadece Sınıfımdan</option>
+                            <option value="all"    ${prefs.msgScope === 'all'    ? 'selected' : ''}>Herkesten</option>
+                            <option value="school" ${prefs.msgScope === 'school' ? 'selected' : ''}>Sadece Okulumdan</option>
+                            <option value="class"  ${prefs.msgScope === 'class'  ? 'selected' : ''}>Sadece Sınıfımdan</option>
                         </select>
                     </div>
 
@@ -3208,7 +3208,7 @@
                             <small>Kendi paylaşımlarına yanıt geldiğinde bildirim al</small>
                         </div>
                         <label class="notif-toggle-wrap">
-                            <input type="checkbox" \${prefs.replyEnabled ? 'checked' : ''}
+                            <input type="checkbox" ${prefs.replyEnabled ? 'checked' : ''}
                                 onchange="app.toggleNotifPref('replyEnabled', this.checked)">
                             <span class="notif-toggle-slider"></span>
                         </label>
@@ -3221,13 +3221,13 @@
                             <small>Telefon kilitliyken bile bildirim gelir (PWA gerektirir)</small>
                         </div>
                         <div style="text-align:right;">
-                            \${ permStatus === 'granted' ?
+                            ${ permStatus === 'granted' ?
                                 '<span class="notif-status-badge granted"><i class="fas fa-check"></i> Aktif</span>' :
                                 '<span class="notif-status-badge default"><i class="fas fa-info-circle"></i> İzin Gerekli</span>'
                             }
                         </div>
                     </div>
-                \`;
+                `;
             }
         };
 
