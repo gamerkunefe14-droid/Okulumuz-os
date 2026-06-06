@@ -14,8 +14,39 @@
     <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js');}</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --bg: #f0f2f5; --card: #ffffff; --text: #333; --nav: #ffffff; }
+        :root { --bg: #f0f2f5; --card: #ffffff; --text: #333; --nav: #ffffff; --accent: #ff9f43; --accent2: #e67e22; }
         .dark-mode { --bg: #18191a; --card: #242526; --text: #e4e6eb; --nav: #242526; }
+
+        /* === TEMA SİSTEMİ CSS DEĞİŞKENLERİ === */
+        body.theme-dark { --bg: #18191a; --card: #242526; --text: #e4e6eb; --nav: #242526; --accent: #ff9f43; --accent2: #e67e22; }
+        body.theme-dark-blue { --bg: #0d1b2a; --card: #1b2a3b; --text: #cfe2f3; --nav: #1b2a3b; --accent: #4fc3f7; --accent2: #0288d1; }
+        body.theme-dark-purple { --bg: #1a0a2e; --card: #2d1b4e; --text: #e1bee7; --nav: #2d1b4e; --accent: #ce93d8; --accent2: #9c27b0; }
+        body.theme-dark-green { --bg: #0a1f0a; --card: #1b3a1b; --text: #c8e6c9; --nav: #1b3a1b; --accent: #81c784; --accent2: #388e3c; }
+        body.theme-dark-red { --bg: #1f0a0a; --card: #3a1b1b; --text: #ffcdd2; --nav: #3a1b1b; --accent: #ef9a9a; --accent2: #c62828; }
+        body.theme-light { --bg: #f0f2f5; --card: #ffffff; --text: #333; --nav: #ffffff; --accent: #ff9f43; --accent2: #e67e22; }
+        body.theme-light-blue { --bg: #e3f2fd; --card: #ffffff; --text: #1a237e; --nav: #ffffff; --accent: #1976d2; --accent2: #0d47a1; }
+        body.theme-light-green { --bg: #e8f5e9; --card: #ffffff; --text: #1b5e20; --nav: #ffffff; --accent: #43a047; --accent2: #1b5e20; }
+        body.theme-light-purple { --bg: #f3e5f5; --card: #ffffff; --text: #4a148c; --nav: #ffffff; --accent: #8e24aa; --accent2: #4a148c; }
+        body.theme-sunset { --bg: #fff3e0; --card: #ffe0b2; --text: #bf360c; --nav: #ffe0b2; --accent: #ff5722; --accent2: #bf360c; }
+        body.theme-ocean { --bg: #e0f7fa; --card: #b2ebf2; --text: #006064; --nav: #b2ebf2; --accent: #0097a7; --accent2: #006064; }
+        body.theme-custom { --bg: var(--custom-bg, #f0f2f5); --card: var(--custom-card, #ffffff); --text: var(--custom-text, #333); --nav: var(--custom-nav, #ffffff); --accent: var(--custom-accent, #ff9f43); --accent2: var(--custom-accent2, #e67e22); }
+
+        /* === TEMA SEÇİCİ MODAL === */
+        .theme-modal-bg { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index: 2000; }
+        .theme-modal { background: var(--card); padding: 20px; border-radius: 20px; width: 92%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
+        .theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        .theme-option { border: 2.5px solid transparent; border-radius: 14px; padding: 12px 8px; cursor: pointer; text-align: center; font-size: 13px; font-weight: bold; transition: all 0.2s; }
+        .theme-option:hover { transform: scale(1.04); border-color: #ff9f43; }
+        .theme-option.selected { border-color: #ff9f43; box-shadow: 0 0 0 3px rgba(255,159,67,0.35); }
+        .theme-preview-dot { width: 28px; height: 28px; border-radius: 50%; display: inline-block; margin-bottom: 6px; border: 2px solid rgba(255,255,255,0.3); }
+        .custom-colors-section { background: rgba(0,0,0,0.04); border-radius: 12px; padding: 14px; margin-top: 5px; }
+        .color-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .color-row label { font-size: 12px; font-weight: bold; flex: 1; }
+        .color-row input[type=color] { width: 44px; height: 36px; border: none; border-radius: 8px; cursor: pointer; padding: 2px; }
+
+        /* === AYARLAR ŞIFRE/KUL.ADI ALAN STİLLERİ === */
+        .settings-section { background: var(--card); padding: 16px; border-radius: 15px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .settings-section h4 { font-size: 14px; margin-bottom: 12px; color: var(--accent); display: flex; align-items: center; gap: 7px; }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; transition: background 0.2s; }
         body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
@@ -645,6 +676,7 @@
                 if(this.currentUser.isLeader) document.getElementById('nav-leader').classList.remove('hidden');
                 if(this.currentUser.isTeacher) document.getElementById('nav-teacher').classList.remove('hidden');
                 
+                this.applyUserTheme();
                 this.updateMyStatus();
                 this.statusInterval = setInterval(() => this.updateMyStatus(), 30000);
                 
@@ -659,6 +691,10 @@
                     document.getElementById('admin-btn').classList.add('hidden');
                     document.getElementById('nav-leader').classList.add('hidden');
                     document.getElementById('nav-teacher').classList.add('hidden');
+                    
+                    // Çıkışta temayı sıfırla (giriş/kayıt ekranı klasik görünsün)
+                    const allThemeClasses = ['theme-dark','theme-dark-blue','theme-dark-purple','theme-dark-green','theme-dark-red','theme-light','theme-light-blue','theme-light-green','theme-light-purple','theme-sunset','theme-ocean','theme-custom','dark-mode'];
+                    allThemeClasses.forEach(c => document.body.classList.remove(c));
                     
                     document.getElementById('login-user').value = "";
                     document.getElementById('login-pass').value = "";
@@ -2149,13 +2185,325 @@
 
             renderSettings() {
                 const main = document.getElementById('main-content');
+                const u = this.currentUser;
+                const lowerName = u.username.toLowerCase();
+                const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || u.isAdmin;
+                const isMod = u.isMod;
+                const isTeacher = u.isTeacher;
+
+                const currentTheme = this.getUserTheme();
+                const themes = [
+                    { id: 'light', label: 'Klasik Açık', bg: '#f0f2f5', card: '#ffffff', accent: '#ff9f43' },
+                    { id: 'dark', label: 'Karanlık', bg: '#18191a', card: '#242526', accent: '#ff9f43' },
+                    { id: 'dark-blue', label: 'Gece Mavisi', bg: '#0d1b2a', card: '#1b2a3b', accent: '#4fc3f7' },
+                    { id: 'dark-purple', label: 'Mor Gece', bg: '#1a0a2e', card: '#2d1b4e', accent: '#ce93d8' },
+                    { id: 'dark-green', label: 'Orman', bg: '#0a1f0a', card: '#1b3a1b', accent: '#81c784' },
+                    { id: 'dark-red', label: 'Kızıl', bg: '#1f0a0a', card: '#3a1b1b', accent: '#ef9a9a' },
+                    { id: 'light-blue', label: 'Gün Mavisi', bg: '#e3f2fd', card: '#ffffff', accent: '#1976d2' },
+                    { id: 'light-green', label: 'Bahar', bg: '#e8f5e9', card: '#ffffff', accent: '#43a047' },
+                    { id: 'light-purple', label: 'Lavanta', bg: '#f3e5f5', card: '#ffffff', accent: '#8e24aa' },
+                    { id: 'sunset', label: 'Gün Batımı', bg: '#fff3e0', card: '#ffe0b2', accent: '#ff5722' },
+                    { id: 'ocean', label: 'Okyanus', bg: '#e0f7fa', card: '#b2ebf2', accent: '#0097a7' },
+                    { id: 'custom', label: '🎨 Özel Renk', bg: '#ffffff', card: '#f5f5f5', accent: '#ff9f43' },
+                ];
+
+                let themeGridHtml = '';
+                themes.forEach(t => {
+                    const sel = currentTheme === t.id ? 'selected' : '';
+                    themeGridHtml += `
+                        <div class="theme-option ${sel}" onclick="app.selectTheme('${t.id}')" id="theme-opt-${t.id}">
+                            <div class="theme-preview-dot" style="background:${t.accent}; box-shadow: 0 0 0 4px ${t.bg}, 0 0 0 6px ${t.card};"></div>
+                            <div style="color:var(--text);">${t.label}</div>
+                        </div>
+                    `;
+                });
+
+                const savedCustom = this.getCustomColors();
+                const customHidden = currentTheme !== 'custom' ? 'style="display:none;"' : '';
+
                 main.innerHTML = `
-                    <h3>Ayarlar</h3>
-                    <div style="background:var(--card); padding:15px; border-radius:15px; margin-top:15px;">
-                        <button class="btn-main" style="background:#34495e; margin-bottom:10px;" onclick="document.body.classList.toggle('dark-mode')"><i class="fas fa-moon"></i> Görünüm Modu Değiştir</button>
+                    <h3><i class="fas fa-cog"></i> Ayarlar</h3>
+
+                    <!-- KULLANICI ADI DEĞİŞTİRME -->
+                    <div class="settings-section" style="margin-top:15px;">
+                        <h4><i class="fas fa-user-edit"></i> Kullanıcı Adı Değiştir</h4>
+                        <input type="text" id="settings-new-username" placeholder="Yeni Kullanıcı Adı" value="${u.username}">
+                        <button class="btn-main" style="background:#2ecc71;" onclick="app.settingsChangeUsername()"><i class="fas fa-check"></i> Kullanıcı Adını Güncelle</button>
+                    </div>
+
+                    <!-- ŞİFRE DEĞİŞTİRME -->
+                    <div class="settings-section">
+                        <h4><i class="fas fa-lock"></i> Şifre Değiştir</h4>
+                        <input type="password" id="settings-old-pass" placeholder="Mevcut Şifreniz">
+                        <input type="password" id="settings-new-pass" placeholder="Yeni Şifre">
+                        <input type="password" id="settings-new-pass2" placeholder="Yeni Şifre (Tekrar)">
+                        <button class="btn-main" style="background:#e74c3c;" onclick="app.settingsChangePassword()"><i class="fas fa-key"></i> Şifreyi Güncelle</button>
+                    </div>
+
+                    <!-- ÖĞRETMEN KODU DEĞİŞTİRME (sadece öğretmenler) -->
+                    ${isTeacher || isMod || isRealAdmin ? `
+                    <div class="settings-section">
+                        <h4><i class="fas fa-id-badge"></i> ${isTeacher ? 'Öğretmen Kodunu' : 'Kodları'} Değiştir</h4>
+                        ${isTeacher ? `
+                        <label style="font-size:12px; font-weight:bold; margin-bottom:5px; display:block;">Öğretmen Kodu (Kayıt için kullanılan kod)</label>
+                        <input type="text" id="settings-teacher-code" placeholder="Yeni Öğretmen Kodu">
+                        <button class="btn-teacher" onclick="app.settingsChangeTeacherCode()"><i class="fas fa-sync"></i> Öğretmen Kodunu Güncelle</button>
+                        ` : ''}
+                        ${isMod || isRealAdmin ? `
+                        <label style="font-size:12px; font-weight:bold; margin-top:10px; margin-bottom:5px; display:block;">İdareci Kodu (1. Kod)</label>
+                        <input type="text" id="settings-manager-code1" placeholder="Yeni İdareci Kodu (1. Kod)">
+                        <label style="font-size:12px; font-weight:bold; margin-top:8px; margin-bottom:5px; display:block;">İdareci 2. Şifresi</label>
+                        <input type="password" id="settings-manager-code2" placeholder="Yeni 2. Şifre">
+                        <button class="btn-admin" style="margin-top:5px;" onclick="app.settingsChangeManagerCodes()"><i class="fas fa-sync"></i> İdareci Kodlarını Güncelle</button>
+                        ` : ''}
+                    </div>
+                    ` : ''}
+
+                    <!-- TEMA SEÇİCİ -->
+                    <div class="settings-section">
+                        <h4><i class="fas fa-palette"></i> Tema Seçimi</h4>
+                        <p style="font-size:12px; color:#888; margin-bottom:10px;">Seçtiğiniz tema yalnızca size özel kaydedilir ve her oturumda otomatik uygulanır.</p>
+                        <div class="theme-grid" id="theme-grid-container">
+                            ${themeGridHtml}
+                        </div>
+
+                        <!-- ÖZEL RENK ALANI -->
+                        <div class="custom-colors-section" id="custom-color-section" ${customHidden}>
+                            <p style="font-size:13px; font-weight:bold; margin-bottom:10px; color:var(--text);">🎨 Kendi Renk Paletini Oluştur</p>
+                            <div class="color-row">
+                                <label>Arka Plan Rengi</label>
+                                <input type="color" id="custom-bg-color" value="${savedCustom.bg}" oninput="app.previewCustomTheme()">
+                            </div>
+                            <div class="color-row">
+                                <label>Kart / Panel Rengi</label>
+                                <input type="color" id="custom-card-color" value="${savedCustom.card}" oninput="app.previewCustomTheme()">
+                            </div>
+                            <div class="color-row">
+                                <label>Yazı Rengi</label>
+                                <input type="color" id="custom-text-color" value="${savedCustom.text}" oninput="app.previewCustomTheme()">
+                            </div>
+                            <div class="color-row">
+                                <label>Alt Bar / Nav Rengi</label>
+                                <input type="color" id="custom-nav-color" value="${savedCustom.nav}" oninput="app.previewCustomTheme()">
+                            </div>
+                            <div class="color-row">
+                                <label>Ana Vurgu Rengi</label>
+                                <input type="color" id="custom-accent-color" value="${savedCustom.accent}" oninput="app.previewCustomTheme()">
+                            </div>
+                            <div class="color-row">
+                                <label>İkincil Vurgu</label>
+                                <input type="color" id="custom-accent2-color" value="${savedCustom.accent2}" oninput="app.previewCustomTheme()">
+                            </div>
+                            <button class="btn-main" style="background:linear-gradient(135deg,#ff9f43,#e84393);" onclick="app.saveCustomTheme()"><i class="fas fa-save"></i> Özel Temayı Kaydet</button>
+                        </div>
+                    </div>
+
+                    <!-- ÇIKIŞ -->
+                    <div class="settings-section">
+                        <h4><i class="fas fa-sign-out-alt"></i> Hesap</h4>
                         <button class="btn-danger" onclick="app.logout()"><i class="fas fa-sign-out-alt"></i> Güvenli Çıkış Yap</button>
                     </div>
                 `;
+            },
+
+            // =============================================
+            // TEMA SİSTEMİ FONKSİYONLARI
+            // =============================================
+
+            getUserTheme() {
+                if(!this.currentUser) return 'light';
+                return localStorage.getItem('theme_' + this.currentUser.username) || 'light';
+            },
+
+            getCustomColors() {
+                if(!this.currentUser) return { bg:'#f0f2f5', card:'#ffffff', text:'#333333', nav:'#ffffff', accent:'#ff9f43', accent2:'#e67e22' };
+                const saved = localStorage.getItem('custom_theme_' + this.currentUser.username);
+                if(saved) {
+                    try { return JSON.parse(saved); } catch(e) {}
+                }
+                return { bg:'#f0f2f5', card:'#ffffff', text:'#333333', nav:'#ffffff', accent:'#ff9f43', accent2:'#e67e22' };
+            },
+
+            applyUserTheme() {
+                if(!this.currentUser) return;
+                const theme = this.getUserTheme();
+                // Tüm tema classlarını temizle
+                const allThemeClasses = ['theme-dark','theme-dark-blue','theme-dark-purple','theme-dark-green','theme-dark-red','theme-light','theme-light-blue','theme-light-green','theme-light-purple','theme-sunset','theme-ocean','theme-custom','dark-mode'];
+                allThemeClasses.forEach(c => document.body.classList.remove(c));
+
+                if(theme === 'light') {
+                    // varsayılan, class eklemeye gerek yok
+                } else if(theme === 'custom') {
+                    document.body.classList.add('theme-custom');
+                    const colors = this.getCustomColors();
+                    this.applyCSSCustomColors(colors);
+                } else {
+                    document.body.classList.add('theme-' + theme);
+                    if(theme === 'dark') document.body.classList.add('dark-mode');
+                }
+            },
+
+            applyCSSCustomColors(colors) {
+                const root = document.documentElement;
+                root.style.setProperty('--custom-bg', colors.bg);
+                root.style.setProperty('--custom-card', colors.card);
+                root.style.setProperty('--custom-text', colors.text);
+                root.style.setProperty('--custom-nav', colors.nav);
+                root.style.setProperty('--custom-accent', colors.accent);
+                root.style.setProperty('--custom-accent2', colors.accent2);
+            },
+
+            selectTheme(themeId) {
+                if(!this.currentUser) return;
+
+                // Özel tema seçildiyse paneli göster
+                const customSection = document.getElementById('custom-color-section');
+                if(customSection) {
+                    customSection.style.display = themeId === 'custom' ? 'block' : 'none';
+                }
+
+                // Seçili görsel işaretlemesi
+                document.querySelectorAll('.theme-option').forEach(el => el.classList.remove('selected'));
+                const optEl = document.getElementById('theme-opt-' + themeId);
+                if(optEl) optEl.classList.add('selected');
+
+                // Eğer özel değilse hemen uygula ve kaydet
+                if(themeId !== 'custom') {
+                    localStorage.setItem('theme_' + this.currentUser.username, themeId);
+                    this.applyUserTheme();
+                    this.toast('Tema uygulandı: ' + themeId.replace(/-/g,' '), 'success');
+                }
+            },
+
+            previewCustomTheme() {
+                const bgEl = document.getElementById('custom-bg-color');
+                const cardEl = document.getElementById('custom-card-color');
+                const textEl = document.getElementById('custom-text-color');
+                const navEl = document.getElementById('custom-nav-color');
+                const accentEl = document.getElementById('custom-accent-color');
+                const accent2El = document.getElementById('custom-accent2-color');
+                if(!bgEl) return;
+                const colors = {
+                    bg: bgEl.value, card: cardEl.value, text: textEl.value,
+                    nav: navEl.value, accent: accentEl.value, accent2: accent2El.value
+                };
+                // Tüm diğer tema classlarını kaldır, özel uygula
+                const allThemeClasses = ['theme-dark','theme-dark-blue','theme-dark-purple','theme-dark-green','theme-dark-red','theme-light','theme-light-blue','theme-light-green','theme-light-purple','theme-sunset','theme-ocean','dark-mode'];
+                allThemeClasses.forEach(c => document.body.classList.remove(c));
+                document.body.classList.add('theme-custom');
+                this.applyCSSCustomColors(colors);
+            },
+
+            saveCustomTheme() {
+                if(!this.currentUser) return;
+                const bgEl = document.getElementById('custom-bg-color');
+                const cardEl = document.getElementById('custom-card-color');
+                const textEl = document.getElementById('custom-text-color');
+                const navEl = document.getElementById('custom-nav-color');
+                const accentEl = document.getElementById('custom-accent-color');
+                const accent2El = document.getElementById('custom-accent2-color');
+                if(!bgEl) return;
+                const colors = {
+                    bg: bgEl.value, card: cardEl.value, text: textEl.value,
+                    nav: navEl.value, accent: accentEl.value, accent2: accent2El.value
+                };
+                localStorage.setItem('custom_theme_' + this.currentUser.username, JSON.stringify(colors));
+                localStorage.setItem('theme_' + this.currentUser.username, 'custom');
+                this.applyUserTheme();
+                this.toast('Özel tema başarıyla kaydedildi!', 'success');
+            },
+
+            // =============================================
+            // AYARLAR: ŞİFRE & KULLANICI ADI DEĞİŞTİRME
+            // =============================================
+
+            async settingsChangeUsername() {
+                const newName = document.getElementById('settings-new-username').value.trim();
+                if(!newName) return this.toast('Kullanıcı adı boş olamaz!', 'error');
+                if(newName === this.currentUser.username) return this.toast('Bu zaten mevcut kullanıcı adınız!', 'error');
+
+                const checkDoc = await getDoc(doc(db, 'users', newName));
+                if(checkDoc.exists()) return this.toast('Bu kullanıcı adı zaten alınmış!', 'error');
+
+                const oldUsername = this.currentUser.username;
+                const oldData = { ...this.currentUser, username: newName };
+                await setDoc(doc(db, 'users', newName), oldData);
+                await deleteDoc(doc(db, 'users', oldUsername));
+
+                // Durum verisini de taşı
+                try {
+                    const statusData = await getDoc(doc(db, 'status', oldUsername));
+                    if(statusData.exists()) {
+                        await setDoc(doc(db, 'status', newName), statusData.data());
+                        await deleteDoc(doc(db, 'status', oldUsername));
+                    }
+                } catch(e) {}
+
+                this.currentUser = oldData;
+                document.getElementById('display-name').innerText = newName;
+                this.toast('Kullanıcı adı başarıyla değiştirildi!', 'success');
+            },
+
+            async settingsChangePassword() {
+                const oldPass = document.getElementById('settings-old-pass').value;
+                const newPass = document.getElementById('settings-new-pass').value;
+                const newPass2 = document.getElementById('settings-new-pass2').value;
+
+                if(!oldPass || !newPass || !newPass2) return this.toast('Lütfen tüm şifre alanlarını doldurun!', 'error');
+                if(oldPass !== this.currentUser.password) return this.toast('Mevcut şifreniz yanlış!', 'error');
+                if(newPass !== newPass2) return this.toast('Yeni şifreler eşleşmiyor!', 'error');
+                if(newPass.length < 4) return this.toast('Yeni şifre en az 4 karakter olmalıdır!', 'error');
+
+                await updateDoc(doc(db, 'users', this.currentUser.username), { password: newPass });
+                this.currentUser.password = newPass;
+                document.getElementById('settings-old-pass').value = '';
+                document.getElementById('settings-new-pass').value = '';
+                document.getElementById('settings-new-pass2').value = '';
+                this.toast('Şifreniz başarıyla güncellendi!', 'success');
+            },
+
+            async settingsChangeTeacherCode() {
+                const newCode = document.getElementById('settings-teacher-code').value.trim();
+                if(!newCode) return this.toast('Yeni öğretmen kodu boş olamaz!', 'error');
+
+                // Mevcut öğretmen kodunu bul ve güncelle (registration_codes koleksiyonunda)
+                const q = query(collection(db, 'registration_codes'), where('type', '==', 'teacher'), where('usedBy', '==', this.currentUser.username));
+                const snap = await getDocs(q);
+                if(snap.empty) return this.toast('Mevcut öğretmen kodunuz bulunamadı!', 'error');
+
+                snap.forEach(async d => {
+                    await updateDoc(doc(db, 'registration_codes', d.id), { code: newCode });
+                });
+                document.getElementById('settings-teacher-code').value = '';
+                this.toast('Öğretmen kodunuz başarıyla güncellendi!', 'success');
+            },
+
+            async settingsChangeManagerCodes() {
+                const newCode1 = document.getElementById('settings-manager-code1').value.trim();
+                const newCode2 = document.getElementById('settings-manager-code2').value.trim();
+
+                if(!newCode1 && !newCode2) return this.toast('En az bir alan doldurulmalıdır!', 'error');
+
+                // Mevcut idareci kodunu bul
+                const q = query(collection(db, 'registration_codes'), where('type', '==', 'manager'), where('usedBy', '==', this.currentUser.username));
+                const snap = await getDocs(q);
+                if(snap.empty) return this.toast('Mevcut idareci kodunuz bulunamadı!', 'error');
+
+                const updates = {};
+                if(newCode1) updates.code = newCode1;
+                if(newCode2) updates.password = newCode2;
+
+                snap.forEach(async d => {
+                    await updateDoc(doc(db, 'registration_codes', d.id), updates);
+                });
+
+                // LocalStorage'daki kayıtlı kodları da güncelle
+                if(newCode1) localStorage.setItem('saved_manager_code1', newCode1);
+                if(newCode2) localStorage.setItem('saved_manager_code2', newCode2);
+
+                document.getElementById('settings-manager-code1').value = '';
+                document.getElementById('settings-manager-code2').value = '';
+                this.toast('İdareci kodlarınız başarıyla güncellendi!', 'success');
             },
 
             openChat(targetUsername) {
