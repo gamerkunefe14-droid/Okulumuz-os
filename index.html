@@ -3099,6 +3099,35 @@
                 }, 5000);
             },
 
+            openBrowserNotifSettings() {
+                // Tarayıcı bildirim ayarlarını açmaya çalış
+                try {
+                    // Chrome/Edge: chrome://settings/content/notifications (doğrudan açılamaz güvenlik nedeniyle)
+                    // Bunun yerine kullanıcıya adım adım rehberlik et
+                    const isAndroid = /Android/i.test(navigator.userAgent);
+                    const isIOS     = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                    const isChrome  = /Chrome/i.test(navigator.userAgent);
+                    const isFirefox = /Firefox/i.test(navigator.userAgent);
+                    const isSafari  = /Safari/i.test(navigator.userAgent) && !isChrome;
+
+                    let msg = '';
+                    if (isAndroid) {
+                        msg = 'Android cihazda:\n1. Tarayıcı menüsüne tıkla (⋮)\n2. Ayarlar > Site Ayarları > Bildirimler\n3. Bu siteyi bulup izin ver';
+                    } else if (isIOS) {
+                        msg = 'iPhone/iPad'da:\n1. Ayarlar uygulamasını aç\n2. Safari (veya tarayıcın) > Bildirimler\n3. Bu site için izin ver';
+                    } else if (isFirefox) {
+                        msg = 'Firefox'ta:\n1. Adres çubuğundaki kilit simgesine tıkla\n2. "Bildirimler" satırını bul\n3. "İzin Ver" seç ve sayfayı yenile';
+                    } else if (isChrome) {
+                        msg = 'Chrome'da:\n1. Adres çubuğundaki kilit simgesine tıkla\n2. "Site Ayarları" ya da "Bildirimler" seçeneğini aç\n3. "İzin Ver" olarak değiştir ve sayfayı yenile';
+                    } else {
+                        msg = 'Adres çubuğundaki kilit/bilgi simgesine tıklayın,\n"Bildirimler" bölümünü bulun ve\n"İzin Ver" seçeneğini işaretleyin.\nArdından sayfayı yenileyin.';
+                    }
+
+                    // Toast yerine alert — adımlar net görünsün
+                    alert('🔔 Bildirim İzni Nasıl Açılır?\n\n' + msg);
+                } catch(e) {}
+            },
+
             stopAllNotifListeners() {
                 if (this.msgNotifUnsub) { this.msgNotifUnsub(); this.msgNotifUnsub = null; }
                 Object.values(this.replyNotifUnsubMap).forEach(unsub => { try { unsub(); } catch(e){} });
@@ -3155,11 +3184,20 @@
                 const permClass  = permStatus === 'granted' ? 'granted' : permStatus === 'denied' ? 'denied' : 'default';
                 const permIcon   = permStatus === 'granted' ? 'fa-check-circle' : permStatus === 'denied' ? 'fa-times-circle' : 'fa-clock';
 
-                const reAskBtn = (permStatus === 'default') ?
-                    `<button class="notif-re-ask-btn" onclick="app.requestNotifPermission()"><i class="fas fa-bell"></i> İzin İste</button>` :
-                    (permStatus === 'denied' ?
-                        `<small style="font-size:11px;color:#888;">Tarayıcı ayarlarından manuel açabilirsiniz</small>` :
-                        ``);
+                const reAskBtn = (permStatus === 'granted') ?
+                    `<span class="notif-status-badge granted" style="margin-top:4px;"><i class="fas fa-check-circle"></i> Bildirimler Açık</span>` :
+                    (permStatus === 'default') ?
+                    `<button class="notif-re-ask-btn" onclick="app.requestNotifPermission()">
+                        <i class="fas fa-bell"></i> Bildirimleri Aç
+                    </button>` :
+                    (permStatus === 'denied') ?
+                    `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                        <button class="notif-re-ask-btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b);" onclick="app.openBrowserNotifSettings()">
+                            <i class="fas fa-external-link-alt"></i> Tarayıcı Ayarlarını Aç
+                        </button>
+                        <small style="font-size:10px;color:#aaa;text-align:right;">Tarayıcı > Site Ayarları > Bildirimler</small>
+                    </div>` :
+                    `<small style="font-size:11px;color:#888;">Bu cihaz bildirimi desteklemiyor</small>`;
 
                 return `
                     <div class="notif-pref-section-title"><i class="fas fa-bell"></i> Bildirim İzni</div>
