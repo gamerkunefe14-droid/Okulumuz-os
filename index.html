@@ -132,11 +132,146 @@
         .grade-checkbox-container { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; max-height: 120px; overflow-y: auto; padding: 8px; border: 1.5px solid #eee; border-radius: 10px; margin-bottom: 12px; background: var(--card); }
         .grade-checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; }
         .grade-checkbox-item input { width: auto; margin: 0; cursor: pointer; }
+
+        /* ===== BİLDİRİM SİSTEMİ STİLLERİ ===== */
+        #notif-permission-modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.75); display:flex; justify-content:center; align-items:center; z-index: 9000; }
+        #notif-permission-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 30px 24px;
+            width: 88%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            animation: notifCardPop 0.4s cubic-bezier(.175,.885,.32,1.275) forwards;
+        }
+        @keyframes notifCardPop {
+            from { opacity:0; transform: scale(0.75) translateY(30px); }
+            to   { opacity:1; transform: scale(1)    translateY(0);    }
+        }
+        #notif-permission-card .notif-bell-icon {
+            width: 70px; height: 70px;
+            background: linear-gradient(135deg, #ff9f43, #e67e22);
+            border-radius: 50%;
+            display: flex; align-items:center; justify-content:center;
+            margin: 0 auto 16px;
+            box-shadow: 0 8px 20px rgba(255,159,67,0.45);
+            animation: bellRing 1.2s ease infinite;
+        }
+        @keyframes bellRing {
+            0%,100% { transform: rotate(0deg); }
+            15%      { transform: rotate(14deg); }
+            30%      { transform: rotate(-12deg); }
+            45%      { transform: rotate(10deg); }
+            60%      { transform: rotate(-8deg); }
+            75%      { transform: rotate(5deg); }
+        }
+        #notif-permission-card .notif-bell-icon i { font-size: 30px; color: white; }
+        #notif-permission-card h3 { font-size: 18px; color: #222; margin-bottom: 8px; font-weight: 700; }
+        #notif-permission-card p  { font-size: 13px; color: #666; line-height: 1.6; margin-bottom: 20px; }
+        #notif-permission-card .notif-features {
+            display: flex; flex-direction: column; gap: 8px;
+            background: #f8f9fa; border-radius: 14px; padding: 14px; margin-bottom: 20px; text-align: left;
+        }
+        #notif-permission-card .notif-feature-item { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #444; }
+        #notif-permission-card .notif-feature-item i { color: #ff9f43; width: 18px; text-align:center; }
+        .notif-allow-btn {
+            width: 100%; padding: 13px; border: none; border-radius: 14px;
+            background: linear-gradient(135deg, #ff9f43, #e67e22);
+            color: white; font-size: 15px; font-weight: 700; cursor: pointer;
+            margin-bottom: 10px;
+            box-shadow: 0 6px 18px rgba(255,159,67,0.4);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .notif-allow-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(255,159,67,0.5); }
+        .notif-skip-btn {
+            width: 100%; padding: 11px; border: none; border-radius: 14px;
+            background: #f0f0f0; color: #888; font-size: 13px; cursor: pointer; font-weight: 600;
+        }
+        .notif-skip-btn:hover { background: #e0e0e0; }
+
+        /* Push benzeri uygulama ici bildirim banner */
+        #in-app-notif-container {
+            position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+            z-index: 9500; display: flex; flex-direction: column; gap: 10px;
+            width: 92%; max-width: 380px; pointer-events: none;
+        }
+        .in-app-notif {
+            background: #1e1e1e;
+            border-radius: 18px;
+            padding: 13px 16px;
+            display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+            pointer-events: all;
+            cursor: pointer;
+            animation: notifSlideIn 0.4s cubic-bezier(.175,.885,.32,1.275) forwards;
+            border-left: 4px solid #ff9f43;
+            min-height: 68px;
+        }
+        .in-app-notif.notif-reply  { border-left-color: #9b59b6; }
+        .in-app-notif.notif-msg    { border-left-color: #27ae60; }
+        @keyframes notifSlideIn {
+            from { opacity:0; transform: translateY(-22px) scale(0.93); }
+            to   { opacity:1; transform: translateY(0)     scale(1);    }
+        }
+        @keyframes notifSlideOut {
+            from { opacity:1; transform: translateY(0)     scale(1);    }
+            to   { opacity:0; transform: translateY(-18px) scale(0.92); }
+        }
+        .in-app-notif-icon {
+            width: 42px; height: 42px; min-width: 42px;
+            border-radius: 50%;
+            display: flex; align-items:center; justify-content:center;
+            font-size: 18px; color: white;
+        }
+        .in-app-notif-icon.icon-reply { background: linear-gradient(135deg, #9b59b6, #6c3483); }
+        .in-app-notif-icon.icon-msg   { background: linear-gradient(135deg, #27ae60, #1e8449); }
+        .in-app-notif-body { flex: 1; overflow: hidden; }
+        .in-app-notif-title { font-size: 12px; font-weight: 700; color: #ff9f43; margin-bottom: 2px; letter-spacing: 0.3px; text-transform: uppercase; }
+        .in-app-notif-title.title-reply { color: #bb8fce; }
+        .in-app-notif-title.title-msg   { color: #58d68d; }
+        .in-app-notif-sender { font-size: 13px; font-weight: 700; color: #ffffff; margin-bottom: 2px; }
+        .in-app-notif-text   { font-size: 12px; color: #aaaaaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .in-app-notif-time   { font-size: 10px; color: #666; min-width: 28px; text-align: right; align-self: flex-start; padding-top: 2px; }
+        .in-app-notif-close  { font-size: 16px; color: #555; padding: 4px; cursor: pointer; align-self: flex-start; }
+        .in-app-notif-close:hover { color: #ccc; }
     </style>
 </head>
 <body>
 
     <div id="toast-container"></div>
+    <div id="in-app-notif-container"></div>
+
+    <!-- BİLDİRİM İZİN MODALI -->
+    <div id="notif-permission-modal" style="display:none;">
+        <div id="notif-permission-card">
+            <div class="notif-bell-icon">
+                <i class="fas fa-bell"></i>
+            </div>
+            <h3>Bildirimler Açık Olsun mu?</h3>
+            <p>Sana özel mesajlar ve sosyal paylaşımlarına gelen yanıtlar için anlık bildirim almak ister misin?</p>
+            <div class="notif-features">
+                <div class="notif-feature-item">
+                    <i class="fas fa-comment-dots"></i>
+                    <span>Sana gelen yeni mesajları anında gör</span>
+                </div>
+                <div class="notif-feature-item">
+                    <i class="fas fa-reply"></i>
+                    <span>Paylaşımlarına gelen yanıtlardan haberdar ol</span>
+                </div>
+                <div class="notif-feature-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Bildirimler sadece sana gelir, güvenli</span>
+                </div>
+            </div>
+            <button class="notif-allow-btn" onclick="app.requestNotifPermission()">
+                <i class="fas fa-bell"></i> Evet, Bildirimlere İzin Ver
+            </button>
+            <button class="notif-skip-btn" onclick="app.skipNotifPermission()">
+                Şimdilik İstemiyorum
+            </button>
+        </div>
+    </div>
 
     <div id="auth-screen" class="auth-card">
         <h2 id="auth-title" style="text-align:center; margin-bottom:15px;">Giriş Yap</h2>
@@ -336,6 +471,13 @@
             homeHomeworksUnsub: null,
             selectedWorksheetGrade: "",
             selectedWorksheetSubject: "",
+
+            // === BİLDİRİM SİSTEMİ DEĞİŞKENLERİ ===
+            notifPermissionAsked: false,
+            msgNotifUnsub: null,
+            replyNotifUnsubMap: {},
+            notifSeenMsgIds: new Set(),
+            notifSeenReplyIds: {},
 
             toast(msg, type = "info") {
                 const container = document.getElementById('toast-container');
@@ -680,6 +822,9 @@
                 this.updateMyStatus();
                 this.statusInterval = setInterval(() => this.updateMyStatus(), 30000);
                 
+                // Bildirim iznini sor (giriş sonrası)
+                this.showNotifPermissionModal();
+
                 this.navigate('home');
             },
 
@@ -692,6 +837,9 @@
                     document.getElementById('nav-leader').classList.add('hidden');
                     document.getElementById('nav-teacher').classList.add('hidden');
                     
+                    // Çıkışta bildirim dinleyicilerini durdur
+                    this.stopAllNotifListeners();
+
                     // Çıkışta temayı sıfırla (giriş/kayıt ekranı klasik görünsün)
                     const allThemeClasses = ['theme-dark','theme-dark-blue','theme-dark-purple','theme-dark-green','theme-dark-red','theme-light','theme-light-blue','theme-light-green','theme-light-purple','theme-sunset','theme-ocean','theme-custom','dark-mode'];
                     allThemeClasses.forEach(c => document.body.classList.remove(c));
@@ -1074,7 +1222,9 @@
                     }
                 }
 
-                await addDoc(collection(db, "social_posts"), postData);
+                const newPostRef = await addDoc(collection(db, "social_posts"), postData);
+                // Yeni paylaşıma gelen yanıtlar için bildirim dinleyicisi başlat
+                this.listenPostRepliesForNotif(newPostRef.id, postData.text || '');
                 document.getElementById('social-post-modal').classList.add('hidden');
                 this.toast("Paylaşım yapıldı.", "success");
             },
@@ -2575,6 +2725,269 @@
                     }
                 });
                 if(inboxCont.innerHTML === "") inboxCont.innerHTML = "<p style='font-size:12px; color:#999;'>Mesajlaşabileceğiniz kimse bulunmuyor.</p>";
+            },
+
+            // ========================================================
+            // BİLDİRİM SİSTEMİ FONKSİYONLARI
+            // ========================================================
+
+            showNotifPermissionModal() {
+                // Daha önce sorulduysa tekrar sorma
+                const alreadyAsked = localStorage.getItem('notif_asked_' + this.currentUser.username);
+                if (alreadyAsked) {
+                    // İzin verilmişse dinleyicileri başlat
+                    if (Notification.permission === 'granted') {
+                        this.startNotifListeners();
+                    }
+                    return;
+                }
+                // Browser bildirimi desteklemiyor mu?
+                if (!('Notification' in window)) {
+                    this.startNotifListeners(); // uygulama içi bildirim için yine de başlat
+                    return;
+                }
+                // Zaten izin verilmiş veya reddedilmişse modal gösterme
+                if (Notification.permission === 'granted') {
+                    localStorage.setItem('notif_asked_' + this.currentUser.username, '1');
+                    this.startNotifListeners();
+                    return;
+                }
+                if (Notification.permission === 'denied') {
+                    localStorage.setItem('notif_asked_' + this.currentUser.username, '1');
+                    this.startNotifListeners(); // uygulama içi bildirim için
+                    return;
+                }
+                // Modali göster
+                document.getElementById('notif-permission-modal').style.display = 'flex';
+            },
+
+            async requestNotifPermission() {
+                document.getElementById('notif-permission-modal').style.display = 'none';
+                localStorage.setItem('notif_asked_' + this.currentUser.username, '1');
+                if ('Notification' in window) {
+                    try {
+                        const perm = await Notification.requestPermission();
+                        if (perm === 'granted') {
+                            this.toast('Bildirimler aktifleştirildi!', 'success');
+                        } else {
+                            this.toast('Bildirim izni verilmedi. Uygulama içi bildirimler aktif.', 'info');
+                        }
+                    } catch(e) {}
+                }
+                this.startNotifListeners();
+            },
+
+            skipNotifPermission() {
+                document.getElementById('notif-permission-modal').style.display = 'none';
+                localStorage.setItem('notif_asked_' + this.currentUser.username, '1');
+                this.startNotifListeners(); // uygulama içi bildirim için yine de başlat
+                this.toast('Bildirimler kapatıldı. Ayarlardan değiştirebilirsin.', 'info');
+            },
+
+            startNotifListeners() {
+                if (!this.currentUser) return;
+                this.startMsgNotifListener();
+                this.startSocialReplyNotifListener();
+            },
+
+            startMsgNotifListener() {
+                if (this.msgNotifUnsub) { this.msgNotifUnsub(); this.msgNotifUnsub = null; }
+
+                // İlk yüklemede mevcut mesaj ID'lerini kaydet (bildirimi tetikleme)
+                let initialized = false;
+
+                const q = query(
+                    collection(db, "messages"),
+                    where("receiver", "==", this.currentUser.username),
+                    orderBy("createdAt", "asc")
+                );
+
+                this.msgNotifUnsub = onSnapshot(q, (snap) => {
+                    if (!initialized) {
+                        snap.forEach(d => this.notifSeenMsgIds.add(d.id));
+                        initialized = true;
+                        return;
+                    }
+                    snap.docChanges().forEach(change => {
+                        if (change.type === 'added') {
+                            const msgId = change.doc.id;
+                            if (this.notifSeenMsgIds.has(msgId)) return;
+                            this.notifSeenMsgIds.add(msgId);
+                            const m = change.doc.data();
+                            // Aktif sohbet bu gönderendeyse bildirim gösterme
+                            if (this.activeChat === m.sender &&
+                                document.getElementById('chat-window') &&
+                                !document.getElementById('chat-window').classList.contains('hidden')) {
+                                return;
+                            }
+                            this.showInAppNotif('msg', m.sender, m.text);
+                            this.sendBrowserNotif(
+                                '💬 Yeni Mesaj: ' + m.sender,
+                                this.truncateNotif(m.text),
+                                'msg'
+                            );
+                        }
+                    });
+                });
+            },
+
+            startSocialReplyNotifListener() {
+                // Kullanıcının kendi paylaşımlarını bul, her birine reply dinleyici ekle
+                const myPostsQ = query(
+                    collection(db, "social_posts"),
+                    where("sender", "==", this.currentUser.username)
+                );
+                getDocs(myPostsQ).then(snap => {
+                    snap.forEach(postDoc => {
+                        this.listenPostRepliesForNotif(postDoc.id, postDoc.data().text || '');
+                    });
+                });
+
+                // Yeni paylaşım eklenirse onun reply dinleyicisini de başlat
+                // (submitSocialPost çağrıldığında otomatik tetiklenir)
+            },
+
+            listenPostRepliesForNotif(postId, postText) {
+                if (this.replyNotifUnsubMap[postId]) return; // Zaten dinleniyor
+
+                if (!this.notifSeenReplyIds[postId]) {
+                    this.notifSeenReplyIds[postId] = new Set();
+                }
+
+                let initialized = false;
+                const q = query(
+                    collection(db, "social_posts", postId, "replies"),
+                    orderBy("createdAt", "asc")
+                );
+
+                const unsub = onSnapshot(q, (snap) => {
+                    if (!initialized) {
+                        snap.forEach(d => this.notifSeenReplyIds[postId].add(d.id));
+                        initialized = true;
+                        return;
+                    }
+                    snap.docChanges().forEach(change => {
+                        if (change.type === 'added') {
+                            const replyId = change.doc.id;
+                            if (this.notifSeenReplyIds[postId].has(replyId)) return;
+                            this.notifSeenReplyIds[postId].add(replyId);
+                            const reply = change.doc.data();
+                            // Kendi yanıtı bildirim gelmesi gerekmez
+                            if (reply.sender === this.currentUser.username) return;
+                            const postSnippet = this.truncateNotif(postText, 8);
+                            this.showInAppNotif('reply', reply.sender, reply.text, postSnippet);
+                            this.sendBrowserNotif(
+                                '💬 Yanıt: ' + reply.sender,
+                                this.truncateNotif(reply.text),
+                                'reply'
+                            );
+                        }
+                    });
+                });
+
+                this.replyNotifUnsubMap[postId] = unsub;
+            },
+
+            truncateNotif(text, len) {
+                const limit = len || 10;
+                if (!text) return '';
+                const clean = text.replace(/\n/g, ' ').trim();
+                if (clean.length <= limit) return clean;
+                return clean.substring(0, limit) + '...';
+            },
+
+            sendBrowserNotif(title, body, type) {
+                if (!('Notification' in window)) return;
+                if (Notification.permission !== 'granted') return;
+                try {
+                    const icons = {
+                        msg: 'https://gamerkunefe14-droid.github.io/Okulumuz-os/icon-192x192.png',
+                        reply: 'https://gamerkunefe14-droid.github.io/Okulumuz-os/icon-192x192.png'
+                    };
+                    const n = new Notification(title, {
+                        body: body,
+                        icon: icons[type] || icons.msg,
+                        badge: icons[type] || icons.msg,
+                        tag: 'bizimokul-' + type + '-' + Date.now(),
+                        renotify: true,
+                        vibrate: [200, 100, 200]
+                    });
+                    n.onclick = () => { window.focus(); n.close(); };
+                    setTimeout(() => n.close(), 6000);
+                } catch(e) {}
+            },
+
+            showInAppNotif(type, sender, text, postSnippet) {
+                const container = document.getElementById('in-app-notif-container');
+                if (!container) return;
+
+                const notifEl = document.createElement('div');
+                const typeClass = type === 'reply' ? 'notif-reply' : 'notif-msg';
+                notifEl.className = 'in-app-notif ' + typeClass;
+
+                const iconClass = type === 'reply' ? 'icon-reply' : 'icon-msg';
+                const iconName  = type === 'reply' ? 'fa-reply' : 'fa-comment';
+                const titleText = type === 'reply' ? 'YENİ YANIT' : 'YENİ MESAJ';
+                const titleClass = type === 'reply' ? 'title-reply' : 'title-msg';
+                const truncated  = this.truncateNotif(text);
+                const now = new Date();
+                const timeStr = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
+
+                let subLine = '';
+                if (type === 'reply' && postSnippet) {
+                    subLine = `<div class="in-app-notif-text" style="color:#888; font-size:11px; margin-bottom:2px;">Paylaşım: ${postSnippet}</div>`;
+                }
+
+                notifEl.innerHTML = `
+                    <div class="in-app-notif-icon ${iconClass}">
+                        <i class="fas ${iconName}"></i>
+                    </div>
+                    <div class="in-app-notif-body">
+                        <div class="in-app-notif-title ${titleClass}">${titleText}</div>
+                        <div class="in-app-notif-sender">${sender}</div>
+                        ${subLine}
+                        <div class="in-app-notif-text">${truncated}</div>
+                    </div>
+                    <div class="in-app-notif-time">${timeStr}</div>
+                    <div class="in-app-notif-close" onclick="this.closest('.in-app-notif').remove()">
+                        <i class="fas fa-times"></i>
+                    </div>
+                `;
+
+                // Tıklayınca ilgili sekmeye git
+                notifEl.addEventListener('click', (e) => {
+                    if (e.target.closest('.in-app-notif-close')) return;
+                    notifEl.remove();
+                    if (type === 'msg') {
+                        app.navigate('messages');
+                        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                        const msgNav = document.querySelector('.nav-item:nth-child(3)');
+                        if (msgNav) msgNav.classList.add('active');
+                    } else {
+                        app.navigate('social');
+                        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                        const socNav = document.querySelector('.nav-item:nth-child(2)');
+                        if (socNav) socNav.classList.add('active');
+                    }
+                });
+
+                container.appendChild(notifEl);
+
+                // 5 saniye sonra otomatik kapat
+                setTimeout(() => {
+                    if (notifEl.parentElement) {
+                        notifEl.style.animation = 'notifSlideOut 0.35s ease forwards';
+                        setTimeout(() => notifEl.remove(), 350);
+                    }
+                }, 5000);
+            },
+
+            stopAllNotifListeners() {
+                if (this.msgNotifUnsub) { this.msgNotifUnsub(); this.msgNotifUnsub = null; }
+                Object.values(this.replyNotifUnsubMap).forEach(unsub => { try { unsub(); } catch(e){} });
+                this.replyNotifUnsubMap = {};
+                this.notifSeenMsgIds = new Set();
+                this.notifSeenReplyIds = {};
             }
         };
 
