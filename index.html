@@ -3269,7 +3269,8 @@
             }
         };
 
-        window.addEventListener('DOMContentLoaded', () => { app.init(); });
+        window.addEventListener('DOMContentLoaded', () => { if (typeof app !== 'undefined') { app.init(); } else if (window.app) { window.app.init(); } else { console.log("App nesnesi henüz yüklenmedi."); } });
+		setTimeout(() => { if (typeof app !== 'undefined') window.app = app; }, 100);
     </script>
 </body>
 </html>
