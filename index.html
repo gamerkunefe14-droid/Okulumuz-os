@@ -3264,10 +3264,12 @@
                                 '<span class="notif-status-badge default"><i class="fas fa-info-circle"></i> İzin Gerekli</span>'
                             }
                         </div>
-                    </div>
+</div>
                 `;
             }
         };
+
+        window.app = app; // Sadece bu satırı ekle, app'i tüm dünyaya tanımlar ve buton hatasını çözer!
 
         window.addEventListener('DOMContentLoaded', () => { if (typeof app !== 'undefined') { app.init(); } else if (window.app) { window.app.init(); } else { console.log("App nesnesi henüz yüklenmedi."); } });
 		setTimeout(() => { if (typeof app !== 'undefined') window.app = app; }, 100);
