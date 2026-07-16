@@ -366,7 +366,7 @@ selectedWorksheetGrade: "",
 selectedWorksheetSubject: "",
 
 kunefeAIHistory: [],
-kunefeAIApiKey: "AQ.Ab8RN6J0NKhRNGvsn0mXDvrdBLK2B_0QBiJ-DtBAkEn8jEWTEg",
+kunefeAIApiKey: ("AQ.Ab8RN6IJ9f9atV9sp8G1EAa2tPNL6HP03uGmZ1ekfCyosHIYHA="),
 kunefeAIModel: "gemini-2.5-flash",
 
 toast(msg, type = "info") {
@@ -437,9 +437,9 @@ this.renderKunefeAIMessage('user', text);
 this.kunefeAIHistory.push({ role: 'user', parts: [{ text: text }] });
 const thinkingBubble = this.renderKunefeAIMessage('ai', 'Yazıyor...');
 try {
-const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.kunefeAIModel}:generateContent?key=${this.kunefeAIApiKey}`, {
+const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.kunefeAIModel}:generateContent`, {
 method: 'POST',
-headers: { 'Content-Type': 'application/json' },
+headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.kunefeAIApiKey },
 body: JSON.stringify({ contents: this.kunefeAIHistory })
 });
 const data = await resp.json();
