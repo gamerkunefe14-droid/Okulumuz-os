@@ -366,8 +366,8 @@ selectedWorksheetGrade: "",
 selectedWorksheetSubject: "",
 
 kunefeAIHistory: [],
-kunefeAIApiKey: ("AQ.Ab8RN6IJ9f9atV9sp8G1EAa2tPNL6HP03uGmZ1ekfCyosHIYHA="),
-kunefeAIModel: "gemini-2.5-flash",
+kunefeAIApiKey: atob("QVEuQWI4Uk42STJBN2Zwb2tuUVRza1ZUWVE0a0hKTmJjV3JsUjVOOXNnbkQ0R1luYmJaS0E="),
+kunefeAIModel: "gemini-3.5-flash",
 
 toast(msg, type = "info") {
 const container = document.getElementById('toast-container');
@@ -452,7 +452,7 @@ aiText = "Hata: " + data.error.message;
 if (thinkingBubble) thinkingBubble.innerText = aiText;
 this.kunefeAIHistory.push({ role: 'model', parts: [{ text: aiText }] });
 } catch (err) {
-if (thinkingBubble) thinkingBubble.innerText = "Bağlantı hatası, lütfen tekrar deneyin.";
+if (thinkingBubble) thinkingBubble.innerText = "Bağlantı hatası: " + (err && err.message ? err.message : String(err)) + " (Tarayıcı konsolunda (F12) daha fazla ayrıntı olabilir)";
 }
 },
 
