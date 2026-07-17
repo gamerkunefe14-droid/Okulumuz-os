@@ -137,12 +137,6 @@ main { flex: 1; padding: 15px; overflow-y: auto; }
 /* === BENİ HATIRLA (Remember Me) === */
 .remember-me-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); margin: -6px 0 14px 2px; cursor: pointer; user-select: none; }
 .remember-me-row input { width: auto; margin: 0; cursor: pointer; }
-
-/* === KÜNEFE AI SOHBET PENCERESİ === */
-#kunefe-ai-window { display: flex; flex-direction: column; width: 100%; max-width: 480px; height: 75vh; max-height: 640px; padding: 15px; }
-#kunefe-ai-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 10px; background: var(--bg); border-radius: 12px; }
-.kunefe-msg-user { align-self: flex-end; margin-left: auto; max-width: 80%; background: var(--accent); color: #fff; padding: 8px 14px; border-radius: 14px 14px 2px 14px; margin-bottom: 8px; font-size: 14px; line-height: 1.4; white-space: pre-wrap; }
-.kunefe-msg-ai { align-self: flex-start; margin-right: auto; max-width: 80%; background: var(--card); color: var(--text); border: 1.5px solid #eee; padding: 8px 14px; border-radius: 14px 14px 14px 2px; margin-bottom: 8px; font-size: 14px; line-height: 1.4; white-space: pre-wrap; }
 </style>
 </head>
 <body>
@@ -215,23 +209,8 @@ main { flex: 1; padding: 15px; overflow-y: auto; }
 <div class="nav-item hidden" id="nav-leader" onclick="app.navigate('leader', this)"><i class="fas fa-star"></i><span>Başkanlık</span></div>
 <div class="nav-item hidden" id="nav-teacher" onclick="app.navigate('teacher', this)"><i class="fas fa-chalkboard-teacher"></i><span>Öğretmen</span></div>
 <div class="nav-item" onclick="app.navigate('users', this)"><i class="fas fa-users"></i><span>Kullanıcılar</span></div>
-<div class="nav-item" id="nav-kunefe-ai" onclick="app.openKunefeAI()"><i class="fas fa-robot"></i><span>Künefe AI</span></div>
 <div class="nav-item" onclick="app.navigate('settings', this)"><i class="fas fa-cog"></i><span>Ayarlar</span></div>
 </nav>
-</div>
-
-<div id="kunefe-ai-modal" class="modal-bg hidden">
-<div class="modal" id="kunefe-ai-window">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-<h3 style="margin:0;"><i class="fas fa-robot"></i> Künefe AI</h3>
-<i class="fas fa-times" style="cursor:pointer; font-size:20px; color:var(--text);" onclick="app.closeKunefeAI()"></i>
-</div>
-<div id="kunefe-ai-messages"></div>
-<div style="display:flex; gap:8px; margin-top:10px;">
-<input type="text" id="kunefe-ai-input" placeholder="Künefe AI'ya bir şey sor..." style="flex:1; margin:0;" onkeypress="if(event.key==='Enter'){app.sendKunefeAIMessage();}">
-<button class="btn-main" style="width:auto; margin:0; padding:10px 18px;" onclick="app.sendKunefeAIMessage()"><i class="fas fa-paper-plane"></i></button>
-</div>
-</div>
 </div>
 
 <div id="social-post-modal" class="modal-bg hidden">
@@ -365,10 +344,6 @@ homeHomeworksUnsub: null,
 selectedWorksheetGrade: "",
 selectedWorksheetSubject: "",
 
-kunefeAIHistory: [],
-kunefeAIApiKey: atob("QVEuQWI4Uk42STJBN2Zwb2tuUVRza1ZUWVE0a0hKTmJjV3JsUjVOOXNnbkQ0R1luYmJaS0E="),
-kunefeAIModel: "gemini-3.5-flash",
-
 toast(msg, type = "info") {
 const container = document.getElementById('toast-container');
 if (!container) return;
@@ -402,57 +377,6 @@ const sr = document.getElementById('staff-remember');
 if (su) su.value = remStaffUser;
 if (sp) sp.value = remStaffPass;
 if (sr) sr.checked = true;
-}
-},
-
-openKunefeAI() {
-document.getElementById('kunefe-ai-modal').classList.remove('hidden');
-if (this.kunefeAIHistory.length === 0) {
-this.renderKunefeAIMessage('ai', 'Merhaba! Ben Künefe AI 🍮 Sana nasıl yardımcı olabilirim?');
-}
-},
-
-closeKunefeAI() {
-document.getElementById('kunefe-ai-modal').classList.add('hidden');
-},
-
-renderKunefeAIMessage(role, text) {
-const box = document.getElementById('kunefe-ai-messages');
-if (!box) return null;
-const bubble = document.createElement('div');
-bubble.className = role === 'user' ? 'kunefe-msg-user' : 'kunefe-msg-ai';
-bubble.innerText = text;
-box.appendChild(bubble);
-box.scrollTop = box.scrollHeight;
-return bubble;
-},
-
-async sendKunefeAIMessage() {
-const input = document.getElementById('kunefe-ai-input');
-if (!input) return;
-const text = input.value.trim();
-if (!text) return;
-input.value = "";
-this.renderKunefeAIMessage('user', text);
-this.kunefeAIHistory.push({ role: 'user', parts: [{ text: text }] });
-const thinkingBubble = this.renderKunefeAIMessage('ai', 'Yazıyor...');
-try {
-const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.kunefeAIModel}:generateContent`, {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.kunefeAIApiKey },
-body: JSON.stringify({ contents: this.kunefeAIHistory })
-});
-const data = await resp.json();
-let aiText = "Üzgünüm, şu an bir cevap oluşturamadım.";
-if (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) {
-aiText = data.candidates[0].content.parts[0].text;
-} else if (data && data.error && data.error.message) {
-aiText = "Hata: " + data.error.message;
-}
-if (thinkingBubble) thinkingBubble.innerText = aiText;
-this.kunefeAIHistory.push({ role: 'model', parts: [{ text: aiText }] });
-} catch (err) {
-if (thinkingBubble) thinkingBubble.innerText = "Bağlantı hatası: " + (err && err.message ? err.message : String(err)) + " (Tarayıcı konsolunda (F12) daha fazla ayrıntı olabilir)";
 }
 },
 
