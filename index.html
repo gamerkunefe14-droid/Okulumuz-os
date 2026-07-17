@@ -344,6 +344,8 @@ homeHomeworksUnsub: null,
 selectedWorksheetGrade: "",
 selectedWorksheetSubject: "",
 
+admSelectedClasses: [],
+
 toast(msg, type = "info") {
 const container = document.getElementById('toast-container');
 if (!container) return;
@@ -932,6 +934,7 @@ const q = query(collection(db, "subjects"), where("grades", "array-contains", St
 const snap = await getDocs(q);
 snap.forEach(d => {
 const data = d.data();
+if(data.school && data.school !== this.currentUser.school) return;
 selectEl.innerHTML += `<option value="${data.name}" ${this.selectedWorksheetSubject === data.name ? 'selected' : ''}>${data.name}</option>`;
 });
 },
@@ -1360,6 +1363,7 @@ let section = this.currentUser.section;
 let targetType = "class";
 let homeDocType = "general";
 let subjectCategory = "";
+let admMultiClasses = null;
 
 if(panelType === 'admin') {
 const mode = document.getElementById('adm-target-mode').value;
@@ -1368,6 +1372,7 @@ if(mode === 'class') {
 grade = document.getElementById('adm-grade-select').value;
 section = document.getElementById('adm-section-select').value;
 targetType = "class";
+if(this.admSelectedClasses.length > 0) admMultiClasses = this.admSelectedClasses.slice();
 } else {
 targetType = "school-all";
 }
@@ -1387,6 +1392,28 @@ try {
 this.toast("Dosya sisteme yükleniyor, lütfen bekleyin...");
 const snapshot = await uploadBytes(storageRef, file);
 const downloadUrl = await getDownloadURL(snapshot.ref);
+
+if(admMultiClasses && admMultiClasses.length > 0) {
+for (const c of admMultiClasses) {
+const [g, s] = c.split('-');
+await addDoc(collection(db, "images"), {
+url: downloadUrl,
+fileName: file.name,
+fileType: file.type,
+storagePath: storagePath,
+school, grade: g, section: s, targetType: "class", homeDocType, subjectCategory,
+text: file.name,
+sender: this.currentUser.username,
+createdAt: serverTimestamp()
+});
+}
+this.toast("Dosya başarıyla sisteme yüklendi!", "success");
+fileInput.value = "";
+this.admSelectedClasses = [];
+this.renderAdminClasses();
+this.renderAdminControlList();
+return;
+}
 
 await addDoc(collection(db, "images"), {
 url: downloadUrl,
@@ -1496,7 +1523,9 @@ main.innerHTML = `
                        <div id="adm-class-selectors" style="display:flex; gap:5px;">
                            <select id="adm-grade-select"></select>
                            <select id="adm-section-select"></select>
+                           <button type="button" class="btn-main" style="width:auto; margin:0; padding:10px 15px;" onclick="app.addAdminClass()"><i class="fas fa-plus"></i> Ekle</button>
                        </div>
+                       <div id="adm-added-classes" style="display:flex; flex-direction:column; gap:5px; margin-bottom:12px;"></div>
 
                        <hr style="margin:10px 0; opacity:0.2;">
 
@@ -1588,10 +1617,20 @@ const schoolSelectorDiv = document.getElementById('adm-code-school-selector');
 if(schoolSelectorDiv) schoolSelectorDiv.classList.add('hidden');
 }
 
+// Güncelleme: idareciler artık sadece kendi okulları için geçerli idareci kodu da oluşturabiliyor
+if(admCodeTypeEl && !isRealAdmin) {
+Array.from(admCodeTypeEl.options).forEach(opt => {
+if(opt.value === 'manager') opt.style.display = '';
+});
+}
+
 const gSel = document.getElementById('adm-grade-select');
 gSel.innerHTML = ""; for(let i=1; i<=12; i++) gSel.innerHTML += `<option value="${i}">${i}. Sınıf</option>`;
 const sSel = document.getElementById('adm-section-select');
 sSel.innerHTML = ""; "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => sSel.innerHTML += `<option value="${char}">${char}</option>`);
+
+this.admSelectedClasses = [];
+this.renderAdminClasses();
 
 if(isRealAdmin) {
 let schoolListMarkup = "";
@@ -1655,10 +1694,14 @@ if(checkedBoxes.length === 0) return this.toast("Lütfen en az bir sınıf kadem
 
 const grades = Array.from(checkedBoxes).map(cb => cb.value);
 
+const lowerNameForSubject = this.currentUser.username.toLowerCase();
+const isRealAdminForSubject = lowerNameForSubject === "künefe" || lowerNameForSubject === "kodc" || this.currentUser.isAdmin;
+
 try {
 await addDoc(collection(db, "subjects"), {
 name: name,
 grades: grades,
+school: isRealAdminForSubject ? null : this.currentUser.school,
 createdAt: serverTimestamp()
 });
 this.toast("Ders başarıyla oluşturuldu!", "success");
@@ -1670,6 +1713,8 @@ this.toast("Ders oluşturulurken hata oluştu.", "error");
 },
 
 listenSubjectsList() {
+const lowerNameForList = this.currentUser.username.toLowerCase();
+const isRealAdminForList = lowerNameForList === "künefe" || lowerNameForList === "kodc" || this.currentUser.isAdmin;
 onSnapshot(query(collection(db, "subjects"), orderBy("createdAt", "desc")), (snap) => {
 const cont = document.getElementById('admin-subjects-list');
 if(!cont) return;
@@ -1678,8 +1723,12 @@ if(snap.empty) {
 cont.innerHTML = "<p style='color:#999; font-size:12px;'>Kayıtlı ders bulunmuyor.</p>";
 return;
 }
+let renderedSubjectCount = 0;
 snap.forEach(d => {
 const data = d.data();
+if(isRealAdminForList && data.school) return;
+if(!isRealAdminForList && data.school !== this.currentUser.school) return;
+renderedSubjectCount++;
 cont.innerHTML += `
                            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.03); padding:6px; margin-bottom:4px; border-radius:5px;">
                                <span><b>${data.name}</b> <small style="color:#7f8c8d;">(Kademeler: ${data.grades.join(', ')})</small></span>
@@ -1687,11 +1736,20 @@ cont.innerHTML += `
                            </div>
                        `;
 });
+if(renderedSubjectCount === 0) cont.innerHTML = "<p style='color:#999; font-size:12px;'>Kayıtlı ders bulunmuyor.</p>";
 });
 },
 
 async deleteSubject(id) {
 if(confirm("Bu ders kategorisini silmek istediğinize emin misiniz?")) {
+const lowerNameForDel = this.currentUser.username.toLowerCase();
+const isRealAdminForDel = lowerNameForDel === "künefe" || lowerNameForDel === "kodc" || this.currentUser.isAdmin;
+if(!isRealAdminForDel) {
+const subjSnap = await getDoc(doc(db, "subjects", id));
+if(subjSnap.exists() && subjSnap.data().school !== this.currentUser.school) {
+return this.toast("Sadece kendi okulunuza ait dersleri silebilirsiniz!", "error");
+}
+}
 await deleteDoc(doc(db, "subjects", id));
 this.toast("Ders başarıyla silindi.", "success");
 }
@@ -1765,6 +1823,21 @@ return result;
 
 const lowerName = this.currentUser.username.toLowerCase();
 const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
+
+// Güncelleme: İdareciler artık SADECE KENDİ OKULLARI için geçerli idareci kodu oluşturabiliyor
+if (!isRealAdmin && type === 'manager') {
+const modManagerCodeData = {
+type: 'manager',
+code: createRandomString(10),
+password: createRandomString(10),
+school: this.currentUser.school,
+createdAt: serverTimestamp(),
+usedBy: ""
+};
+await addDoc(collection(db, "registration_codes"), modManagerCodeData);
+this.toast("İdareci kodu başarıyla üretildi! (Sadece kendi okulunuz için geçerli)", "success");
+return;
+}
 
 // İdareciler (moderatörler) yalnızca öğretmen kodu oluşturabilir, idareci kodu oluşturamaz
 if (!isRealAdmin && type === 'manager') {
@@ -1978,6 +2051,34 @@ const mode = document.getElementById('adm-target-mode').value;
 document.getElementById('adm-class-selectors').classList.toggle('hidden', mode === 'school');
 },
 
+addAdminClass() {
+const g = document.getElementById('adm-grade-select').value;
+const s = document.getElementById('adm-section-select').value;
+if(!g || !s) return;
+const classStr = `${g}-${s}`;
+if(this.admSelectedClasses.includes(classStr)) return this.toast("Bu sınıf zaten eklendi!", "error");
+this.admSelectedClasses.push(classStr);
+this.renderAdminClasses();
+},
+
+removeAdminClass(c) {
+this.admSelectedClasses = this.admSelectedClasses.filter(x => x !== c);
+this.renderAdminClasses();
+},
+
+renderAdminClasses() {
+const cont = document.getElementById('adm-added-classes');
+if(!cont) return;
+cont.innerHTML = "";
+this.admSelectedClasses.forEach(c => {
+const [g, s] = c.split('-');
+cont.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; border-radius:5px; font-size:12px;">
+                       <span><b>Sınıf:</b> ${g}. Sınıf - ${s} Şubesi</span>
+                       <i class="fas fa-times" style="color:#d63031; cursor:pointer;" onclick="app.removeAdminClass('${c}')"></i>
+                   </div>`;
+});
+},
+
 // Link ile Sınav Tarihi Yükleme Mantığıyla Güncellenmiş Metot
 async adminPublishAnnouncement() {
 const text = document.getElementById('adm-ann-text').value.trim();
@@ -1986,6 +2087,37 @@ if(!text) return this.toast("Lütfen başlık veya metin giriniz!", "error");
 const mode = document.getElementById('adm-target-mode').value;
 const school = document.getElementById('adm-school-select').value;
 const annType = document.getElementById('adm-ann-type').value;
+
+if(mode === 'class' && this.admSelectedClasses.length > 0) {
+let examUrlMulti = "";
+if(annType === 'exam') {
+examUrlMulti = document.getElementById('adm-exam-url-input').value.trim();
+if(!examUrlMulti) return this.toast("Sınav takvimi için URL bağlantı linki girmek zorunludur!", "error");
+}
+for (const c of this.admSelectedClasses) {
+const [g, s] = c.split('-');
+const multiDocData = {
+text, school, grade: g, section: s, targetType: "class",
+homeDocType: annType,
+sender: this.currentUser.username,
+createdAt: serverTimestamp()
+};
+if(annType === 'exam') multiDocData.examUrl = examUrlMulti;
+await addDoc(collection(db, "announcements"), multiDocData);
+}
+this.toast(annType === 'exam' ? "Sınav tarihi bağlantısı başarıyla yüklendi!" : "Duyuru başarıyla yayınlandı!", "success");
+document.getElementById('adm-ann-text').value = "";
+const urlFieldMulti = document.getElementById('adm-exam-url-input');
+if(urlFieldMulti) {
+urlFieldMulti.value = "";
+urlFieldMulti.classList.add('hidden');
+}
+document.getElementById('adm-ann-type').value = "general";
+this.admSelectedClasses = [];
+this.renderAdminClasses();
+this.renderAdminControlList();
+return;
+}
 
 let grade = "";
 let section = "";
@@ -2031,6 +2163,27 @@ if(!title || !deadline) return this.toast("Başlık ve Tarih zorunludur!", "erro
 
 const mode = document.getElementById('adm-target-mode').value;
 const school = document.getElementById('adm-school-select').value;
+
+if(mode === 'class' && this.admSelectedClasses.length > 0) {
+for (const c of this.admSelectedClasses) {
+const [g, s] = c.split('-');
+await addDoc(collection(db, "homeworks"), {
+title,
+subject: document.getElementById('adm-hw-subject').value,
+book: document.getElementById('adm-hw-book').value,
+pages: document.getElementById('adm-hw-pages').value,
+deadline, school, grade: g, section: s, targetType: "class",
+sender: this.currentUser.username,
+createdAt: serverTimestamp()
+});
+}
+this.toast("Ödev başarıyla yayınlandı!", "success");
+document.getElementById('adm-hw-title').value = "";
+this.admSelectedClasses = [];
+this.renderAdminClasses();
+this.renderAdminControlList();
+return;
+}
 
 let grade = "";
 let section = "";
@@ -2200,6 +2353,7 @@ const q = query(collection(db, "subjects"), where("grades", "array-contains", St
 const snap = await getDocs(q);
 snap.forEach(d => {
 const data = d.data();
+if(data.school && data.school !== this.currentUser.school) return;
 subjectSelect.innerHTML += `<option value="${data.name}">${data.name}</option>`;
 });
 },
