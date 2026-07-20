@@ -137,11 +137,21 @@ main { flex: 1; padding: 15px; overflow-y: auto; }
 /* === BENİ HATIRLA (Remember Me) === */
 .remember-me-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); margin: -6px 0 14px 2px; cursor: pointer; user-select: none; }
 .remember-me-row input { width: auto; margin: 0; cursor: pointer; }
+
+/* === ONAY TOAST'U (Toast Tasarımlı Emin misiniz?) === */
+.confirm-toast { background: #1e272e; color: #fff; padding: 14px 16px; border-radius: 8px; font-size: 14px; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 10px; animation: slideDown 0.3s ease forwards; border-left: 5px solid #ff9f43; }
+.confirm-toast-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.confirm-toast-actions i { cursor: pointer; font-size: 16px; padding: 6px 14px; border-radius: 6px; }
+.confirm-toast-actions .confirm-yes { color: #27ae60; background: rgba(39,174,96,0.12); }
+.confirm-toast-actions .confirm-yes:hover { background: rgba(39,174,96,0.25); }
+.confirm-toast-actions .confirm-no { color: #d63031; background: rgba(214,48,49,0.12); }
+.confirm-toast-actions .confirm-no:hover { background: rgba(214,48,49,0.25); }
 </style>
 </head>
 <body>
 
 <div id="toast-container"></div>
+<div id="confirm-toast-container" style="position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:10000; display:flex; flex-direction:column; gap:10px; width:90%; max-width:350px;"></div>
 
 <div id="auth-screen" class="auth-card">
 <h2 id="auth-title" style="text-align:center; margin-bottom:15px;">Giriş Yap</h2>
@@ -357,6 +367,28 @@ setTimeout(() => {
 toastEl.style.animation = "slideDown 0.3s ease reverse forwards";
 setTimeout(() => toastEl.remove(), 300);
 }, 3000);
+},
+
+customConfirm(msg) {
+return new Promise((resolve) => {
+const container = document.getElementById('confirm-toast-container');
+if(!container) return resolve(false);
+const toastEl = document.createElement('div');
+toastEl.className = 'confirm-toast';
+toastEl.innerHTML = `<span>${msg}</span>
+                       <div class="confirm-toast-actions">
+                           <i class="fas fa-times confirm-no" title="Vazgeç"></i>
+                           <i class="fas fa-check confirm-yes" title="Onayla"></i>
+                       </div>`;
+container.appendChild(toastEl);
+const close = (result) => {
+toastEl.style.animation = "slideDown 0.3s ease reverse forwards";
+setTimeout(() => toastEl.remove(), 300);
+resolve(result);
+};
+toastEl.querySelector('.confirm-yes').addEventListener('click', () => close(true));
+toastEl.querySelector('.confirm-no').addEventListener('click', () => close(false));
+});
 },
 
 autofillRememberedLogin() {
@@ -740,8 +772,8 @@ this.statusInterval = setInterval(() => this.updateMyStatus(), 30000);
 this.navigate('home');
 },
 
-logout() {
-if(confirm("Çıkış yapmak istediğinize emin misiniz?")) {
+async logout() {
+if(await this.customConfirm("Çıkış yapmak istediğinize emin misiniz?")) {
 if(this.statusInterval) clearInterval(this.statusInterval);
 this.currentUser = null;
 document.getElementById('app-container').classList.add('hidden');
@@ -1139,7 +1171,7 @@ this.toast("Paylaşım yapıldı.", "success");
 },
 
 async deleteSocialPost(postId, storagePath) {
-if(confirm("Bu paylaşımı forumdan kaldırmak istiyor musunuz?")) {
+if(await this.customConfirm("Bu paylaşımı forumdan kaldırmak istiyor musunuz?")) {
 if(storagePath) {
 const fileRef = ref(storage, storagePath);
 await deleteObject(fileRef).catch(e => console.log("Dosya zaten silinmiş."));
@@ -1438,7 +1470,7 @@ this.toast("Dosya yüklenirken bir hata oluştu.", "error");
 },
 
 async deleteItem(colName, id, storagePath) {
-if(confirm("Bu içeriği tamamen kaldırmak istediğinize emin misiniz?")) {
+if(await this.customConfirm("Bu içeriği tamamen kaldırmak istediğinize emin misiniz?")) {
 try {
 if(storagePath) {
 const fileRef = ref(storage, storagePath);
@@ -1741,7 +1773,7 @@ if(renderedSubjectCount === 0) cont.innerHTML = "<p style='color:#999; font-size
 },
 
 async deleteSubject(id) {
-if(confirm("Bu ders kategorisini silmek istediğinize emin misiniz?")) {
+if(await this.customConfirm("Bu ders kategorisini silmek istediğinize emin misiniz?")) {
 const lowerNameForDel = this.currentUser.username.toLowerCase();
 const isRealAdminForDel = lowerNameForDel === "künefe" || lowerNameForDel === "kodc" || this.currentUser.isAdmin;
 if(!isRealAdminForDel) {
@@ -1756,7 +1788,7 @@ this.toast("Ders başarıyla silindi.", "success");
 },
 
 async adminDeleteSchool(index) {
-if(confirm(`"${this.allSchools[index]}" okulunu silmek istediğinize emin misiniz?`)) {
+if(await this.customConfirm(`"${this.allSchools[index]}" okulunu silmek istediğinize emin misiniz?`)) {
 this.allSchools.splice(index, 1);
 await setDoc(doc(db, "config", "schools"), { list: this.allSchools });
 this.toast("Okul listeden başarıyla silindi!", "success");
@@ -1888,7 +1920,7 @@ this.toast(`${type === 'teacher' ? 'Öğretmen' : 'İdareci'} kodu başarıyla �
 },
 
 async deleteRegistrationCode(id) {
-if(confirm("Bu kodu tamamen silmek istediğinize emin misiniz?")) {
+if(await this.customConfirm("Bu kodu tamamen silmek istediğinize emin misiniz?")) {
 await deleteDoc(doc(db, "registration_codes", id));
 this.toast("Kod başarıyla silindi!", "success");
 }
@@ -2013,7 +2045,7 @@ this.navigate('admin');
 
 async adminDeleteUser() {
 if(!this.selectedEditUser) return;
-if(confirm(`${this.selectedEditUser.username} isimli hesabı tamamen silmek istediğinize emin misiniz?`)) {
+if(await this.customConfirm(`${this.selectedEditUser.username} isimli hesabı tamamen silmek istediğinize emin misiniz?`)) {
 await deleteDoc(doc(db, "users", this.selectedEditUser.username));
 await deleteDoc(doc(db, "status", this.selectedEditUser.username));
 this.toast("Hesap sistemden silindi.", "success");
@@ -2281,7 +2313,7 @@ this.toast("Güncelleme Ayarı Kaydedildi!", "success");
 },
 
 async resetSystemData() {
-if(confirm("DİKKAT! Tüm öğrenci hesapları ve durum verileri silinecek (Admin/Mod hariç). Emin misiniz?")) {
+if(await this.customConfirm("DİKKAT! Tüm öğrenci hesapları ve durum verileri silinecek (Admin/Mod hariç). Emin misiniz?")) {
 const userSnap = await getDocs(collection(db, "users"));
 userSnap.forEach(async (uDoc) => {
 const u = uDoc.data();
@@ -2382,7 +2414,7 @@ cont.innerHTML += `
 },
 
 async deleteTeacherItem(id, storagePath) {
-if(confirm("Bu çalışma kağıdını kaldırmak istediğinize emin misiniz?")) {
+if(await this.customConfirm("Bu çalışma kağıdını kaldırmak istediğinize emin misiniz?")) {
 if(storagePath) {
 const fileRef = ref(storage, storagePath);
 await deleteObject(fileRef).catch(e => console.log("Dosya bulunamadı."));
