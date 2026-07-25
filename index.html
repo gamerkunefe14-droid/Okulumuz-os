@@ -1349,6 +1349,14 @@ const url = (rawUrl && !rawUrl.match(/^https?:\/\//i)) ? 'https://' + rawUrl : r
 if(!title || !url) return this.toast("Lütfen Başlık ve Link alanlarını doldurun!", "error");
 if(!subject) return this.toast("Lütfen bir ders kategorisi seçin!", "error");
 
+const subjSnapCheck = await getDocs(query(collection(db, "subjects"), where("name", "==", subject)));
+let subjectAllowed = false;
+subjSnapCheck.forEach(sd => {
+const sData = sd.data();
+if(!sData.school || sData.school === this.currentUser.school) subjectAllowed = true;
+});
+if(!subjectAllowed) return this.toast("Bu ders başka bir okula özel olduğu için çalışma kağıdı oluşturamazsınız!", "error");
+
 try {
 await addDoc(collection(db, "images"), {
 url: url,
@@ -1412,6 +1420,15 @@ targetType = "school-all";
 grade = document.getElementById('teacher-ws-grade-select').value;
 subjectCategory = document.getElementById('teacher-ws-subject-select').value;
 if(!subjectCategory) return this.toast("Lütfen bir ders kategorisi seçin!", "error");
+
+const subjSnapCheck2 = await getDocs(query(collection(db, "subjects"), where("name", "==", subjectCategory)));
+let subjectAllowed2 = false;
+subjSnapCheck2.forEach(sd => {
+const sData = sd.data();
+if(!sData.school || sData.school === this.currentUser.school) subjectAllowed2 = true;
+});
+if(!subjectAllowed2) return this.toast("Bu ders başka bir okula özel olduğu için çalışma kağıdı oluşturamazsınız!", "error");
+
 section = "Tümü";
 targetType = "class"; 
 homeDocType = "worksheet";
@@ -1714,6 +1731,7 @@ this.allSchools.forEach(sch => { admCodeSchoolSel.innerHTML += `<option value="$
 admCodeSchoolSel.innerHTML = `<option value="${this.currentUser.school}">${this.currentUser.school}</option>`;
 }
 }
+this.onAdmCodeTypeChange();
 },
 
 async adminCreateSubject() {
@@ -1838,6 +1856,19 @@ schoolSelectorDiv.classList.remove('hidden');
 } else {
 schoolSelectorDiv.classList.add('hidden');
 }
+}
+
+// Güncelleme: Gerçek admin, öğretmen kodu oluştururken de hedef okulu bilinçli olarak seçebilsin
+const lowerNameForCodeSchool = this.currentUser.username.toLowerCase();
+const isRealAdminForCodeSchool = lowerNameForCodeSchool === "künefe" || lowerNameForCodeSchool === "kodc" || this.currentUser.isAdmin;
+if(schoolSelectorDiv && isRealAdminForCodeSchool && type === 'teacher') {
+schoolSelectorDiv.classList.remove('hidden');
+const labelEl = schoolSelectorDiv.querySelector('label');
+if(labelEl) labelEl.innerText = "Bu Öğretmen Kodunun Geçerli Olacağı Okul:";
+}
+if(schoolSelectorDiv && isRealAdminForCodeSchool && type === 'manager') {
+const labelEl2 = schoolSelectorDiv.querySelector('label');
+if(labelEl2) labelEl2.innerText = "Bu İdareci Kodunun Geçerli Olacağı Okul:";
 }
 },
 
