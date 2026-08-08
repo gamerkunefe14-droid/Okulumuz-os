@@ -333,8 +333,6 @@ appId: "1:144133286740:web:5ce1ad633fed06233376c1"
 const fApp = initializeApp(firebaseConfig);
 const db = getFirestore(fApp);
 const storage = getStorage(fApp);
-emailjs.init("bgyhgWde8icqWQ5gB");
-
 window.app = {
 currentUser: null,
 allSchools: [],
@@ -570,11 +568,25 @@ cont.innerHTML += `<div style="display:flex; justify-content:space-between; alig
 });
 },
 
+async isUsernameTaken(username) {
+// Kullanıcı adının büyük/küçük harf duyarsız olarak zaten alınıp alınmadığını kontrol eder.
+// Firestore'a kullanıcı adları belge kimliği olarak kaydediliyor; harf duyarsız karşılaştırma için tüm kullanıcıları tararız.
+const name = (username || "").trim().toLowerCase();
+if(!name) return true;
+const snap = await getDocs(collection(db, "users"));
+let taken = false;
+snap.forEach(d => { if(d.id.toLowerCase() === name) taken = true; });
+return taken;
+},
+
 async startRegister() {
 const email = document.getElementById('reg-email').value;
+const uname = document.getElementById('reg-user').value.trim();
+if(!uname) return this.toast("Kullanıcı adı boş olamaz!", "error");
+if(await this.isUsernameTaken(uname)) return this.toast("Bu kullanıcı adı zaten alınmış! (Büyük/küçük harf farkı önemli değil) Lütfen farklı bir kullanıcı adı seçin.", "error");
 this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
 this.tempUser = {
-username: document.getElementById('reg-user').value,
+username: uname,
 email: email, password: document.getElementById('reg-pass').value,
 school: document.getElementById('reg-school').value,
 grade: document.getElementById('reg-grade').value,
@@ -661,6 +673,8 @@ return this.toast("Bu kod herhangi bir okula atanmamış. Lütfen yöneticiye ba
 }
 }
 
+if(await this.isUsernameTaken(username)) return this.toast("Bu kullanıcı adı zaten alınmış! (Büyük/küçük harf farkı önemli değil) Lütfen farklı bir kullanıcı adı seçin.", "error");
+
 this.tempUser = {
 username, email, password: pass, school: resolvedSchool, 
 grade: this.currentStaffMode === 'manager' ? "Tümü" : "",
@@ -717,6 +731,10 @@ localStorage.removeItem('kunefe_remember_staff_pass');
 }
 this.launch();
 } else {
+if(await this.isUsernameTaken(this.tempUser.username)) {
+this.toast("Bu kullanıcı adı zaten alınmış! Lütfen farklı bir kullanıcı adı seçin.", "error");
+return;
+}
 document.getElementById('verify-modal').classList.add('hidden');
 
 // Güncelleme: Öğretmenin sınıfları artık idareci tarafından kod oluşturulurken belirleniyor, öğretmen kayıt sırasında ayrıca sınıf seçmiyor
@@ -788,7 +806,7 @@ document.getElementById('app-container').classList.remove('hidden');
 document.getElementById('display-name').innerText = this.currentUser.username;
 
 const lowerName = this.currentUser.username.toLowerCase();
-const hasAdminPower = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
+const hasAdminPower = lowerName === "künefe" || this.currentUser.isAdmin;
 if(hasAdminPower || this.currentUser.isMod) {
 document.getElementById('admin-btn').classList.remove('hidden');
 }
@@ -1099,7 +1117,7 @@ mediaHtml = `<a href="${post.fileUrl}" target="_blank" style="display:block; mar
 }
 
 const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
+const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
 let canDelete = false;
 
 if(isRealAdmin) canDelete = true;
@@ -1256,7 +1274,7 @@ input.value = "";
 buildUserBadges(u) {
 let html = '<div class="badges-wrapper">';
 const lowerName = u.username.toLowerCase();
-if(lowerName === "künefe" || lowerName === "kodc" || u.isAdmin) {
+if(lowerName === "künefe" || u.isAdmin) {
 html += `<span class="badge-tag" style="background:#e67e22">ADMİN</span>`;
 }
 if(u.isMod) html += `<span class="badge-tag" style="background:#2980b9">MOD</span>`;
@@ -1573,7 +1591,7 @@ urlInputEl.classList.add('hidden');
 async renderAdminPanel() {
 const main = document.getElementById('main-content');
 const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
+const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
 
 let gradeCheckboxMarkup = "";
 for(let i=1; i<=12; i++) {
@@ -1815,7 +1833,7 @@ if(checkedBoxes.length === 0) return this.toast("Lütfen en az bir sınıf kadem
 const grades = Array.from(checkedBoxes).map(cb => cb.value);
 
 const lowerNameForSubject = this.currentUser.username.toLowerCase();
-const isRealAdminForSubject = lowerNameForSubject === "künefe" || lowerNameForSubject === "kodc" || this.currentUser.isAdmin;
+const isRealAdminForSubject = lowerNameForSubject === "künefe" || this.currentUser.isAdmin;
 
 try {
 await addDoc(collection(db, "subjects"), {
@@ -1834,7 +1852,7 @@ this.toast("Ders oluşturulurken hata oluştu.", "error");
 
 listenSubjectsList() {
 const lowerNameForList = this.currentUser.username.toLowerCase();
-const isRealAdminForList = lowerNameForList === "künefe" || lowerNameForList === "kodc" || this.currentUser.isAdmin;
+const isRealAdminForList = lowerNameForList === "künefe" || this.currentUser.isAdmin;
 onSnapshot(query(collection(db, "subjects"), orderBy("createdAt", "desc")), (snap) => {
 const cont = document.getElementById('admin-subjects-list');
 if(!cont) return;
@@ -1863,7 +1881,7 @@ if(renderedSubjectCount === 0) cont.innerHTML = "<p style='color:#999; font-size
 async deleteSubject(id) {
 if(await this.customConfirm("Bu ders kategorisini silmek istediğinize emin misiniz?")) {
 const lowerNameForDel = this.currentUser.username.toLowerCase();
-const isRealAdminForDel = lowerNameForDel === "künefe" || lowerNameForDel === "kodc" || this.currentUser.isAdmin;
+const isRealAdminForDel = lowerNameForDel === "künefe" || this.currentUser.isAdmin;
 if(!isRealAdminForDel) {
 const subjSnap = await getDoc(doc(db, "subjects", id));
 if(subjSnap.exists() && subjSnap.data().school !== this.currentUser.school) {
@@ -1930,7 +1948,7 @@ schoolSelectorDiv.classList.add('hidden');
 
 // Güncelleme: Gerçek admin, öğretmen kodu oluştururken de hedef okulu bilinçli olarak seçebilsin
 const lowerNameForCodeSchool = this.currentUser.username.toLowerCase();
-const isRealAdminForCodeSchool = lowerNameForCodeSchool === "künefe" || lowerNameForCodeSchool === "kodc" || this.currentUser.isAdmin;
+const isRealAdminForCodeSchool = lowerNameForCodeSchool === "künefe" || this.currentUser.isAdmin;
 if(schoolSelectorDiv && isRealAdminForCodeSchool && type === 'teacher') {
 schoolSelectorDiv.classList.remove('hidden');
 const labelEl = schoolSelectorDiv.querySelector('label');
@@ -1961,7 +1979,7 @@ return result;
 };
 
 const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
+const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
 
 // Güncelleme: İdareciler artık SADECE KENDİ OKULLARI için geçerli idareci kodu oluşturabiliyor
 if (!isRealAdmin && type === 'manager') {
@@ -2075,7 +2093,7 @@ listCont.appendChild(item);
 openAdminUserModal(u) {
 this.selectedEditUser = u;
 const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
+const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
 
 document.getElementById('edit-user-title').innerText = `${u.username} - Düzenle`;
 document.getElementById('admin-user-modal').classList.remove('hidden');
@@ -2123,7 +2141,7 @@ this.selectedEditUser[roleField] = newStatus;
 this.toast("Rol durumu başarıyla güncellendi!", "success");
 
 const lowerName = this.currentUser.username.toLowerCase();
-this.renderAdminUserList(lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin);
+this.renderAdminUserList(lowerName === "künefe" || this.currentUser.isAdmin);
 },
 
 async adminUpdateStatus(blockStatus) {
@@ -2135,16 +2153,15 @@ document.getElementById('block-btn').classList.toggle('hidden', blockStatus);
 document.getElementById('unblock-btn').classList.toggle('hidden', !blockStatus);
 
 const lowerName = this.currentUser.username.toLowerCase();
-this.renderAdminUserList(lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin);
+this.renderAdminUserList(lowerName === "künefe" || this.currentUser.isAdmin);
 },
 
 async adminChangeUsername() {
 if(!this.selectedEditUser) return;
 const newName = document.getElementById('edit-username-input').value.trim();
-if(!newName || newName === this.selectedEditUser.username) return this.toast("Geçersiz veya aynı isim!", "error");
-
-const checkDoc = await getDoc(doc(db, "users", newName));
-if(checkDoc.exists()) return this.toast("Bu kullanıcı adı zaten alınmış!", "error");
+if(!newName) return this.toast("Geçersiz veya aynı isim!", "error");
+if(newName.toLowerCase() === this.selectedEditUser.username.toLowerCase()) return this.toast("Geçersiz veya aynı isim!", "error");
+if(await this.isUsernameTaken(newName)) return this.toast("Bu kullanıcı adı zaten alınmış! (Büyük/küçük harf farkı önemli değil)", "error");
 
 const oldData = { ...this.selectedEditUser, username: newName };
 await setDoc(doc(db, "users", newName), oldData);
@@ -2173,7 +2190,7 @@ this.renderAdminPanel();
 async saveUserEdits() {
 if(!this.selectedEditUser) return;
 const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
+const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
 
 const updates = {
 grade: document.getElementById('edit-grade').value,
@@ -2420,7 +2437,7 @@ cont.innerHTML = "Yükleniyor...";
 let html = "";
 const school = document.getElementById('adm-school-select').value;
 const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || this.currentUser.isAdmin;
+const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
 
 const annSnap = await getDocs(collection(db, "announcements"));
 annSnap.forEach(d => {
@@ -2488,7 +2505,7 @@ const userSnap = await getDocs(collection(db, "users"));
 userSnap.forEach(async (uDoc) => {
 const u = uDoc.data();
 const lowerName = u.username.toLowerCase();
-const isAdminUser = lowerName === "künefe" || lowerName === "kodc" || u.isAdmin;
+const isAdminUser = lowerName === "künefe" || u.isAdmin;
 
 if(!isAdminUser) {
 await deleteDoc(doc(db, "users", u.username));
@@ -2599,7 +2616,7 @@ renderSettings() {
 const main = document.getElementById('main-content');
                 const u = this.currentUser;
                 const lowerName = u.username.toLowerCase();
-                const isRealAdmin = lowerName === "künefe" || lowerName === "kodc" || u.isAdmin;
+                const isRealAdmin = lowerName === "künefe" || u.isAdmin;
                 const isMod = u.isMod;
                 const isTeacher = u.isTeacher;
 
@@ -2833,12 +2850,10 @@ main.innerHTML = `
             // =============================================
 
             async settingsChangeUsername() {
-                const newName = document.getElementById('settings-new-username').value.trim();
-                if(!newName) return this.toast('Kullanıcı adı boş olamaz!', 'error');
-                if(newName === this.currentUser.username) return this.toast('Bu zaten mevcut kullanıcı adınız!', 'error');
-
-                const checkDoc = await getDoc(doc(db, 'users', newName));
-                if(checkDoc.exists()) return this.toast('Bu kullanıcı adı zaten alınmış!', 'error');
+const newName = document.getElementById('settings-new-username').value.trim();
+if(!newName) return this.toast('Kullanıcı adı boş olamaz!', 'error');
+if(newName.toLowerCase() === this.currentUser.username.toLowerCase()) return this.toast('Bu zaten mevcut kullanıcı adınız!', 'error');
+if(await this.isUsernameTaken(newName)) return this.toast('Bu kullanıcı adı zaten alınmış! (Büyük/küçük harf farkı önemli değil)', 'error');
 
                 const oldUsername = this.currentUser.username;
                 const oldData = { ...this.currentUser, username: newName };
@@ -2995,5 +3010,5 @@ if(inboxCont.innerHTML === "") inboxCont.innerHTML = "<p style='font-size:12px; 
 
 window.addEventListener('DOMContentLoaded', () => { app.init(); });
 </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28069434829c546',t:'MTc4NjIxMTkyNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
