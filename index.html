@@ -201,7 +201,7 @@ main { flex: 1; padding: 15px; overflow-y: auto; }
 
 <div id="app-container" class="hidden">
 <div id="update-banner" class="hidden">
-<span>🚀 Yeni güncelleme mevcut!</span>
+<span>🚀 Yeni yayın mevcut!</span>
 <a id="update-link" href="#" target="_blank">HEMEN İNDİR</a>
 </div>
 <header>
@@ -355,6 +355,8 @@ selectedWorksheetGrade: "",
 selectedWorksheetSubject: "",
 
 admSelectedClasses: [],
+admCodeClasses: [],
+admCodeSubjectClasses: [],
 
 toast(msg, type = "info") {
 const container = document.getElementById('toast-container');
@@ -669,6 +671,23 @@ isTeacher: this.currentStaffMode === 'teacher',
 isAdmin: false, rank: "", rankColor: "#ff9f43",
 managerLoginCount: 0
 };
+
+if (this.currentStaffMode === 'teacher') {
+const codeClasses = validDoc.data().classes || [];
+if (codeClasses.length === 0) return this.toast("Bu öğretmen koduna henüz sınıf atanmamış. Lütfen idarecinize başvurun!", "error");
+this.tempUser.grade = codeClasses.map(c => c.split('-')[0]).join(',');
+this.tempUser.section = codeClasses.map(c => c.split('-')[1]).join(',');
+
+const codeSubjectClasses = validDoc.data().subjectClasses || [];
+this.tempUser.homeroomClasses = codeClasses;
+this.tempUser.subjectClasses = codeSubjectClasses;
+if (codeSubjectClasses.length > 0) {
+const allTeacherClasses = codeClasses.concat(codeSubjectClasses);
+this.tempUser.grade = allTeacherClasses.map(c => c.split('-')[0]).join(',');
+this.tempUser.section = allTeacherClasses.map(c => c.split('-')[1]).join(',');
+}
+}
+
 this.tempCodeIdToBurn = validDoc.id;
 this.tempAction = 'register';
 this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
@@ -699,6 +718,18 @@ localStorage.removeItem('kunefe_remember_staff_pass');
 this.launch();
 } else {
 document.getElementById('verify-modal').classList.add('hidden');
+
+// Güncelleme: Öğretmenin sınıfları artık idareci tarafından kod oluşturulurken belirleniyor, öğretmen kayıt sırasında ayrıca sınıf seçmiyor
+if (this.tempUser.isTeacher) {
+await setDoc(doc(db, "users", this.tempUser.username), this.tempUser);
+if (this.tempCodeIdToBurn) {
+await updateDoc(doc(db, "registration_codes", this.tempCodeIdToBurn), { usedBy: this.tempUser.username });
+}
+this.toast("Kaydınız başarıyla tamamlandı öğretmenim!", "success");
+setTimeout(() => location.reload(), 1000);
+return;
+}
+
 if (this.tempUser.isTeacher) {
 this.staffClasses = [];
 document.getElementById('modal-teacher-added-classes').innerHTML = "";
@@ -1625,6 +1656,23 @@ main.innerHTML = `
                            <label style="font-size:12px; font-weight:bold;">Bu İdareci Kodunun Geçerli Olacağı Okul:</label>
                            <select id="adm-code-school" style="margin-top:5px;"></select>
                        </div>
+                       <div id="adm-code-class-selector" class="hidden" style="margin-bottom:10px;">
+                           <label style="font-size:12px; font-weight:bold;">Öğretmenin Sınıf Öğretmeni Olacağı Sınıf(lar):</label>
+                           <div style="display:flex; gap:5px; margin:5px 0;">
+                               <select id="adm-code-grade-select"></select>
+                               <select id="adm-code-section-select"></select>
+                               <button type="button" class="btn-main" style="width:auto; margin:0; padding:10px 15px;" onclick="app.addAdminCodeClass()"><i class="fas fa-plus"></i> Ekle</button>
+                           </div>
+                           <div id="adm-code-added-classes" style="display:flex; flex-direction:column; gap:5px; margin-bottom:12px;"></div>
+
+                           <label style="font-size:12px; font-weight:bold;">Öğretmenin Girdiği Ama Sınıf Öğretmeni Olmadığı Sınıf(lar):</label>
+                           <div style="display:flex; gap:5px; margin:5px 0;">
+                               <select id="adm-code-subject-grade-select"></select>
+                               <select id="adm-code-subject-section-select"></select>
+                               <button type="button" class="btn-main" style="width:auto; margin:0; padding:10px 15px;" onclick="app.addAdminCodeSubjectClass()"><i class="fas fa-plus"></i> Ekle</button>
+                           </div>
+                           <div id="adm-code-subject-added-classes" style="display:flex; flex-direction:column; gap:5px; margin-bottom:12px;"></div>
+                       </div>
                        <div id="adm-generated-codes-list" style="max-height:150px; overflow-y:auto; font-size:13px;">Yükleniyor...</div>
                    </div>
 
@@ -1732,6 +1780,28 @@ admCodeSchoolSel.innerHTML = `<option value="${this.currentUser.school}">${this.
 }
 }
 this.onAdmCodeTypeChange();
+
+const admCodeGradeSel = document.getElementById('adm-code-grade-select');
+if(admCodeGradeSel) {
+admCodeGradeSel.innerHTML = ""; for(let i=1; i<=12; i++) admCodeGradeSel.innerHTML += `<option value="${i}">${i}. Sınıf</option>`;
+}
+const admCodeSectionSel = document.getElementById('adm-code-section-select');
+if(admCodeSectionSel) {
+admCodeSectionSel.innerHTML = ""; "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => admCodeSectionSel.innerHTML += `<option value="${char}">${char}</option>`);
+}
+this.admCodeClasses = [];
+this.renderAdminCodeClasses();
+
+const admCodeSubjectGradeSel = document.getElementById('adm-code-subject-grade-select');
+if(admCodeSubjectGradeSel) {
+admCodeSubjectGradeSel.innerHTML = ""; for(let i=1; i<=12; i++) admCodeSubjectGradeSel.innerHTML += `<option value="${i}">${i}. Sınıf</option>`;
+}
+const admCodeSubjectSectionSel = document.getElementById('adm-code-subject-section-select');
+if(admCodeSubjectSectionSel) {
+admCodeSubjectSectionSel.innerHTML = ""; "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => admCodeSubjectSectionSel.innerHTML += `<option value="${char}">${char}</option>`);
+}
+this.admCodeSubjectClasses = [];
+this.renderAdminCodeSubjectClasses();
 },
 
 async adminCreateSubject() {
@@ -1870,6 +1940,12 @@ if(schoolSelectorDiv && isRealAdminForCodeSchool && type === 'manager') {
 const labelEl2 = schoolSelectorDiv.querySelector('label');
 if(labelEl2) labelEl2.innerText = "Bu İdareci Kodunun Geçerli Olacağı Okul:";
 }
+
+// Güncelleme: Öğretmen kodu seçilince, idarecinin öğretmen için sınıf(lar) seçebileceği alan gösterilsin
+const classSelectorDiv = document.getElementById('adm-code-class-selector');
+if(classSelectorDiv) {
+classSelectorDiv.classList.toggle('hidden', type !== 'teacher');
+}
 },
 
 async generateRegistrationCode() {
@@ -1931,6 +2007,9 @@ codeData.school = this.currentUser.school;
 }
 
 if(type === 'teacher') {
+if(this.admCodeClasses.length === 0) return this.toast("Lütfen öğretmenin sınıf öğretmeni olacağı en az bir sınıf seçin!", "error");
+codeData.classes = this.admCodeClasses.slice();
+codeData.subjectClasses = this.admCodeSubjectClasses.slice();
 // İdareci (moderatör) öğretmen kodu oluştururken yalnızca kendi okuluna geçerli kod oluşturabilir
 if(isRealAdmin) {
 // Gerçek admin: seçilen hedef okul için öğretmen kodu oluştur
@@ -1948,6 +2027,10 @@ codeData.school = this.currentUser.school;
 
 await addDoc(collection(db, "registration_codes"), codeData);
 this.toast(`${type === 'teacher' ? 'Öğretmen' : 'İdareci'} kodu başarıyla üretildi!`, "success");
+this.admCodeClasses = [];
+this.renderAdminCodeClasses();
+this.admCodeSubjectClasses = [];
+this.renderAdminCodeSubjectClasses();
 },
 
 async deleteRegistrationCode(id) {
@@ -2138,6 +2221,62 @@ const [g, s] = c.split('-');
 cont.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; border-radius:5px; font-size:12px;">
                        <span><b>Sınıf:</b> ${g}. Sınıf - ${s} Şubesi</span>
                        <i class="fas fa-times" style="color:#d63031; cursor:pointer;" onclick="app.removeAdminClass('${c}')"></i>
+                   </div>`;
+});
+},
+
+addAdminCodeClass() {
+const g = document.getElementById('adm-code-grade-select').value;
+const s = document.getElementById('adm-code-section-select').value;
+if(!g || !s) return;
+const classStr = `${g}-${s}`;
+if(this.admCodeClasses.includes(classStr)) return this.toast("Bu sınıf zaten eklendi!", "error");
+this.admCodeClasses.push(classStr);
+this.renderAdminCodeClasses();
+},
+
+removeAdminCodeClass(c) {
+this.admCodeClasses = this.admCodeClasses.filter(x => x !== c);
+this.renderAdminCodeClasses();
+},
+
+renderAdminCodeClasses() {
+const cont = document.getElementById('adm-code-added-classes');
+if(!cont) return;
+cont.innerHTML = "";
+this.admCodeClasses.forEach(c => {
+const [g, s] = c.split('-');
+cont.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; border-radius:5px; font-size:12px;">
+                       <span><b>Sınıf:</b> ${g}. Sınıf - ${s} Şubesi</span>
+                       <i class="fas fa-times" style="color:#d63031; cursor:pointer;" onclick="app.removeAdminCodeClass('${c}')"></i>
+                   </div>`;
+});
+},
+
+addAdminCodeSubjectClass() {
+const g = document.getElementById('adm-code-subject-grade-select').value;
+const s = document.getElementById('adm-code-subject-section-select').value;
+if(!g || !s) return;
+const classStr = `${g}-${s}`;
+if(this.admCodeSubjectClasses.includes(classStr)) return this.toast("Bu sınıf zaten eklendi!", "error");
+this.admCodeSubjectClasses.push(classStr);
+this.renderAdminCodeSubjectClasses();
+},
+
+removeAdminCodeSubjectClass(c) {
+this.admCodeSubjectClasses = this.admCodeSubjectClasses.filter(x => x !== c);
+this.renderAdminCodeSubjectClasses();
+},
+
+renderAdminCodeSubjectClasses() {
+const cont = document.getElementById('adm-code-subject-added-classes');
+if(!cont) return;
+cont.innerHTML = "";
+this.admCodeSubjectClasses.forEach(c => {
+const [g, s] = c.split('-');
+cont.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; border-radius:5px; font-size:12px;">
+                       <span><b>Sınıf:</b> ${g}. Sınıf - ${s} Şubesi</span>
+                       <i class="fas fa-times" style="color:#d63031; cursor:pointer;" onclick="app.removeAdminCodeSubjectClass('${c}')"></i>
                    </div>`;
 });
 },
