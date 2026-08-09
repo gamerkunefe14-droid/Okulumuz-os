@@ -1,3112 +1,735 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bizim Okul - Künefe App</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#ff9f43">
-<meta name="application-name" content="Okulumuz Os">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Okulumuz Os">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="apple-touch-icon" href="https://gamerkunefe14-droid.github.io/Okulumuz-os/icon-192x192.png">
-<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js');}</script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-<style>
-        :root { --bg: #f0f2f5; --card: #ffffff; --text: #333; --nav: #ffffff; }
-        :root { --bg: #f0f2f5; --card: #ffffff; --text: #333; --nav: #ffffff; --accent: #ff9f43; --accent2: #e67e22; }
-.dark-mode { --bg: #18191a; --card: #242526; --text: #e4e6eb; --nav: #242526; }
-
-        /* === TEMA SİSTEMİ CSS DEĞİŞKENLERİ === */
-        body.theme-dark { --bg: #18191a; --card: #242526; --text: #e4e6eb; --nav: #242526; --accent: #ff9f43; --accent2: #e67e22; }
-        body.theme-dark-blue { --bg: #0d1b2a; --card: #1b2a3b; --text: #cfe2f3; --nav: #1b2a3b; --accent: #4fc3f7; --accent2: #0288d1; }
-        body.theme-dark-purple { --bg: #1a0a2e; --card: #2d1b4e; --text: #e1bee7; --nav: #2d1b4e; --accent: #ce93d8; --accent2: #9c27b0; }
-        body.theme-dark-green { --bg: #0a1f0a; --card: #1b3a1b; --text: #c8e6c9; --nav: #1b3a1b; --accent: #81c784; --accent2: #388e3c; }
-        body.theme-dark-red { --bg: #1f0a0a; --card: #3a1b1b; --text: #ffcdd2; --nav: #3a1b1b; --accent: #ef9a9a; --accent2: #c62828; }
-        body.theme-light { --bg: #f0f2f5; --card: #ffffff; --text: #333; --nav: #ffffff; --accent: #ff9f43; --accent2: #e67e22; }
-        body.theme-light-blue { --bg: #e3f2fd; --card: #ffffff; --text: #1a237e; --nav: #ffffff; --accent: #1976d2; --accent2: #0d47a1; }
-        body.theme-light-green { --bg: #e8f5e9; --card: #ffffff; --text: #1b5e20; --nav: #ffffff; --accent: #43a047; --accent2: #1b5e20; }
-        body.theme-light-purple { --bg: #f3e5f5; --card: #ffffff; --text: #4a148c; --nav: #ffffff; --accent: #8e24aa; --accent2: #4a148c; }
-        body.theme-sunset { --bg: #fff3e0; --card: #ffe0b2; --text: #bf360c; --nav: #ffe0b2; --accent: #ff5722; --accent2: #bf360c; }
-        body.theme-ocean { --bg: #e0f7fa; --card: #b2ebf2; --text: #006064; --nav: #b2ebf2; --accent: #0097a7; --accent2: #006064; }
-        body.theme-custom { --bg: var(--custom-bg, #f0f2f5); --card: var(--custom-card, #ffffff); --text: var(--custom-text, #333); --nav: var(--custom-nav, #ffffff); --accent: var(--custom-accent, #ff9f43); --accent2: var(--custom-accent2, #e67e22); }
-
-        /* === TEMA SEÇİCİ MODAL === */
-        .theme-modal-bg { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index: 2000; }
-        .theme-modal { background: var(--card); padding: 20px; border-radius: 20px; width: 92%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
-        .theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-        .theme-option { border: 2.5px solid transparent; border-radius: 14px; padding: 12px 8px; cursor: pointer; text-align: center; font-size: 13px; font-weight: bold; transition: all 0.2s; }
-        .theme-option:hover { transform: scale(1.04); border-color: #ff9f43; }
-        .theme-option.selected { border-color: #ff9f43; box-shadow: 0 0 0 3px rgba(255,159,67,0.35); }
-        .theme-preview-dot { width: 28px; height: 28px; border-radius: 50%; display: inline-block; margin-bottom: 6px; border: 2px solid rgba(255,255,255,0.3); }
-        .custom-colors-section { background: rgba(0,0,0,0.04); border-radius: 12px; padding: 14px; margin-top: 5px; }
-        .color-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-        .color-row label { font-size: 12px; font-weight: bold; flex: 1; }
-        .color-row input[type=color] { width: 44px; height: 36px; border: none; border-radius: 8px; cursor: pointer; padding: 2px; }
-
-        /* === AYARLAR ŞIFRE/KUL.ADI ALAN STİLLERİ === */
-        .settings-section { background: var(--card); padding: 16px; border-radius: 15px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .settings-section h4 { font-size: 14px; margin-bottom: 12px; color: var(--accent); display: flex; align-items: center; gap: 7px; }
-
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; transition: background 0.2s; }
-body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
-.hidden { display: none !important; }
-
-.auth-card { background: var(--card); padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 90%; max-width: 450px; }
-input, select { width: 100%; padding: 12px; margin-bottom: 12px; border: 1.5px solid #eee; border-radius: 10px; outline: none; background: var(--card); color: var(--text); }
-button { width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-bottom: 5px; }
-.btn-main { background: #ff9f43; color: white; }
-.btn-danger { background: #d63031; color: white; }
-.btn-success { background: #27ae60; color: white; }
-.btn-mod { background: #2980b9; color: white; }
-.btn-teacher { background: #9b59b6; color: white; }
-.btn-admin { background: #e67e22; color: white; }
-.toggle-link { text-align: center; margin-top: 15px; color: #3498db; cursor: pointer; font-size: 14px; }
-
-#app-container { width: 100%; height: 100vh; background: var(--bg); display: flex; flex-direction: column; position: fixed; top:0; left:0; z-index: 100; }
-header { padding: 15px 20px; background: #ff9f43; color: white; display: flex; justify-content: space-between; align-items: center; }
-
-#update-banner { background: #2980b9; color: white; padding: 10px; text-align: center; font-size: 14px; display: flex; justify-content: center; align-items: center; gap: 10px; }
-#update-banner a { background: white; color: #2980b9; padding: 4px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 12px; }
-
-.admin-badge { background: #d63031; padding: 6px 15px; border-radius: 25px; font-size: 12px; font-weight: bold; cursor: pointer; }
-main { flex: 1; padding: 15px; overflow-y: auto; }
-
-.homework-card { background: var(--card); padding: 15px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: left; position: relative; border-left: 5px solid #ff9f43; }
-.homework-card h4 { color: #ff9f43; margin-bottom: 5px; }
-.warning-icon { position: absolute; top: 15px; right: 15px; color: #d63031; font-size: 20px; font-weight: bold; }
-.del-hw { color: #d63031; cursor: pointer; float: right; }
-
-.user-item { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-.status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
-.status-active { background: #27ae60; } 
-.status-blocked { background: #d63031; }
-.status-offline { background: #95a5a6; }
-
-.badges-wrapper { display: inline-flex; gap: 4px; vertical-align: middle; }
-.badge-tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; color: white; font-weight: bold; text-transform: uppercase; }
-
-#chat-window { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg); z-index: 600; display: flex; flex-direction: column; }
-.msg-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; }
-.bubble { max-width: 70%; padding: 10px; border-radius: 15px; margin-bottom: 10px; font-size: 14px; }
-.msg-me { align-self: flex-end; background: #ff9f43; color: white; }
-.msg-them { align-self: flex-start; background: var(--card); }
-
-.bottom-nav { height: 70px; background: var(--nav); border-top: 1px solid #eee; display: flex; justify-content: space-around; align-items: center; }
-.nav-item { display: flex; flex-direction: column; align-items: center; color: #a4b0be; cursor: pointer; font-size: 11px; flex: 1; }
-.nav-item.active { color: #ff9f43; }
-
-.modal-bg { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; z-index: 1000; }
-.modal { background: var(--card); padding: 20px; border-radius: 15px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
-
-.media-preview { max-width: 100%; max-height: 250px; margin-top: 10px; border-radius: 8px; display: block; }
-
-/* Forum / Social Styles */
-.social-card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-bottom: 2px solid #eee; position: relative; }
-.social-card .del-hw { color: #d63031; cursor: pointer; float: right; }
-.social-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
-.social-user { font-weight: bold; color: #ff9f43; }
-.social-scope { font-size: 11px; background: #e0e0e0; color: #333; padding: 2px 6px; border-radius: 5px; }
-.social-body { font-size: 14px; line-height: 1.4; white-space: pre-wrap; margin-bottom: 8px; }
-.social-footer { display: flex; gap: 15px; font-size: 12px; margin-top: 10px; color: #888; }
-.social-action { cursor: pointer; display: flex; align-items: center; gap: 5px; }
-.social-action:hover { color: #ff9f43; }
-.reply-box { margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px; background: rgba(0,0,0,0.02); padding: 8px; border-radius: 8px; }
-.reply-item { font-size: 13px; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px dashed #ddd; }
-.reply-user { font-weight: bold; color: #3498db; }
-
-/* Ana Sayfa Menü Butonları */
-.home-menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-.home-menu-btn { background: var(--card); color: var(--text); padding: 15px; border-radius: 12px; border: 1.5px solid #eee; font-weight: bold; font-size: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
-.home-menu-btn i { font-size: 20px; color: #ff9f43; }
-.home-menu-btn.active { border-color: #ff9f43; background: rgba(255, 159, 67, 0.05); }
-
-/* Toast Bildirim Tasarımı */
-#toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; width: 90%; max-width: 350px; }
-.toast-msg { background: #333; color: #fff; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 10px; animation: slideDown 0.3s ease forwards; border-left: 5px solid #ff9f43; }
-.toast-msg.success { border-left-color: #27ae60; background: #1e272e; }
-.toast-msg.error { border-left-color: #d63031; background: #1e272e; }
-@keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-
-/* Ders Ekleme Kademeli Seçim Listesi */
-.grade-checkbox-container { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; max-height: 120px; overflow-y: auto; padding: 8px; border: 1.5px solid #eee; border-radius: 10px; margin-bottom: 12px; background: var(--card); }
-.grade-checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; }
-.grade-checkbox-item input { width: auto; margin: 0; cursor: pointer; }
-
-/* === BENİ HATIRLA (Remember Me) === */
-.remember-me-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); margin: -6px 0 14px 2px; cursor: pointer; user-select: none; }
-.remember-me-row input { width: auto; margin: 0; cursor: pointer; }
-
-/* === ONAY TOAST'U (Toast Tasarımlı Emin misiniz?) === */
-.confirm-toast { background: #1e272e; color: #fff; padding: 14px 16px; border-radius: 8px; font-size: 14px; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 10px; animation: slideDown 0.3s ease forwards; border-left: 5px solid #ff9f43; }
-.confirm-toast-actions { display: flex; justify-content: flex-end; gap: 8px; }
-.confirm-toast-actions i { cursor: pointer; font-size: 16px; padding: 6px 14px; border-radius: 6px; }
-.confirm-toast-actions .confirm-yes { color: #27ae60; background: rgba(39,174,96,0.12); }
-.confirm-toast-actions .confirm-yes:hover { background: rgba(39,174,96,0.25); }
-.confirm-toast-actions .confirm-no { color: #d63031; background: rgba(214,48,49,0.12); }
-.confirm-toast-actions .confirm-no:hover { background: rgba(214,48,49,0.25); }
-</style>
-</head>
-<body>
-
-<div id="toast-container"></div>
-<div id="confirm-toast-container" style="position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:10000; display:flex; flex-direction:column; gap:10px; width:90%; max-width:350px;"></div>
-
-<div id="auth-screen" class="auth-card">
-<h2 id="auth-title" style="text-align:center; margin-bottom:15px;">Giriş Yap</h2>
-<div id="login-fields">
-<input type="text" id="login-user" placeholder="Kullanıcı Adı">
-<input type="password" id="login-pass" placeholder="Şifre">
-<label class="remember-me-row" for="login-remember"><input type="checkbox" id="login-remember"> Beni Hatırla</label>
-<button class="btn-main" onclick="app.login()">Giriş Yap</button>
-<div class="toggle-link" onclick="app.toggleAuth('register')">Hesap Oluştur</div>
-<div style="display: flex; gap: 5px; margin-top: 15px;">
-<button class="btn-teacher" style="font-size: 12px; padding: 8px;" onclick="app.toggleAuth('teacher')">Öğretmen Girişi</button>
-<button class="btn-admin" style="font-size: 12px; padding: 8px;" onclick="app.toggleAuth('manager')">İdareci Girişi</button>
-</div>
-</div>
-<div id="register-fields" class="hidden">
-<input type="email" id="reg-email" placeholder="E-posta">
-<input type="text" id="reg-user" placeholder="Kullanıcı Adı">
-<input type="password" id="reg-pass" placeholder="Şifre">
-<select id="reg-school"></select>
-<div style="display:flex; gap:5px;"><select id="reg-grade"></select><select id="reg-section"></select></div>
-<button class="btn-main" onclick="app.startRegister()">Kod Gönder</button>
-<div class="toggle-link" onclick="app.toggleAuth('login')">Geri Dön</div>
-</div>
-<div id="staff-fields" class="hidden">
-<input type="text" id="staff-user" placeholder="Kullanıcı Adı">
-<input type="password" id="staff-pass" placeholder="Şifre">
-<input type="text" id="staff-code1" placeholder="Öğretmen Kodu">
-<input type="password" id="staff-code2" placeholder="2. Şifre (İdareci)" class="hidden">
-<input type="email" id="staff-email" placeholder="E-posta">
-<select id="staff-school"></select>
-
-<div id="staff-class-area" class="hidden">
-<p style="font-size:11px; margin-bottom:5px; font-weight:bold;">Sınıf(lar)ınızı Ekleyin:</p>
-<div style="display:flex; gap:5px; margin-bottom:5px;">
-<select id="staff-grade-select"></select>
-<select id="staff-section-select"></select>
-<button type="button" class="btn-main" style="width:auto; margin:0; padding:10px 15px;" onclick="app.addStaffClass()"><i class="fas fa-plus"></i> Ekle</button>
-</div>
-<div id="staff-added-classes" style="display:flex; flex-direction:column; gap:5px; margin-bottom:12px;"></div>
-</div>
-
-<label class="remember-me-row" for="staff-remember"><input type="checkbox" id="staff-remember"> Beni Hatırla</label>
-<button class="btn-main" onclick="app.handleStaffAuth()">Kayıt Ol / Giriş Yap</button>
-<div class="toggle-link" onclick="app.toggleAuth('login')">Geri Dön</div>
-</div>
-</div>
-
-<div id="app-container" class="hidden">
-<div id="update-banner" class="hidden">
-<span>🚀 Yeni yayın mevcut!</span>
-<a id="update-link" href="#" target="_blank">HEMEN İNDİR</a>
-</div>
-<header>
-<div>
-<button id="social-add-btn" class="btn-main hidden" style="width:auto; display:inline-block; margin:0; padding:5px 12px; font-size:14px; border-radius:50%; margin-right:10px;" onclick="app.openSocialModal()"><i class="fas fa-plus"></i></button>
-<i class="fas fa-user-circle"></i> <span id="display-name"></span>
-</div>
-<div id="admin-btn" class="admin-badge hidden" onclick="app.navigate('admin')">ADMİN / MOD</div>
-</header>
-<main id="main-content"></main>
-<nav class="bottom-nav">
-<div class="nav-item active" onclick="app.navigate('home', this)"><i class="fas fa-home"></i><span>Ana Sayfa</span></div>
-<div class="nav-item" onclick="app.navigate('social', this)"><i class="fas fa-globe"></i><span>Sosyal</span></div>
-<div class="nav-item" onclick="app.navigate('messages', this)"><i class="fas fa-comments"></i><span>Mesajlar</span></div>
-<div class="nav-item hidden" id="nav-leader" onclick="app.navigate('leader', this)"><i class="fas fa-star"></i><span>Başkanlık</span></div>
-<div class="nav-item hidden" id="nav-teacher" onclick="app.navigate('teacher', this)"><i class="fas fa-chalkboard-teacher"></i><span>Öğretmen</span></div>
-<div class="nav-item" onclick="app.navigate('users', this)"><i class="fas fa-users"></i><span>Kullanıcılar</span></div>
-<div class="nav-item" onclick="app.navigate('settings', this)"><i class="fas fa-cog"></i><span>Ayarlar</span></div>
-</nav>
-</div>
-
-<div id="social-post-modal" class="modal-bg hidden">
-<div class="modal">
-<h3>Sosyal Paylaşım Yap</h3>
-<textarea id="social-post-text" placeholder="Ne düşünüyorsunuz?" style="width:100%; height:100px; padding:10px; margin-top:10px; margin-bottom:10px; border-radius:10px; border:1.5px solid #eee; outline:none; font-family:inherit; resize:none; background:var(--card); color:var(--text);"></textarea>
-
-<label>Yayın Kapsamı:</label>
-<select id="social-post-scope" onchange="app.onSocialScopeChange()">
-<option value="all">Herkese Açık (Tüm Okullar)</option>
-<option value="school">Sadece Kendi Okulum</option>
-<option value="class">Sadece Kendi Sınıfım</option>
-<option value="other-class">Kendi Okulumdan Başka Bir Sınıf</option>
-</select>
-
-<div id="social-post-other-class-selects" class="hidden" style="display:flex; gap:5px; margin-bottom:10px;">
-<select id="social-post-grade"></select>
-<select id="social-post-section"></select>
-</div>
-
-<label>Medya Ekle (Maks 25MB):</label>
-<input type="file" id="social-post-file" style="padding:5px;">
-
-<button class="btn-main" onclick="app.submitSocialPost()">Paylaş</button>
-<button class="btn-danger" style="background:#888;" onclick="document.getElementById('social-post-modal').classList.add('hidden')">İptal</button>
-</div>
-</div>
-
-<div id="teacher-class-modal" class="modal-bg hidden">
-<div class="modal">
-<h3>Öğretmen Sınıf Seçimi</h3>
-<p style="font-size: 12px; margin-bottom: 10px; color:#666;">E-posta doğrulamanız başarıyla tamamlandı. Lütfen dersine girdiğiniz sınıf ve şubeleri ekleyin:</p>
-<div style="display:flex; gap:5px; margin-bottom:5px;">
-<select id="modal-teacher-grade"></select>
-<select id="modal-teacher-section"></select>
-<button type="button" class="btn-main" style="width:auto; margin:0; padding:10px 15px;" onclick="app.addModalTeacherClass()"><i class="fas fa-plus"></i></button>
-</div>
-<div id="modal-teacher-added-classes" style="display:flex; flex-direction:column; gap:5px; margin-bottom:12px;"></div>
-<button class="btn-main" onclick="app.finishTeacherRegistrationWithClass()">Kaydı Tamamla</button>
-</div>
-</div>
-
-<div id="admin-user-modal" class="modal-bg hidden">
-<div class="modal">
-<h3 id="edit-user-title">Kullanıcı Düzenle</h3>
-<div id="name-edit-area" class="hidden" style="margin-top:10px;">
-<label>Kullanıcı Adı Değiştir:</label>
-<input type="text" id="edit-username-input">
-<button class="btn-main" style="background:#2ecc71; margin-bottom:15px;" onclick="app.adminChangeUsername()">Adı Güncelle</button>
-</div>
-<label id="edit-school-label">Okul:</label><select id="edit-school"></select>
-<label>Sınıf ve Şube:</label>
-<div style="display:flex; gap:5px;"><select id="edit-grade"></select><select id="edit-section"></select></div>
-
-<button id="leader-btn" class="btn-main hidden" onclick="app.adminToggleRole('isLeader')">Sınıf Başkanı Yap/Al</button>
-<button id="teacher-btn" class="btn-teacher hidden" onclick="app.adminToggleRole('isTeacher')">Öğretmen Yap/Al</button>
-<button id="mod-btn" class="btn-mod hidden" onclick="app.adminToggleRole('isMod')">Moderatör Yap/Al</button>
-<button id="admin-make-btn" class="btn-admin hidden" onclick="app.adminToggleRole('isAdmin')">Admin Yap/Al</button>
-
-<div id="admin-only-tools" class="hidden">
-<button id="block-btn" class="btn-danger" onclick="app.adminUpdateStatus(true)">Ceza Ver (Engelle)</button>
-<button id="unblock-btn" class="btn-success hidden" onclick="app.adminUpdateStatus(false)">Cezayı Kaldır</button>
-<button class="btn-danger" style="background:#c0392b; margin-top:5px;" onclick="app.adminDeleteUser()">Hesabı Tamamen Sil</button>
-<hr style="margin:10px 0;">
-<p style="font-size:12px; margin-bottom:5px;"><b>Özel Unvan Ayarları:</b></p>
-<input type="text" id="edit-rank" placeholder="Ekstra Özel Unvan Girin">
-<label style="font-size:11px;">Özel Unvan Rengi:</label>
-<input type="color" id="edit-rank-color" style="height:40px; cursor:pointer;" value="#ff9f43">
-</div>
-<button id="save-btn" class="btn-main" style="background:#34495e; margin-top:10px;" onclick="app.saveUserEdits()">Kaydet</button>
-<button onclick="document.getElementById('admin-user-modal').classList.add('hidden')">Kapat</button>
-</div>
-</div>
-
-<div id="chat-window" class="hidden">
-<header style="background:#ff9f43; padding:15px; display:flex; align-items:center;">
-<i class="fas fa-arrow-left" style="cursor:pointer; margin-right:15px;" onclick="document.getElementById('chat-window').classList.add('hidden')"></i>
-<span id="chat-target-name" style="font-weight:bold;">Sohbet</span>
-</header>
-<div class="msg-container" id="chat-messages"></div>
-<div style="padding:10px; display:flex; gap:5px; background:var(--card);">
-<input type="text" id="msg-input" placeholder="Mesaj..." style="margin:0;">
-<button class="btn-main" style="width:60px; margin:0;" onclick="app.sendMessage()"><i class="fas fa-paper-plane"></i></button>
-</div>
-</div>
-
-<div id="verify-modal" class="modal-bg hidden">
-<div class="modal">
-<h3>Doğrulama</h3>
-<input type="text" id="verify-code" maxlength="4" style="text-align:center; font-size:24px;">
-<button class="btn-main" onclick="app.verifyAndFinish()">Onayla</button>
-</div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, updateDoc, onSnapshot, orderBy, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-
-const firebaseConfig = {
-apiKey: "AIzaSyBjs49askwa3CJi9MY_ABhK2l1umFLuEZo",
-authDomain: "bizimokul14-4d546.firebaseapp.com",
-projectId: "bizimokul14-4d546",
-storageBucket: "bizimokul14-4d546.firebasestorage.app",
-messagingSenderId: "144133286740",
-appId: "1:144133286740:web:5ce1ad633fed06233376c1"
-};
-
-const fApp = initializeApp(firebaseConfig);
-const db = getFirestore(fApp);
-const storage = getStorage(fApp);
-emailjs.init("bgyhgWde8icqWQ5gB");
-window.app = {
-currentUser: null,
-allSchools: [],
-activeChat: null,
-unsubscribeChat: null,
-selectedEditUser: null,
-activeUsers: new Set(),
-currentStaffMode: null,
-staffClasses: [],
-socialUnsub: null,
-openReplyBoxes: new Set(),
-
-activeHomeTab: "homeworks",
-homeAnnounUnsub: null,
-homeImagesUnsub: null,
-homeHomeworksUnsub: null,
-selectedWorksheetGrade: "",
-selectedWorksheetSubject: "",
-
-admSelectedClasses: [],
-admCodeClasses: [],
-admCodeSubjectClasses: [],
-
-toast(msg, type = "info") {
-const container = document.getElementById('toast-container');
-if (!container) return;
-const toastEl = document.createElement('div');
-toastEl.className = `toast-msg ${type}`;
-toastEl.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> <span>${msg}</span>`;
-container.appendChild(toastEl);
-setTimeout(() => {
-toastEl.style.animation = "slideDown 0.3s ease reverse forwards";
-setTimeout(() => toastEl.remove(), 300);
-}, 3000);
-},
-
-customConfirm(msg) {
-return new Promise((resolve) => {
-const container = document.getElementById('confirm-toast-container');
-if(!container) return resolve(false);
-const toastEl = document.createElement('div');
-toastEl.className = 'confirm-toast';
-toastEl.innerHTML = `<span>${msg}</span>
-                       <div class="confirm-toast-actions">
-                           <i class="fas fa-times confirm-no" title="Vazgeç"></i>
-                           <i class="fas fa-check confirm-yes" title="Onayla"></i>
-                       </div>`;
-container.appendChild(toastEl);
-const close = (result) => {
-toastEl.style.animation = "slideDown 0.3s ease reverse forwards";
-setTimeout(() => toastEl.remove(), 300);
-resolve(result);
-};
-toastEl.querySelector('.confirm-yes').addEventListener('click', () => close(true));
-toastEl.querySelector('.confirm-no').addEventListener('click', () => close(false));
-});
-},
-
-autofillRememberedLogin() {
-const remUser = localStorage.getItem('kunefe_remember_login_user');
-const remPass = localStorage.getItem('kunefe_remember_login_pass');
-if (remUser && remPass) {
-const lu = document.getElementById('login-user');
-const lp = document.getElementById('login-pass');
-const lr = document.getElementById('login-remember');
-if (lu) lu.value = remUser;
-if (lp) lp.value = remPass;
-if (lr) lr.checked = true;
-}
-const remStaffUser = localStorage.getItem('kunefe_remember_staff_user');
-const remStaffPass = localStorage.getItem('kunefe_remember_staff_pass');
-if (remStaffUser && remStaffPass) {
-const su = document.getElementById('staff-user');
-const sp = document.getElementById('staff-pass');
-const sr = document.getElementById('staff-remember');
-if (su) su.value = remStaffUser;
-if (sp) sp.value = remStaffPass;
-if (sr) sr.checked = true;
-}
-},
-
-async init() {
-const gSelects = [document.getElementById('reg-grade'), document.getElementById('edit-grade'), document.getElementById('staff-grade-select'), document.getElementById('social-post-grade'), document.getElementById('modal-teacher-grade')];
-gSelects.forEach(s => { if(s) { s.innerHTML = ""; for(let i=1; i<=12; i++) s.innerHTML += `<option value="${i}">${i}. Sınıf</option>`; } });
-const sSelects = [document.getElementById('reg-section'), document.getElementById('edit-section'), document.getElementById('staff-section-select'), document.getElementById('social-post-section'), document.getElementById('modal-teacher-section')];
-sSelects.forEach(s => { if(s) { s.innerHTML = ""; "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => s.innerHTML += `<option value="${char}">${char}</option>`); } });
-await this.fetchSchools();
-this.listenForUpdates();
-this.listenActiveStatus();
-this.autofillRememberedLogin();
-},
-
-listenForUpdates() {
-onSnapshot(doc(db, "config", "updates"), (snap) => {
-const banner = document.getElementById('update-banner');
-if(snap.exists() && snap.data().active) {
-banner.classList.remove('hidden');
-document.getElementById('update-link').href = snap.data().link;
-} else {
-banner.classList.add('hidden');
-}
-});
-},
-
-listenActiveStatus() {
-onSnapshot(collection(db, "status"), (snap) => {
-this.activeUsers.clear();
-const now = Date.now();
-snap.forEach(docSnap => {
-const data = docSnap.data();
-if(data.lastSeen && (now - data.lastSeen.toMillis()) < 60000) {
-this.activeUsers.add(docSnap.id);
-}
-});
-});
-},
-
-updateMyStatus() {
-if(this.currentUser) {
-setDoc(doc(db, "status", this.currentUser.username), { lastSeen: serverTimestamp() }, { merge: true });
-}
-},
-
-async fetchSchools() {
-const snap = await getDoc(doc(db, "config", "schools"));
-this.allSchools = snap.exists() ? snap.data().list : [];
-const selects = [document.getElementById('reg-school'), document.getElementById('edit-school'), document.getElementById('staff-school')];
-selects.forEach(s => {
-if(s) {
-s.innerHTML = this.allSchools.length ? "" : '<option>Okul Ekleyin</option>';
-this.allSchools.forEach(sch => s.innerHTML += `<option value="${sch}">${sch}</option>`);
-}
-});
-},
-
-toggleAuth(mode) {
-document.getElementById('login-fields').classList.add('hidden');
-document.getElementById('register-fields').classList.add('hidden');
-const staffFields = document.getElementById('staff-fields');
-if(staffFields) staffFields.classList.add('hidden');
-
-if (mode === 'login' || mode === false) {
-document.getElementById('login-fields').classList.remove('hidden');
-} else if (mode === 'register' || mode === true) {
-document.getElementById('register-fields').classList.remove('hidden');
-} else if (mode === 'teacher' || mode === 'manager') {
-this.currentStaffMode = mode;
-document.getElementById('staff-fields').classList.remove('hidden');
-document.getElementById('staff-code1').placeholder = mode === 'teacher' ? "Öğretmen Kodu" : "İdareci Kodu";
-document.getElementById('staff-code2').classList.toggle('hidden', mode === 'teacher');
-
-// Manager modunda okul seçimi gereksiz (okul koddan geliyor)
-const staffSchoolEl = document.getElementById('staff-school');
-if(staffSchoolEl) {
-if(mode === 'manager') {
-staffSchoolEl.classList.add('hidden');
-} else {
-staffSchoolEl.classList.remove('hidden');
-}
-}
-
-document.getElementById('staff-class-area').classList.add('hidden');
-
-if (mode === 'manager') {
-const savedCode1 = localStorage.getItem('saved_manager_code1');
-const savedCode2 = localStorage.getItem('saved_manager_code2');
-if (savedCode1) document.getElementById('staff-code1').value = savedCode1;
-if (savedCode2) document.getElementById('staff-code2').value = savedCode2;
-} else {
-document.getElementById('staff-code1').value = "";
-document.getElementById('staff-code2').value = "";
-}
-
-this.staffClasses = [];
-const addedCont = document.getElementById('staff-added-classes');
-if(addedCont) addedCont.innerHTML = "";
-}
-},
-
-addStaffClass() {
-const g = document.getElementById('staff-grade-select').value;
-const s = document.getElementById('staff-section-select').value;
-if(!g || !s) return;
-const classStr = `${g}-${s}`;
-if(this.staffClasses.includes(classStr)) return this.toast("Bu sınıf zaten eklendi!", "error");
-this.staffClasses.push(classStr);
-this.renderStaffClasses();
-},
-
-removeStaffClass(c) {
-this.staffClasses = this.staffClasses.filter(x => x !== c);
-this.renderStaffClasses();
-},
-
-renderStaffClasses() {
-const cont = document.getElementById('staff-added-classes');
-if(!cont) return;
-cont.innerHTML = "";
-this.staffClasses.forEach(c => {
-const [g, s] = c.split('-');
-cont.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; border-radius:5px; font-size:12px;">
-                       <span><b>Sınıf:</b> ${g}. Sınıf - ${s} Şubesi</span>
-                       <i class="fas fa-times" style="color:#d63031; cursor:pointer;" onclick="app.removeStaffClass('${c}')"></i>
-                   </div>`;
-});
-},
-
-addModalTeacherClass() {
-const g = document.getElementById('modal-teacher-grade').value;
-const s = document.getElementById('modal-teacher-section').value;
-if(!g || !s) return;
-const classStr = `${g}-${s}`;
-if(this.staffClasses.includes(classStr)) return this.toast("Bu sınıf zaten eklendi!", "error");
-this.staffClasses.push(classStr);
-this.renderModalTeacherClasses();
-},
-
-removeModalTeacherClass(c) {
-this.staffClasses = this.staffClasses.filter(x => x !== c);
-this.renderModalTeacherClasses();
-},
-
-renderModalTeacherClasses() {
-const cont = document.getElementById('modal-teacher-added-classes');
-if(!cont) return;
-cont.innerHTML = "";
-this.staffClasses.forEach(c => {
-const [g, s] = c.split('-');
-cont.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; border-radius:5px; font-size:12px;">
-                       <span><b>Sınıf:</b> ${g}. Sınıf - ${s} Şubesi</span>
-                       <i class="fas fa-times" style="color:#d63031; cursor:pointer;" onclick="app.removeModalTeacherClass('${c}')"></i>
-                   </div>`;
-});
-},
-
-async isUsernameTaken(username) {
-// Kullanıcı adının büyük/küçük harf duyarsız olarak zaten alınıp alınmadığını kontrol eder.
-// Firestore'a kullanıcı adları belge kimliği olarak kaydediliyor; harf duyarsız karşılaştırma için tüm kullanıcıları tararız.
-const name = (username || "").trim().toLowerCase();
-if(!name) return true;
-// [GÜVENLİ] Sorgu hata verirse kayıt akışını durdurma; bu durumda ad alınmamış varsayılır.
-try {
-const snap = await getDocs(collection(db, "users"));
-let taken = false;
-snap.forEach(d => { if(d.id.toLowerCase() === name) taken = true; });
-return taken;
-} catch(e) {
-console.error("isUsernameTaken hatası:", e);
-return false;
-}
-},
-
-async startRegister() {
-const email = document.getElementById('reg-email').value;
-const uname = document.getElementById('reg-user').value.trim();
-if(!uname) return this.toast("Kullanıcı adı boş olamaz!", "error");
-if(await this.isUsernameTaken(uname)) return this.toast("Bu kullanıcı adı zaten alınmış! (Büyük/küçük harf farkı önemli değil) Lütfen farklı bir kullanıcı adı seçin.", "error");
-this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
-this.tempUser = {
-username: uname,
-email: email, password: document.getElementById('reg-pass').value,
-school: document.getElementById('reg-school').value,
-grade: document.getElementById('reg-grade').value,
-section: document.getElementById('reg-section').value,
-isBlocked: false, isLeader: false, isMod: false, isTeacher: false, isAdmin: false, rank: "", rankColor: "#ff9f43"
-};
-this.tempAction = 'register';
-await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
-document.getElementById('verify-modal').classList.remove('hidden');
-},
-
-async handleStaffAuth() {
-const username = document.getElementById('staff-user').value.trim();
-const pass = document.getElementById('staff-pass').value;
-const email = document.getElementById('staff-email').value.trim();
-const school = document.getElementById('staff-school').value;
-const code1 = document.getElementById('staff-code1').value.trim();
-const code2 = document.getElementById('staff-code2').value.trim();
-
-if (!username || !pass || !email || !code1) return this.toast("Lütfen tüm alanları doldurun!", "error");
-if (this.currentStaffMode === 'manager' && !code2) return this.toast("İdareci için 2. şifre zorunludur!", "error");
-
-const userDoc = await getDoc(doc(db, "users", username));
-
-if (userDoc.exists()) {
-const uData = userDoc.data();
-if (uData.password !== pass) return this.toast("Hatalı şifre!", "error");
-if (uData.isBlocked) return this.toast("Cezalı olduğunuz için giriş yapamazsınız!", "error");
-
-if (this.currentStaffMode === 'manager' && uData.isMod) {
-let count = (uData.managerLoginCount || 0) + 1;
-await updateDoc(doc(db, "users", username), { managerLoginCount: count });
-
-if (count % 3 === 0) {
-this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
-this.tempUser = uData; 
-this.tempAction = 'login';
-await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: uData.email || email, code: this.generatedCode });
-document.getElementById('verify-modal').classList.remove('hidden');
-return;
-}
-
-localStorage.setItem('saved_manager_code1', code1);
-localStorage.setItem('saved_manager_code2', code2);
-}
-
-this.currentUser = uData;
-const staffRememberBox = document.getElementById('staff-remember');
-if (staffRememberBox && staffRememberBox.checked) {
-localStorage.setItem('kunefe_remember_staff_user', username);
-localStorage.setItem('kunefe_remember_staff_pass', pass);
-} else {
-localStorage.removeItem('kunefe_remember_staff_user');
-localStorage.removeItem('kunefe_remember_staff_pass');
-}
-this.launch();
-
-} else {
-const codeQuery = query(collection(db, "registration_codes"), where("type", "==", this.currentStaffMode), where("code", "==", code1));
-const codeSnap = await getDocs(codeQuery);
-if (codeSnap.empty) return this.toast("Geçersiz rol kodu veya bu kod kullanılmış!", "error");
-
-let validDoc = null;
-if (this.currentStaffMode === 'manager') {
-codeSnap.forEach(d => { if (d.data().password === code2) validDoc = d; });
-if (!validDoc) return this.toast("2. şifre hatalı!", "error");
-} else {
-validDoc = codeSnap.docs[0];
-// Öğretmen kodunun okul kısıtlaması varsa, seçilen okul ile eşleşmeli
-const codeSchool = validDoc.data().school;
-if (codeSchool && codeSchool !== school) {
-return this.toast("Bu öğretmen kodu yalnızca '" + codeSchool + "' okulu için geçerlidir!", "error");
-}
-}
-
-// Manager için okul bilgisini koddan al; öğretmen için form'daki okul seçimini kullan
-let resolvedSchool = school;
-if (this.currentStaffMode === 'manager') {
-const codeSchool = validDoc.data().school;
-if (codeSchool) {
-resolvedSchool = codeSchool;
-} else {
-return this.toast("Bu kod herhangi bir okula atanmamış. Lütfen yöneticiye başvurun!", "error");
-}
-}
-
-if(await this.isUsernameTaken(username)) return this.toast("Bu kullanıcı adı zaten alınmış! (Büyük/küçük harf farkı önemli değil) Lütfen farklı bir kullanıcı adı seçin.", "error");
-
-this.tempUser = {
-username, email, password: pass, school: resolvedSchool, 
-grade: this.currentStaffMode === 'manager' ? "Tümü" : "",
-section: this.currentStaffMode === 'manager' ? "Tümü" : "",
-isBlocked: false, isLeader: false,
-isMod: this.currentStaffMode === 'manager',
-isTeacher: this.currentStaffMode === 'teacher',
-isAdmin: false, rank: "", rankColor: "#ff9f43",
-managerLoginCount: 0
-};
-
-if (this.currentStaffMode === 'teacher') {
-const codeClasses = validDoc.data().classes || [];
-if (codeClasses.length === 0) return this.toast("Bu öğretmen koduna henüz sınıf atanmamış. Lütfen idarecinize başvurun!", "error");
-this.tempUser.grade = codeClasses.map(c => c.split('-')[0]).join(',');
-this.tempUser.section = codeClasses.map(c => c.split('-')[1]).join(',');
-
-const codeSubjectClasses = validDoc.data().subjectClasses || [];
-this.tempUser.homeroomClasses = codeClasses;
-this.tempUser.subjectClasses = codeSubjectClasses;
-if (codeSubjectClasses.length > 0) {
-const allTeacherClasses = codeClasses.concat(codeSubjectClasses);
-this.tempUser.grade = allTeacherClasses.map(c => c.split('-')[0]).join(',');
-this.tempUser.section = allTeacherClasses.map(c => c.split('-')[1]).join(',');
-}
-}
-
-this.tempCodeIdToBurn = validDoc.id;
-this.tempAction = 'register';
-this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
-
-if (this.currentStaffMode === 'manager') {
-localStorage.setItem('saved_manager_code1', code1);
-localStorage.setItem('saved_manager_code2', code2);
-}
-
-await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
-document.getElementById('verify-modal').classList.remove('hidden');
-}
-},
-
-async verifyAndFinish() {
-if(document.getElementById('verify-code').value === this.generatedCode) {
-if (this.tempAction === 'login') {
-document.getElementById('verify-modal').classList.add('hidden');
-this.currentUser = this.tempUser;
-const staffRememberBox2 = document.getElementById('staff-remember');
-if (staffRememberBox2 && staffRememberBox2.checked) {
-localStorage.setItem('kunefe_remember_staff_user', this.tempUser.username);
-localStorage.setItem('kunefe_remember_staff_pass', this.tempUser.password);
-} else {
-localStorage.removeItem('kunefe_remember_staff_user');
-localStorage.removeItem('kunefe_remember_staff_pass');
-}
-this.launch();
-} else {
-if(await this.isUsernameTaken(this.tempUser.username)) {
-this.toast("Bu kullanıcı adı zaten alınmış! Lütfen farklı bir kullanıcı adı seçin.", "error");
-return;
-}
-// === [YENİ] Sınıf öğretmeni onay kapısı ===
-// Öğrenci, sınıf öğretmeni olan bir sınıfa kaydoluyorsa hesap anında açılmaz;
-// başvuru öğretmenin "Sınıf Öğrenci Katılım" bölümüne düşer. Kabul edilirse hesap açılır.
-if(!this.tempUser.isTeacher && !this.tempUser.isMod && !this.tempUser.isAdmin && !this.tempUser.isLeader) {
-const hrTeacher = await this.findHomeroomTeacher(this.tempUser.school, this.tempUser.grade, this.tempUser.section);
-if(hrTeacher) {
-await setDoc(doc(db, "pending_students", this.tempUser.username), {
-...this.tempUser,
-teacherUsername: hrTeacher,
-classStr: String(this.tempUser.grade) + "-" + String(this.tempUser.section),
-status: "pending",
-createdAt: serverTimestamp()
-});
-this.toast("Bu sınıfta bir sınıf öğretmeni bulunuyor. Hesabınız, sınıf öğretmeninizin onayının ardından açılacaktır.", "info");
-document.getElementById('verify-modal').classList.add('hidden');
-return;
-}
-}
-document.getElementById('verify-modal').classList.add('hidden');
-
-// Güncelleme: Öğretmenin sınıfları artık idareci tarafından kod oluşturulurken belirleniyor, öğretmen kayıt sırasında ayrıca sınıf seçmiyor
-if (this.tempUser.isTeacher) {
-await setDoc(doc(db, "users", this.tempUser.username), this.tempUser);
-if (this.tempCodeIdToBurn) {
-await updateDoc(doc(db, "registration_codes", this.tempCodeIdToBurn), { usedBy: this.tempUser.username });
-}
-this.toast("Kaydınız başarıyla tamamlandı öğretmenim!", "success");
-setTimeout(() => location.reload(), 1000);
-return;
-}
-
-if (this.tempUser.isTeacher) {
-this.staffClasses = [];
-document.getElementById('modal-teacher-added-classes').innerHTML = "";
-document.getElementById('teacher-class-modal').classList.remove('hidden');
-} else {
-await setDoc(doc(db, "users", this.tempUser.username), this.tempUser);
-if (this.tempCodeIdToBurn) {
-await updateDoc(doc(db, "registration_codes", this.tempCodeIdToBurn), { usedBy: this.tempUser.username });
-}
-location.reload();
-}
-}
-} else {
-this.toast("Doğrulama kodu hatalı!", "error");
-}
-},
-
-async finishTeacherRegistrationWithClass() {
-if (this.staffClasses.length === 0) return this.toast("Lütfen en az bir sınıf ve şube seçin!", "error");
-const grades = this.staffClasses.map(c => c.split('-')[0]);
-const sections = this.staffClasses.map(c => c.split('-')[1]);
-
-this.tempUser.grade = grades.join(',');
-this.tempUser.section = sections.join(',');
-
-await setDoc(doc(db, "users", this.tempUser.username), this.tempUser);
-if (this.tempCodeIdToBurn) {
-await updateDoc(doc(db, "registration_codes", this.tempCodeIdToBurn), { usedBy: this.tempUser.username });
-}
-this.toast("Kaydınız başarıyla tamamlandı öğretmenim!", "success");
-setTimeout(() => location.reload(), 1000);
-},
-
-async login() {
-const id = document.getElementById('login-user').value;
-const pass = document.getElementById('login-pass').value;
-const userDoc = await getDoc(doc(db, "users", id));
-if(userDoc.exists() && userDoc.data().password === pass) {
-if(userDoc.data().isBlocked) return this.toast("Cezalı olduğunuz için giriş yapamazsınız!", "error");
-this.currentUser = userDoc.data();
-const loginRememberBox = document.getElementById('login-remember');
-if (loginRememberBox && loginRememberBox.checked) {
-localStorage.setItem('kunefe_remember_login_user', id);
-localStorage.setItem('kunefe_remember_login_pass', pass);
-} else {
-localStorage.removeItem('kunefe_remember_login_user');
-localStorage.removeItem('kunefe_remember_login_pass');
-}
-this.launch();
-} else this.toast("Hatalı Giriş Bilgileri!", "error");
-},
-
-launch() {
-document.getElementById('auth-screen').classList.add('hidden');
-document.getElementById('app-container').classList.remove('hidden');
-document.getElementById('display-name').innerText = this.currentUser.username;
-
-const lowerName = this.currentUser.username.toLowerCase();
-const hasAdminPower = lowerName === "künefe" || this.currentUser.isAdmin;
-if(hasAdminPower || this.currentUser.isMod) {
-document.getElementById('admin-btn').classList.remove('hidden');
-}
-
-if(this.currentUser.isLeader) document.getElementById('nav-leader').classList.remove('hidden');
-if(this.currentUser.isTeacher) document.getElementById('nav-teacher').classList.remove('hidden');
-
-                this.applyUserTheme();
-this.updateMyStatus();
-this.statusInterval = setInterval(() => this.updateMyStatus(), 30000);
-
-this.navigate('home');
-},
-
-async logout() {
-if(await this.customConfirm("Çıkış yapmak istediğinize emin misiniz?")) {
-if(this.statusInterval) clearInterval(this.statusInterval);
-this.currentUser = null;
-document.getElementById('app-container').classList.add('hidden');
-document.getElementById('admin-btn').classList.add('hidden');
-document.getElementById('nav-leader').classList.add('hidden');
-document.getElementById('nav-teacher').classList.add('hidden');
-
-                    // Çıkışta temayı sıfırla (giriş/kayıt ekranı klasik görünsün)
-                    const allThemeClasses = ['theme-dark','theme-dark-blue','theme-dark-purple','theme-dark-green','theme-dark-red','theme-light','theme-light-blue','theme-light-green','theme-light-purple','theme-sunset','theme-ocean','theme-custom','dark-mode'];
-                    allThemeClasses.forEach(c => document.body.classList.remove(c));
-                    
-document.getElementById('login-user').value = "";
-document.getElementById('login-pass').value = "";
-
-document.getElementById('auth-screen').classList.remove('hidden');
-this.toggleAuth('login');
-this.autofillRememberedLogin();
-this.toast("Başarıyla çıkış yapıldı.", "success");
-}
-},
-
-async navigate(page, el) {
-if(el) {
-document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-el.classList.add('active');
-}
-document.getElementById('social-add-btn').classList.add('hidden');
-if(this.socialUnsub) { this.socialUnsub(); this.socialUnsub = null; }
-
-if(this.homeAnnounUnsub) { this.homeAnnounUnsub(); this.homeAnnounUnsub = null; }
-if(this.homeImagesUnsub) { this.homeImagesUnsub(); this.homeImagesUnsub = null; }
-if(this.homeHomeworksUnsub) { this.homeHomeworksUnsub(); this.homeHomeworksUnsub = null; }
-
-if(page === 'home') this.renderHome();
-if(page === 'social') this.renderSocial();
-if(page === 'messages') this.renderMessageList();
-if(page === 'leader') this.renderLeaderPanel();
-if(page === 'teacher') this.renderTeacherPanel();
-if(page === 'users') this.renderAllUsers();
-if(page === 'settings') this.renderSettings();
-if(page === 'admin') this.renderAdminPanel();
-},
-
-renderHome() {
-const main = document.getElementById('main-content');
-main.innerHTML = `
-                   <h3>Ana Sayfa</h3>
-                   <div class="home-menu-grid" style="margin-top: 15px;">
-                       <div id="tab-btn-homeworks" class="home-menu-btn" onclick="app.setHomeTab('homeworks')">
-                           <i class="fas fa-book"></i><span>Ödevler</span>
-                       </div>
-                       <div id="tab-btn-announcements" class="home-menu-btn" onclick="app.setHomeTab('announcements')">
-                           <i class="fas fa-bullhorn"></i><span>Duyurular</span>
-                       </div>
-                       <div id="tab-btn-worksheets" class="home-menu-btn" onclick="app.setHomeTab('worksheets')">
-                           <i class="fas fa-file-alt"></i><span>Çalışma Kağıtları</span>
-                       </div>
-                       <div id="tab-btn-exams" class="home-menu-btn" onclick="app.setHomeTab('exams')">
-                           <i class="fas fa-calendar-check"></i><span>Sınav Tarihleri</span>
-                       </div>
-                   </div>
-                   <div id="home-tab-content"></div>
-               `;
-this.setHomeTab(this.activeHomeTab);
-},
-
-checkAccess(data) {
-if(data.targetType === "all-schools") return true;
-if(data.targetType === "school-all" && data.school === this.currentUser.school) return true;
-
-if(data.school === this.currentUser.school && String(data.grade) === String(this.currentUser.grade) && String(data.section) === String(this.currentUser.section)) {
-return true;
-}
-return false;
-},
-
-setHomeTab(tab) {
-this.activeHomeTab = tab;
-document.querySelectorAll('.home-menu-btn').forEach(btn => btn.classList.remove('active'));
-const activeBtn = document.getElementById(`tab-btn-${tab}`);
-if(activeBtn) activeBtn.classList.add('active');
-
-if(this.homeAnnounUnsub) { this.homeAnnounUnsub(); this.homeAnnounUnsub = null; }
-if(this.homeImagesUnsub) { this.homeImagesUnsub(); this.homeImagesUnsub = null; }
-if(this.homeHomeworksUnsub) { this.homeHomeworksUnsub(); this.homeHomeworksUnsub = null; }
-
-const container = document.getElementById('home-tab-content');
-if(!container) return;
-container.innerHTML = "";
-
-if(tab === "homeworks") {
-container.innerHTML = `<div id="homework-list"></div>`;
-this.homeHomeworksUnsub = onSnapshot(collection(db, "homeworks"), (snap) => {
-const list = document.getElementById('homework-list');
-if(!list) return;
-list.innerHTML = "";
-const now = new Date().getTime();
-snap.forEach(docSnap => {
-const h = docSnap.data();
-if(this.checkAccess(h)) {
-const deadline = new Date(h.deadline).getTime();
-if(now > deadline) { 
-deleteDoc(doc(db, "homeworks", docSnap.id)); 
-} else {
-const isUrgent = ((deadline - now) / (1000 * 60 * 60)) <= 24;
-list.innerHTML += `<div class="homework-card">${isUrgent ? '<div class="warning-icon">!</div>' : ''}<h4>${h.title}</h4><p><b>Ders:</b> ${h.subject}</p><p><b>Kitap:</b> ${h.book}</p><p><b>Sayfalar:</b> ${h.pages}</p><p style="margin-top:5px; font-size:11px; color:#666;"><b>Bitiş:</b> ${h.deadline.replace('T', ' ')}</p></div>`;
-}
-}
-});
-if(list.innerHTML === "") list.innerHTML = "<p style='font-size:13px; color:#999;'>Şu an güncel bir ödev akışı bulunmuyor.</p>";
-});
-} 
-else if(tab === "announcements") {
-container.innerHTML = `<div id="announcement-list"></div>`;
-this.homeAnnounUnsub = onSnapshot(collection(db, "announcements"), (snap) => {
-const cont = document.getElementById('announcement-list');
-if(!cont) return;
-cont.innerHTML = "";
-snap.forEach(d => {
-const data = d.data();
-if(this.checkAccess(data) && data.homeDocType !== "exam") {
-cont.innerHTML += `<div class="homework-card" style="border-left-color: #3498db;">
-                                                   <h4><i class="fas fa-bullhorn"></i> Duyuru</h4>
-                                                   <p style="margin-top:5px; font-size:15px;">${data.text}</p>
-                                                  </div>`;
-}
-});
-if(cont.innerHTML === "") cont.innerHTML = "<p style='font-size:13px; color:#999;'>Şu an herhangi bir duyuru bulunmuyor.</p>";
-});
-}
-else if(tab === "worksheets") {
-let gradeOptions = `<option value="">-- Sınıf Seçin --</option>`;
-for(let i = 1; i <= 12; i++) {
-gradeOptions += `<option value="${i}" ${this.selectedWorksheetGrade == i ? 'selected' : ''}>${i}. Sınıf</option>`;
-}
-
-container.innerHTML = `
-                       <div style="margin-bottom: 12px; display: flex; gap: 8px;">
-                           <div style="flex: 1;">
-                               <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Sınıf Kademesi:</label>
-                               <select id="home-ws-grade-selector" onchange="app.onWorksheetGradeChange()" style="margin: 0;">${gradeOptions}</select>
-                           </div>
-                           <div style="flex: 1;">
-                               <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Ders Kategorisi:</label>
-                               <select id="home-ws-subject-selector" onchange="app.onWorksheetSubjectChange()" style="margin: 0;">
-                                   <option value="">-- Tüm Dersler --</option>
-                               </select>
-                           </div>
-                       </div>
-                       <div id="worksheet-list"></div>
-                   `;
-this.updateHomeWorksheetSubjectsDropdown();
-this.renderWorksheetsFeed();
-}
-else if(tab === "exams") {
-container.innerHTML = `<div id="exam-list"></div>`;
-this.homeAnnounUnsub = onSnapshot(collection(db, "announcements"), (snap) => {
-const cont = document.getElementById('exam-list');
-if(!cont) return;
-cont.innerHTML = "";
-snap.forEach(d => {
-const data = d.data();
-// Sınav tarihleri linkli kart şeklinde listeleniyor
-if(data.school === this.currentUser.school && data.homeDocType === "exam") {
-if (data.targetType === 'school-all' || (String(data.grade) === String(this.currentUser.grade) && String(data.section) === String(this.currentUser.section))) {
-let linkMarkup = "";
-if(data.examUrl) {
-linkMarkup = `<a href="${data.examUrl}" target="_blank" style="display:block; margin-top:10px; color:#e67e22; font-weight:bold;"><i class="fas fa-external-link-alt"></i> Sınav Planı Bağlantısını Aç</a>`;
-}
-cont.innerHTML += `<div class="homework-card" style="border-left-color: #e67e22;">
-                                                       <h4 style="color:#e67e22;"><i class="fas fa-calendar-alt"></i> Sınav Tarihi Planı</h4>
-                                                       <p style="margin-top:5px; font-size:15px; font-weight:bold;">${data.text}</p>
-                                                       ${linkMarkup}
-                                                      </div>`;
-}
-}
-});
-if(cont.innerHTML === "") cont.innerHTML = "<p style='font-size:13px; color:#999;'>Okulunuza ait girilmiş bir sınav tarihi planı yok.</p>";
-});
-}
-},
-
-async updateHomeWorksheetSubjectsDropdown() {
-const selectEl = document.getElementById('home-ws-subject-selector');
-if(!selectEl) return;
-selectEl.innerHTML = `<option value="">-- Tüm Dersler --</option>`;
-if(!this.selectedWorksheetGrade) return;
-
-const q = query(collection(db, "subjects"), where("grades", "array-contains", String(this.selectedWorksheetGrade)));
-const snap = await getDocs(q);
-snap.forEach(d => {
-const data = d.data();
-if(data.school && data.school !== this.currentUser.school) return;
-selectEl.innerHTML += `<option value="${data.name}" ${this.selectedWorksheetSubject === data.name ? 'selected' : ''}>${data.name}</option>`;
-});
-},
-
-onWorksheetGradeChange() {
-const selectEl = document.getElementById('home-ws-grade-selector');
-if(selectEl) {
-this.selectedWorksheetGrade = selectEl.value;
-this.selectedWorksheetSubject = ""; 
-this.updateHomeWorksheetSubjectsDropdown();
-this.renderWorksheetsFeed();
-}
-},
-
-onWorksheetSubjectChange() {
-const selectEl = document.getElementById('home-ws-subject-selector');
-if(selectEl) {
-this.selectedWorksheetSubject = selectEl.value;
-this.renderWorksheetsFeed();
-}
-},
-
-renderWorksheetsFeed() {
-const cont = document.getElementById('worksheet-list');
-if(!cont) return;
-
-if(this.homeImagesUnsub) { this.homeImagesUnsub(); this.homeImagesUnsub = null; }
-
-if(!this.selectedWorksheetGrade) {
-cont.innerHTML = "<p style='font-size:13px; color:#888; text-align:center; padding: 10px;'>Lütfen yukarıdan sınıf kademesi seçin.</p>";
-return;
-}
-
-cont.innerHTML = "<p style='font-size:12px; color:#666;'>Yükleniyor...</p>";
-this.homeImagesUnsub = onSnapshot(collection(db, "images"), (snap) => {
-cont.innerHTML = "";
-snap.forEach(d => {
-const data = d.data();
-if(data.school === this.currentUser.school && data.homeDocType === "worksheet" && String(data.grade) === String(this.selectedWorksheetGrade)) {
-if(this.selectedWorksheetSubject && data.subjectCategory !== this.selectedWorksheetSubject) {
-return;
-}
-cont.innerHTML += this.buildMediaCardMarkup(data, `Çalışma Kağıdı ${data.subjectCategory ? '[' + data.subjectCategory + ']' : ''}`, "#2ecc71");
-}
-});
-if(cont.innerHTML === "") cont.innerHTML = `<p style='font-size:13px; color:#999;'>Seçilen kriterlere uygun çalışma kağıdı bulunamadı.</p>`;
-});
-},
-
-buildMediaCardMarkup(data, title, borderColor) {
-let mediaHtml = "";
-if(data.fileType && data.fileType.startsWith("image/")) {
-mediaHtml = `<img src="${data.url}" class="media-preview">`;
-} else if(data.fileType && data.fileType.startsWith("video/")) {
-mediaHtml = `<video src="${data.url}" controls class="media-preview"></video>`;
-} else if(data.fileType && data.fileType.startsWith("audio/")) {
-mediaHtml = `<audio src="${data.url}" controls style="width:100%; margin-top:10px;"></audio>`;
-} else {
-const safeUrl = (data.url && !data.url.match(/^https?:\/\//i)) ? 'https://' + data.url : data.url;
-mediaHtml = `<a href="${safeUrl}" target="_blank" style="display:block; margin-top:10px; color:${borderColor}; font-weight:bold;"><i class="fas fa-external-link-alt"></i> Bağlantıyı Aç (${data.fileName || 'Çalışma Belgesi'})</a>`;
-}
-
-return `<div class="homework-card" style="border-left-color: ${borderColor};">
-                           <h4 style="color:${borderColor};"><i class="fas fa-paperclip"></i> ${title}</h4>
-                           ${data.text ? `<p style="margin-bottom:5px; font-weight:bold;">${data.text}</p>` : ''}
-                           ${mediaHtml}
-                       </div>`;
-},
-
-/* Forum / Sosyal Medya Fonksiyonları */
-renderSocial() {
-document.getElementById('social-add-btn').classList.remove('hidden');
-const main = document.getElementById('main-content');
-main.innerHTML = `<h3>Sosyal Akış</h3><div id="social-feed" style="margin-top:10px;"></div>`;
-
-const q = query(collection(db, "social_posts"), orderBy("createdAt", "desc"));
-this.socialUnsub = onSnapshot(q, (snap) => {
-const feed = document.getElementById('social-feed');
-if(!feed) return;
-feed.innerHTML = "";
-
-snap.forEach(docSnap => {
-const post = docSnap.data();
-const postId = docSnap.id;
-
-if(post.scope === 'school' && post.school !== this.currentUser.school) return;
-if(post.scope === 'class' && (post.school !== this.currentUser.school || post.grade !== this.currentUser.grade || post.section !== this.currentUser.section)) return;
-if(post.scope === 'other-class' && (post.school !== this.currentUser.school || post.grade !== this.currentUser.grade || post.section !== this.currentUser.section)) return;
-
-let mediaHtml = "";
-if(post.fileUrl) {
-if(post.fileType && post.fileType.startsWith("image/")) {
-mediaHtml = `<img src="${post.fileUrl}" class="media-preview">`;
-} else if(post.fileType && post.fileType.startsWith("video/")) {
-mediaHtml = `<video src="${post.fileUrl}" controls class="media-preview"></video>`;
-} else {
-mediaHtml = `<a href="${post.fileUrl}" target="_blank" style="display:block; margin-top:5px; color:#ff9f43; font-weight:bold;"><i class="fas fa-file-download"></i> ${post.fileName || 'Eklenti Dosyası'}</a>`;
-}
-}
-
-const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
-let canDelete = false;
-
-if(isRealAdmin) canDelete = true;
-else if(this.currentUser.isMod && post.school === this.currentUser.school) canDelete = true;
-else if(this.currentUser.isTeacher && post.school === this.currentUser.school && this.currentUser.grade.split(',').includes(post.grade) && this.currentUser.section.split(',').includes(post.section)) canDelete = true;
-else if(post.sender === this.currentUser.username) canDelete = true;
-
-let delHtml = canDelete ? `<i class="fas fa-trash del-hw" onclick="app.deleteSocialPost('${postId}', '${post.storagePath || ''}')"></i>` : "";
-
-let scopeText = "🌍 Herkese Açık";
-if(post.scope === 'school') scopeText = `🏫 ${post.school}`;
-if(post.scope === 'class' || post.scope === 'other-class') scopeText = `👥 ${post.grade}/${post.section}`;
-
-feed.innerHTML += `
-                           <div class="social-card">
-                               ${delHtml}
-                               <div class="social-header">
-                                   <span class="social-user"><i class="fas fa-user"></i> ${post.sender}</span>
-                                   <span class="social-scope">${scopeText}</span>
-                               </div>
-                               <div class="social-body">${post.text}</div>
-                               ${mediaHtml}
-                               <div class="social-footer">
-                                   <span class="social-action" onclick="app.toggleReplyBox('${postId}')"><i class="fas fa-comment"></i> Yanıtlar</span>
-                               </div>
-                               <div id="reply-box-${postId}" class="reply-box ${this.openReplyBoxes.has(postId) ? '' : 'hidden'}">
-                                   <div id="reply-list-${postId}"></div>
-                                   <div style="display:flex; gap:5px; margin-top:8px;">
-                                       <input type="text" id="reply-input-${postId}" placeholder="Yanıt yazın..." style="margin:0; padding:8px;">
-                                       <button class="btn-main" style="width:auto; margin:0; padding:8px 15px;" onclick="app.submitSocialReply('${postId}')">Gönder</button>
-                                   </div>
-                               </div>
-                           </div>
-                       `;
-
-this.listenSocialReplies(postId);
-});
-if(feed.innerHTML === "") feed.innerHTML = "<p style='font-size:13px; color:#999; text-align:center;'>Henüz forumda paylaşım yok.</p>";
-});
-},
-
-openSocialModal() {
-document.getElementById('social-post-modal').classList.remove('hidden');
-document.getElementById('social-post-text').value = "";
-document.getElementById('social-post-file').value = "";
-document.getElementById('social-post-scope').value = "all";
-document.getElementById('social-post-other-class-selects').classList.add('hidden');
-},
-
-onSocialScopeChange() {
-const scope = document.getElementById('social-post-scope').value;
-document.getElementById('social-post-other-class-selects').classList.toggle('hidden', scope !== 'other-class');
-},
-
-async submitSocialPost() {
-const text = document.getElementById('social-post-text').value.trim();
-const scope = document.getElementById('social-post-scope').value;
-const fileInput = document.getElementById('social-post-file');
-
-if(!text && !fileInput.files.length) return this.toast("Boş paylaşım yapılamaz!", "error");
-
-let grade = this.currentUser.grade;
-let section = this.currentUser.section;
-
-if(scope === 'other-class') {
-grade = document.getElementById('social-post-grade').value;
-section = document.getElementById('social-post-section').value;
-}
-
-let postData = {
-text, scope,
-school: this.currentUser.school,
-grade, section,
-sender: this.currentUser.username,
-createdAt: serverTimestamp()
-};
-
-if(fileInput.files.length) {
-const file = fileInput.files[0];
-if(file.size > 25 * 1024 * 1024) return this.toast("Dosya boyutu 25MB sınırını aşamaz!", "error");
-
-const storagePath = `social/${Date.now()}_${file.name}`;
-const storageRef = ref(storage, storagePath);
-try {
-this.toast("Dosya yükleniyor...");
-const snapshot = await uploadBytes(storageRef, file);
-const downloadUrl = await getDownloadURL(snapshot.ref);
-postData.fileUrl = downloadUrl;
-postData.fileName = file.name;
-postData.fileType = file.type;
-postData.storagePath = storagePath;
-} catch(e) {
-return this.toast("Dosya yüklenirken hata oluştu!", "error");
-}
-}
-
-await addDoc(collection(db, "social_posts"), postData);
-document.getElementById('social-post-modal').classList.add('hidden');
-this.toast("Paylaşım yapıldı.", "success");
-},
-
-async deleteSocialPost(postId, storagePath) {
-if(await this.customConfirm("Bu paylaşımı forumdan kaldırmak istiyor musunuz?")) {
-if(storagePath) {
-const fileRef = ref(storage, storagePath);
-await deleteObject(fileRef).catch(e => console.log("Dosya zaten silinmiş."));
-}
-await deleteDoc(doc(db, "social_posts", postId));
-this.toast("Paylaşım silindi.", "success");
-}
-},
-
-toggleReplyBox(postId) {
-const box = document.getElementById(`reply-box-${postId}`);
-if(box.classList.contains('hidden')) {
-box.classList.remove('hidden');
-this.openReplyBoxes.add(postId);
-} else {
-box.classList.add('hidden');
-this.openReplyBoxes.delete(postId);
-}
-},
-
-listenSocialReplies(postId) {
-const q = query(collection(db, "social_posts", postId, "replies"), orderBy("createdAt", "asc"));
-onSnapshot(q, (snap) => {
-const list = document.getElementById(`reply-list-${postId}`);
-if(!list) return;
-list.innerHTML = "";
-snap.forEach(d => {
-const reply = d.data();
-list.innerHTML += `
-                           <div class="reply-item">
-                               <span class="reply-user">${reply.sender}:</span> ${reply.text}
-                           </div>
-                       `;
-});
-});
-},
-
-async submitSocialReply(postId) {
-const input = document.getElementById(`reply-input-${postId}`);
-const text = input.value.trim();
-if(!text) return;
-
-await addDoc(collection(db, "social_posts", postId, "replies"), {
-text,
-sender: this.currentUser.username,
-createdAt: serverTimestamp()
-});
-input.value = "";
-},
-
-buildUserBadges(u) {
-let html = '<div class="badges-wrapper">';
-const lowerName = u.username.toLowerCase();
-if(lowerName === "künefe" || u.isAdmin) {
-html += `<span class="badge-tag" style="background:#e67e22">ADMİN</span>`;
-}
-if(u.isMod) html += `<span class="badge-tag" style="background:#2980b9">MOD</span>`;
-if(u.isTeacher) html += `<span class="badge-tag" style="background:#9b59b6">ÖĞR</span>`;
-if(u.isLeader) html += `<span class="badge-tag" style="background:#ff9f43">BŞK</span>`;
-if(u.rank) html += `<span class="badge-tag" style="background:${u.rankColor || '#7f8c8d'}">${u.rank}</span>`;
-html += '</div>';
-return html;
-},
-
-async renderAllUsers() {
-const main = document.getElementById('main-content');
-main.innerHTML = `<h3>Kullanıcılar</h3><div id="full-user-list"></div>`;
-const snap = await getDocs(collection(db, "users"));
-snap.forEach(uDoc => {
-const u = uDoc.data();
-const item = document.createElement('div');
-item.className = 'user-item';
-
-const isOnline = this.activeUsers.has(u.username);
-const dotClass = isOnline ? 'status-active' : 'status-offline';
-const badgesHtml = this.buildUserBadges(u);
-
-item.innerHTML = `<span><span class="status-dot ${dotClass}"></span><b>${u.username}</b> ${badgesHtml}</span><small>${u.school}</small>`;
-item.onclick = () => this.openChat(u.username);
-document.getElementById('full-user-list').appendChild(item);
-});
-},
-
-renderLeaderPanel() {
-document.getElementById('main-content').innerHTML = `
-                   <h3>Başkanlık Paneli</h3>
-                   <div style="background:var(--card); padding:15px; border-radius:15px; margin-top:10px; margin-bottom:15px;">
-                       <p style="margin-bottom:8px;"><b>1. Ödev Gönderme</b></p>
-                       <input id="hw-title" placeholder="Ödevin Adı"><input id="hw-subject" placeholder="Ders"><input id="hw-book" placeholder="Kitap"><input id="hw-pages" placeholder="Sayfalar"><label style="font-size:12px;">Bitiş Tarihi:</label><input type="datetime-local" id="hw-date"><button class="btn-main" onclick="app.addHomework()">Ödev Paylaş</button>
-                   </div>
-                   
-                   <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
-                       <p style="margin-bottom:8px;"><b>2. Sınıfa Duyuru Ekle</b></p>
-                       <input id="ann-text" placeholder="Duyuru metnini yazın...">
-                       <button class="btn-main" style="background:#3498db;" onclick="app.addLeaderAnnouncement()">Duyuruyu Yayınla</button>
-                   </div>
-
-                   <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
-                       <p style="margin-bottom:8px;"><b>3. Sınıfa Dosya/Görsel Yükle (Maks 100MB)</b></p>
-                       <input type="file" id="leader-file-input" style="padding:5px;">
-                       <button class="btn-main" style="background:#2ecc71;" onclick="app.uploadUniversalFile('leader-file-input', 'leader')">İçeriği Yükle</button>
-                   </div>
-
-                   <div style="background:var(--card); padding:15px; border-radius:15px;">
-                       <p style="margin-bottom:10px;"><b>4. Yayınlanan İçerikleri Yönet / Kaldır</b></p>
-                       <div id="leader-management-list"></div>
-                   </div>`;
-this.renderLeaderManagementList();
-},
-
-async renderLeaderManagementList() {
-const listCont = document.getElementById('leader-management-list');
-if(!listCont) return;
-listCont.innerHTML = "<p style='font-size:12px; color:#666;'>Yükleniyor...</p>";
-
-const currentFilter = [
-where("school", "==", this.currentUser.school), 
-where("grade", "==", this.currentUser.grade), 
-where("section", "==", this.currentUser.section)
-];
-let html = "";
-
-const annSnap = await getDocs(query(collection(db, "announcements"), ...currentFilter));
-annSnap.forEach(d => {
-html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:13px;">
-                               <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><b>Duyuru:</b> ${d.data().text}</span>
-                               <i class="fas fa-trash" style="color:#d63031; cursor:pointer; margin-left:10px;" onclick="app.deleteItem('announcements', '${d.id}')"></i>
-                            </div>`;
-});
-
-const imgSnap = await getDocs(query(collection(db, "images"), ...currentFilter));
-imgSnap.forEach(d => {
-html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:13px;">
-                               <span style="flex:1;"><b>Dosya/Bağlantı:</b> ${d.data().fileName || 'İçerik'}</span>
-                               <i class="fas fa-trash" style="color:#d63031; cursor:pointer; margin-left:10px;" onclick="app.deleteItem('images', '${d.id}', '${d.data().storagePath || ''}')"></i>
-                            </div>`;
-});
-
-const hwSnap = await getDocs(query(collection(db, "homeworks"), ...currentFilter));
-hwSnap.forEach(d => {
-html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:13px;">
-                               <span style="flex:1;"><b>Ödev:</b> ${d.data().title}</span>
-                               <i class="fas fa-trash" style="color:#d63031; cursor:pointer; margin-left:10px;" onclick="app.deleteItem('homeworks', '${d.id}')"></i>
-                            </div>`;
-});
-
-listCont.innerHTML = html === "" ? "<p style='font-size:12px; color:#666;'>Paylaştığınız bir duyuru, ödev veya dosya bulunmuyor.</p>" : html;
-},
-
-async addLeaderAnnouncement() {
-const text = document.getElementById('ann-text').value.trim();
-if(!text) return this.toast("Duyuru metni boş olamaz!", "error");
-await addDoc(collection(db, "announcements"), { 
-text, 
-school: this.currentUser.school, 
-grade: this.currentUser.grade, 
-section: this.currentUser.section,
-targetType: "class",
-homeDocType: "general",
-sender: this.currentUser.username,
-createdAt: serverTimestamp() 
-});
-this.toast("Duyuru yayınlandı!", "success");
-document.getElementById('ann-text').value = "";
-this.renderLeaderManagementList();
-},
-
-async addWorksheetLink() {
-const title = document.getElementById('teacher-ws-title').value.trim();
-const rawUrl = document.getElementById('teacher-ws-url').value.trim();
-const grade = document.getElementById('teacher-ws-grade-select').value;
-const subject = document.getElementById('teacher-ws-subject-select').value;
-const url = (rawUrl && !rawUrl.match(/^https?:\/\//i)) ? 'https://' + rawUrl : rawUrl;
-
-if(!title || !url) return this.toast("Lütfen Başlık ve Link alanlarını doldurun!", "error");
-if(!subject) return this.toast("Lütfen bir ders kategorisi seçin!", "error");
-
-const subjSnapCheck = await getDocs(query(collection(db, "subjects"), where("name", "==", subject)));
-let subjectAllowed = false;
-subjSnapCheck.forEach(sd => {
-const sData = sd.data();
-if(!sData.school || sData.school === this.currentUser.school) subjectAllowed = true;
-});
-if(!subjectAllowed) return this.toast("Bu ders başka bir okula özel olduğu için çalışma kağıdı oluşturamazsınız!", "error");
-
-try {
-await addDoc(collection(db, "images"), {
-url: url,
-fileName: title,
-fileType: "text/html",
-storagePath: "",
-school: this.currentUser.school,
-grade: grade,
-section: "Tümü",
-targetType: "class",
-homeDocType: "worksheet",
-subjectCategory: subject,
-text: title,
-sender: this.currentUser.username,
-createdAt: serverTimestamp()
-});
-
-this.toast("Çalışma kağıdı bağlantısı başarıyla eklendi!", "success");
-document.getElementById('teacher-ws-title').value = "";
-document.getElementById('teacher-ws-url').value = "";
-this.renderTeacherPanel();
-} catch(e) {
-this.toast("Bağlantı eklenirken bir sorun oluştu.", "error");
-}
-},
-
-openTeacherFileBrowser() {
-document.getElementById('teacher-hidden-file-input').click();
-},
-
-async uploadUniversalFile(inputId, panelType) {
-const fileInput = document.getElementById(inputId);
-if(!fileInput.files.length) return this.toast("Lütfen bir dosya seçin!", "error");
-const file = fileInput.files[0];
-
-const maxSize = 100 * 1024 * 1024;
-if(file.size > maxSize) {
-return this.toast("Hata: Yüklemek istediğiniz dosya 100 MB sınırını aşamaz!", "error");
-}
-
-let school = this.currentUser.school;
-let grade = this.currentUser.grade;
-let section = this.currentUser.section;
-let targetType = "class";
-let homeDocType = "general";
-let subjectCategory = "";
-let admMultiClasses = null;
-
-if(panelType === 'admin') {
-const mode = document.getElementById('adm-target-mode').value;
-school = document.getElementById('adm-school-select').value;
-if(mode === 'class') {
-grade = document.getElementById('adm-grade-select').value;
-section = document.getElementById('adm-section-select').value;
-targetType = "class";
-if(this.admSelectedClasses.length > 0) admMultiClasses = this.admSelectedClasses.slice();
-} else {
-targetType = "school-all";
-}
-} else if(panelType === 'teacher_worksheet') {
-grade = document.getElementById('teacher-ws-grade-select').value;
-subjectCategory = document.getElementById('teacher-ws-subject-select').value;
-if(!subjectCategory) return this.toast("Lütfen bir ders kategorisi seçin!", "error");
-
-const subjSnapCheck2 = await getDocs(query(collection(db, "subjects"), where("name", "==", subjectCategory)));
-let subjectAllowed2 = false;
-subjSnapCheck2.forEach(sd => {
-const sData = sd.data();
-if(!sData.school || sData.school === this.currentUser.school) subjectAllowed2 = true;
-});
-if(!subjectAllowed2) return this.toast("Bu ders başka bir okula özel olduğu için çalışma kağıdı oluşturamazsınız!", "error");
-
-section = "Tümü";
-targetType = "class"; 
-homeDocType = "worksheet";
-}
-
-const storagePath = `uploads/${Date.now()}_${file.name}`;
-const storageRef = ref(storage, storagePath);
-
-try {
-this.toast("Dosya sisteme yükleniyor, lütfen bekleyin...");
-const snapshot = await uploadBytes(storageRef, file);
-const downloadUrl = await getDownloadURL(snapshot.ref);
-
-if(admMultiClasses && admMultiClasses.length > 0) {
-for (const c of admMultiClasses) {
-const [g, s] = c.split('-');
-await addDoc(collection(db, "images"), {
-url: downloadUrl,
-fileName: file.name,
-fileType: file.type,
-storagePath: storagePath,
-school, grade: g, section: s, targetType: "class", homeDocType, subjectCategory,
-text: file.name,
-sender: this.currentUser.username,
-createdAt: serverTimestamp()
-});
-}
-this.toast("Dosya başarıyla sisteme yüklendi!", "success");
-fileInput.value = "";
-this.admSelectedClasses = [];
-this.renderAdminClasses();
-this.renderAdminControlList();
-return;
-}
-
-await addDoc(collection(db, "images"), {
-url: downloadUrl,
-fileName: file.name,
-fileType: file.type,
-storagePath: storagePath,
-school, grade, section, targetType, homeDocType, subjectCategory,
-text: file.name,
-sender: this.currentUser.username,
-createdAt: serverTimestamp()
-});
-
-this.toast("Dosya başarıyla sisteme yüklendi!", "success");
-fileInput.value = "";
-if(panelType === 'leader') this.renderLeaderManagementList();
-if(panelType === 'admin') this.renderAdminControlList();
-if(panelType === 'teacher_worksheet') this.renderTeacherPanel();
-} catch (error) {
-console.error(error);
-this.toast("Dosya yüklenirken bir hata oluştu.", "error");
-}
-},
-
-async deleteItem(colName, id, storagePath) {
-if(await this.customConfirm("Bu içeriği tamamen kaldırmak istediğinize emin misiniz?")) {
-try {
-if(storagePath) {
-const fileRef = ref(storage, storagePath);
-await deleteObject(fileRef).catch(e => console.log("Dosya storage'da bulunamadı veya zaten silinmiş."));
-}
-await deleteDoc(doc(db, colName, id));
-this.toast("İçerik başarıyla silindi!", "success");
-if(document.getElementById('leader-management-list')) this.renderLeaderManagementList();
-if(document.getElementById('admin-control-list')) this.renderAdminControlList();
-} catch(e) {
-this.toast("Silme işlemi sırasında hata oluştu.", "error");
-}
-}
-},
-
-async addHomework() {
-const title = document.getElementById('hw-title').value;
-const deadline = document.getElementById('hw-date').value;
-if(!title || !deadline) return this.toast("Hata! Başlık ve Tarih zorunludur.", "error");
-
-await addDoc(collection(db, "homeworks"), {
-title,
-subject: document.getElementById('hw-subject').value,
-book: document.getElementById('hw-book').value,
-pages: document.getElementById('hw-pages').value,
-deadline,
-school: this.currentUser.school,
-grade: this.currentUser.grade,
-section: this.currentUser.section,
-targetType: "class",
-createdAt: serverTimestamp()
-});
-this.toast("Ödev Paylaşıldı!", "success");
-this.renderLeaderManagementList();
-},
-
-// İdareci Panelinde Sınav Türüne Göre Arayüzü Değiştiren Metot
-onAdminAnnTypeChange() {
-const annType = document.getElementById('adm-ann-type').value;
-const inputEl = document.getElementById('adm-ann-text');
-const urlInputEl = document.getElementById('adm-exam-url-input');
-
-if(annType === 'exam') {
-inputEl.placeholder = "Sınav Planı / Dönem Bilgisi Başlığı Girin";
-urlInputEl.classList.remove('hidden');
-} else {
-inputEl.placeholder = "Duyuru metni...";
-urlInputEl.classList.add('hidden');
-}
-},
-
-async renderAdminPanel() {
-const main = document.getElementById('main-content');
-const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
-
-let gradeCheckboxMarkup = "";
-for(let i=1; i<=12; i++) {
-gradeCheckboxMarkup += `
-                       <label class="grade-checkbox-item">
-                           <input type="checkbox" name="adm-subject-grades" value="${i}">
-                           <span>${i}. Sınıf</span>
-                       </label>
-                   `;
-}
-
-main.innerHTML = `
-                   <h3>${isRealAdmin ? 'Admin' : 'Moderatör'} Paneli</h3>
-                   
-                   <div style="background:var(--card); padding:15px; border-radius:15px; margin-top:10px; margin-bottom:15px;">
-                       <p style="margin-bottom:8px;"><b>📢 Gelişmiş İçerik & Yayın Paneli</b></p>
-                       
-                       <label>Hedef Okul Seçin:</label>
-                       <select id="adm-school-select" onchange="app.onAdminSchoolChange()"></select>
-
-                       <label>Yayın Kapsamı:</label>
-                       <select id="adm-target-mode" onchange="app.toggleAdminClassSelectors()">
-                           <option value="class">Sadece Belirli Bir Sınıfa Gönder</option>
-                           <option value="school">Seçili Okulun Tamamına Gönder</option>
-                       </select>
-
-                       <div id="adm-class-selectors" style="display:flex; gap:5px;">
-                           <select id="adm-grade-select"></select>
-                           <select id="adm-section-select"></select>
-                           <button type="button" class="btn-main" style="width:auto; margin:0; padding:10px 15px;" onclick="app.addAdminClass()"><i class="fas fa-plus"></i> Ekle</button>
-                       </div>
-                       <div id="adm-added-classes" style="display:flex; flex-direction:column; gap:5px; margin-bottom:12px;"></div>
-
-                       <hr style="margin:10px 0; opacity:0.2;">
-
-                       <div style="margin-top:10px;">
-                           <p style="font-size:13px; margin-bottom:5px;"><b>Seçenek A: Duyuru / Sınav Tarihi Yayınla</b></p>
-                           <select id="adm-ann-type" style="margin-top:5px; margin-bottom:5px;" onchange="app.onAdminAnnTypeChange()">
-                               <option value="general">Genel Duyuru</option>
-                               <option value="exam">Sınav Tarihi Planı / Duyurusu (Link İle)</option>
-                           </select>
-                           <input id="adm-ann-text" placeholder="Duyuru metni...";>
-                           <input id="adm-exam-url-input" type="url" placeholder="Sınav Planı Bağlantı Linki (URL)" class="hidden">
-                           <button class="btn-main" style="background:#3498db; margin-top:5px;" onclick="app.adminPublishAnnouncement()">Yayınla</button>
-                       </div>
-
-                       <div style="margin-top:15px;">
-                           <p style="font-size:13px; margin-bottom:5px;"><b>Seçenek B: Ödev Gönder</b></p>
-                           <input id="adm-hw-title" placeholder="Ödev Başlığı">
-                           <input id="adm-hw-subject" placeholder="Ders">
-                           <input id="adm-hw-book" placeholder="Kitap/Kaynak">
-                           <input id="adm-hw-pages" placeholder="Sayfalar">
-                           <label style="font-size:11px;">Bitiş Tarihi:</label>
-                           <input type="datetime-local" id="adm-hw-date">
-                           <button class="btn-main" onclick="app.adminPublishHomework()">Ödev Gönder</button>
-                       </div>
-
-                       <div style="margin-top:15px;">
-                           <p style="font-size:13px; margin-bottom:5px;"><b>Seçenek C: Her Türlü Dosya Yükle (Maks 100MB)</b></p>
-                           <input type="file" id="adm-file-input">
-                           <button class="btn-main" style="background:#2ecc71;" onclick="app.uploadUniversalFile('adm-file-input', 'admin')">Dosya Yükle & Yayınla</button>
-                       </div>
-                   </div>
-
-                   <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
-                       <p style="margin-bottom:10px;"><b>Yayınlanmış İçerikleri Yönet / Sil</b></p>
-                       <div id="admin-control-list"></div>
-                   </div>
-
-                   <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
-                       <p style="margin-bottom:10px;"><b>🔑 Öğretmen & İdareci Kodu Yönetimi</b></p>
-                       <div style="display:flex; gap:5px; margin-bottom:10px; flex-wrap:wrap;">
-                           <select id="adm-code-type" style="margin:0; flex:1;" onchange="app.onAdmCodeTypeChange()">
-                               <option value="teacher">Öğretmen Kodu</option>
-                               <option value="manager">İdareci Kodu</option>
-                           </select>
-                           <button class="btn-main" style="margin:0; background:#2ecc71; flex:0 0 auto;" onclick="app.generateRegistrationCode()">Kod Oluştur</button>
-                       </div>
-                       <div id="adm-code-school-selector" class="hidden" style="margin-bottom:10px;">
-                           <label style="font-size:12px; font-weight:bold;">Bu İdareci Kodunun Geçerli Olacağı Okul:</label>
-                           <select id="adm-code-school" style="margin-top:5px;"></select>
-                       </div>
-                       <div id="adm-code-class-selector" class="hidden" style="margin-bottom:10px;">
-                           <label style="font-size:12px; font-weight:bold;">Öğretmenin Sınıf Öğretmeni Olacağı Sınıf(lar):</label>
-                           <div style="display:flex; gap:5px; margin:5px 0;">
-                               <select id="adm-code-grade-select"></select>
-                               <select id="adm-code-section-select"></select>
-                               <button type="button" class="btn-main" style="width:auto; margin:0; padding:10px 15px;" onclick="app.addAdminCodeClass()"><i class="fas fa-plus"></i> Ekle</button>
-                           </div>
-                           <div id="adm-code-added-classes" style="display:flex; flex-direction:column; gap:5px; margin-bottom:12px;"></div>
-
-                           <label style="font-size:12px; font-weight:bold;">Öğretmenin Girdiği Ama Sınıf Öğretmeni Olmadığı Sınıf(lar):</label>
-                           <div style="display:flex; gap:5px; margin:5px 0;">
-                               <select id="adm-code-subject-grade-select"></select>
-                               <select id="adm-code-subject-section-select"></select>
-                               <button type="button" class="btn-main" style="width:auto; margin:0; padding:10px 15px;" onclick="app.addAdminCodeSubjectClass()"><i class="fas fa-plus"></i> Ekle</button>
-                           </div>
-                           <div id="adm-code-subject-added-classes" style="display:flex; flex-direction:column; gap:5px; margin-bottom:12px;"></div>
-                       </div>
-                       <div id="adm-generated-codes-list" style="max-height:150px; overflow-y:auto; font-size:13px;">Yükleniyor...</div>
-                   </div>
-
-                   <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
-                       <p style="margin-bottom:10px;"><b>👤 Kullanıcı Hesap Yönetimi</b></p>
-                       <div id="adm-user-list-container">Yükleniyor...</div>
-                   </div>
-
-                   <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
-                       <p style="margin-bottom:10px;"><b>📚 Ders Kategorisi Oluşturma</b></p>
-                       <label style="font-size:12px; font-weight:bold;">Uygun Sınıf Kademeleri:</label>
-                       <div class="grade-checkbox-container">${gradeCheckboxMarkup}</div>
-                       <input type="text" id="adm-subject-name" placeholder="Ders Adı (Örn: Matematik, Türkçe)">
-                       <button class="btn-main" style="background:#9b59b6;" onclick="app.adminCreateSubject()">Ders Oluştur</button>
-                       <hr style="margin: 12px 0; opacity: 0.2;">
-                       <p style="font-size:12px; font-weight:bold; margin-bottom:8px;">Kayıtlı Dersler:</p>
-                       <div id="admin-subjects-list" style="max-height:150px; overflow-y:auto; font-size:13px;">Yükleniyor...</div>
-                   </div>
-
-                   <div id="admin-user-management-zone"></div>
-               `;
-
-const schoolSelect = document.getElementById('adm-school-select');
-schoolSelect.innerHTML = "";
-if(isRealAdmin) {
-this.allSchools.forEach(sch => { schoolSelect.innerHTML += `<option value="${sch}">${sch}</option>`; });
-} else {
-schoolSelect.innerHTML = `<option value="${this.currentUser.school}">${this.currentUser.school}</option>`;
-}
-
-// İdareciler (moderatörler) yalnızca öğretmen kodu oluşturabilir; manager seçeneği gizleniyor
-const admCodeTypeEl = document.getElementById('adm-code-type');
-if(admCodeTypeEl && !isRealAdmin) {
-Array.from(admCodeTypeEl.options).forEach(opt => {
-if(opt.value === 'manager') opt.style.display = 'none';
-});
-admCodeTypeEl.value = 'teacher';
-const schoolSelectorDiv = document.getElementById('adm-code-school-selector');
-if(schoolSelectorDiv) schoolSelectorDiv.classList.add('hidden');
-}
-
-// Güncelleme: idareciler artık sadece kendi okulları için geçerli idareci kodu da oluşturabiliyor
-if(admCodeTypeEl && !isRealAdmin) {
-Array.from(admCodeTypeEl.options).forEach(opt => {
-if(opt.value === 'manager') opt.style.display = '';
-});
-}
-
-const gSel = document.getElementById('adm-grade-select');
-gSel.innerHTML = ""; for(let i=1; i<=12; i++) gSel.innerHTML += `<option value="${i}">${i}. Sınıf</option>`;
-const sSel = document.getElementById('adm-section-select');
-sSel.innerHTML = ""; "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => sSel.innerHTML += `<option value="${char}">${char}</option>`);
-
-this.admSelectedClasses = [];
-this.renderAdminClasses();
-
-if(isRealAdmin) {
-let schoolListMarkup = "";
-this.allSchools.forEach((sch, index) => {
-schoolListMarkup += `
-                           <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.03); padding:8px; margin-bottom:5px; border-radius:6px; font-size:13px;">
-                               <span><i class="fas fa-school"></i> ${sch}</span>
-                               <i class="fas fa-trash-alt" style="color:#d63031; cursor:pointer;" onclick="app.adminDeleteSchool(${index})"></i>
-                           </div>
-                       `;
-});
-
-document.getElementById('admin-user-management-zone').innerHTML = `
-                       <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
-                           <p style="margin-bottom: 10px;"><b>🏫 Okul Yönetimi Paneliniz</b></p>
-                           <input type="text" id="new-school-name" placeholder="Yeni Okul Adı">
-                           <button class="btn-success" onclick="app.adminAddSchool()">Okul Ekle</button>
-                           <hr style="margin: 12px 0; opacity: 0.2;">
-                           <p style="font-size:12px; font-weight:bold; margin-bottom:8px;">Kayıtlı Okullar Listesi:</p>
-                           <div id="admin-schools-panel-list">${schoolListMarkup || '<p style="color:#888; font-size:11px;">Kayıtlı okul yok.</p>'}</div>
-                       </div>
-                       <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
-                           <p><b>Sistemi Sıfırla (Yeni Eğitim Yılı)</b></p>
-                           <button class="btn-danger" onclick="app.resetSystemData()">Tüm Öğrencileri ve Durumları Sıfırla</button>
-                       </div>
-                       <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
-                           <p><b>Uygulama Güncelleme Ayarı</b></p>
-                           <input type="text" id="cfg-link" placeholder="Güncelleme İndirme Linki">
-                           <button class="btn-main" style="background:#2980b9; margin-bottom:5px;" onclick="app.adminSaveUpdate(true)">Güncellemeyi Aktif Et</button>
-                           <button class="btn-danger" onclick="app.adminSaveUpdate(false)">Güncellemeyi Kapat</button>
-                       </div>
-                   `;
-const cfgSnap = await getDoc(doc(db, "config", "updates"));
-if(cfgSnap.exists()) document.getElementById('cfg-link').value = cfgSnap.data().link || "";
-}
-
-this.renderAdminControlList();
-this.renderAdminUserList(isRealAdmin);
-this.listenRegistrationCodes();
-this.listenSubjectsList();
-
-// İdareci kodu için okul seçici doldur
-const admCodeSchoolSel = document.getElementById('adm-code-school');
-if(admCodeSchoolSel) {
-admCodeSchoolSel.innerHTML = "";
-if(isRealAdmin) {
-this.allSchools.forEach(sch => { admCodeSchoolSel.innerHTML += `<option value="${sch}">${sch}</option>`; });
-} else {
-admCodeSchoolSel.innerHTML = `<option value="${this.currentUser.school}">${this.currentUser.school}</option>`;
-}
-}
-this.onAdmCodeTypeChange();
-
-const admCodeGradeSel = document.getElementById('adm-code-grade-select');
-if(admCodeGradeSel) {
-admCodeGradeSel.innerHTML = ""; for(let i=1; i<=12; i++) admCodeGradeSel.innerHTML += `<option value="${i}">${i}. Sınıf</option>`;
-}
-const admCodeSectionSel = document.getElementById('adm-code-section-select');
-if(admCodeSectionSel) {
-admCodeSectionSel.innerHTML = ""; "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => admCodeSectionSel.innerHTML += `<option value="${char}">${char}</option>`);
-}
-this.admCodeClasses = [];
-this.renderAdminCodeClasses();
-
-const admCodeSubjectGradeSel = document.getElementById('adm-code-subject-grade-select');
-if(admCodeSubjectGradeSel) {
-admCodeSubjectGradeSel.innerHTML = ""; for(let i=1; i<=12; i++) admCodeSubjectGradeSel.innerHTML += `<option value="${i}">${i}. Sınıf</option>`;
-}
-const admCodeSubjectSectionSel = document.getElementById('adm-code-subject-section-select');
-if(admCodeSubjectSectionSel) {
-admCodeSubjectSectionSel.innerHTML = ""; "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(char => admCodeSubjectSectionSel.innerHTML += `<option value="${char}">${char}</option>`);
-}
-this.admCodeSubjectClasses = [];
-this.renderAdminCodeSubjectClasses();
-},
-
-async adminCreateSubject() {
-const nameInput = document.getElementById('adm-subject-name');
-const name = nameInput ? nameInput.value.trim() : "";
-if(!name) return this.toast("Lütfen ders adı girin!", "error");
-
-const checkedBoxes = document.querySelectorAll('input[name="adm-subject-grades"]:checked');
-if(checkedBoxes.length === 0) return this.toast("Lütfen en az bir sınıf kademesi seçin!", "error");
-
-const grades = Array.from(checkedBoxes).map(cb => cb.value);
-
-const lowerNameForSubject = this.currentUser.username.toLowerCase();
-const isRealAdminForSubject = lowerNameForSubject === "künefe" || this.currentUser.isAdmin;
-
-try {
-await addDoc(collection(db, "subjects"), {
-name: name,
-grades: grades,
-school: isRealAdminForSubject ? null : this.currentUser.school,
-createdAt: serverTimestamp()
-});
-this.toast("Ders başarıyla oluşturuldu!", "success");
-nameInput.value = "";
-document.querySelectorAll('input[name="adm-subject-grades"]').forEach(cb => cb.checked = false);
-} catch(e) {
-this.toast("Ders oluşturulurken hata oluştu.", "error");
-}
-},
-
-listenSubjectsList() {
-const lowerNameForList = this.currentUser.username.toLowerCase();
-const isRealAdminForList = lowerNameForList === "künefe" || this.currentUser.isAdmin;
-onSnapshot(query(collection(db, "subjects"), orderBy("createdAt", "desc")), (snap) => {
-const cont = document.getElementById('admin-subjects-list');
-if(!cont) return;
-cont.innerHTML = "";
-if(snap.empty) {
-cont.innerHTML = "<p style='color:#999; font-size:12px;'>Kayıtlı ders bulunmuyor.</p>";
-return;
-}
-let renderedSubjectCount = 0;
-snap.forEach(d => {
-const data = d.data();
-if(isRealAdminForList && data.school) return;
-if(!isRealAdminForList && data.school !== this.currentUser.school) return;
-renderedSubjectCount++;
-cont.innerHTML += `
-                           <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.03); padding:6px; margin-bottom:4px; border-radius:5px;">
-                               <span><b>${data.name}</b> <small style="color:#7f8c8d;">(Kademeler: ${data.grades.join(', ')})</small></span>
-                               <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteSubject('${d.id}')"></i>
-                           </div>
-                       `;
-});
-if(renderedSubjectCount === 0) cont.innerHTML = "<p style='color:#999; font-size:12px;'>Kayıtlı ders bulunmuyor.</p>";
-});
-},
-
-async deleteSubject(id) {
-if(await this.customConfirm("Bu ders kategorisini silmek istediğinize emin misiniz?")) {
-const lowerNameForDel = this.currentUser.username.toLowerCase();
-const isRealAdminForDel = lowerNameForDel === "künefe" || this.currentUser.isAdmin;
-if(!isRealAdminForDel) {
-const subjSnap = await getDoc(doc(db, "subjects", id));
-if(subjSnap.exists() && subjSnap.data().school !== this.currentUser.school) {
-return this.toast("Sadece kendi okulunuza ait dersleri silebilirsiniz!", "error");
-}
-}
-await deleteDoc(doc(db, "subjects", id));
-this.toast("Ders başarıyla silindi.", "success");
-}
-},
-
-async adminDeleteSchool(index) {
-if(await this.customConfirm(`"${this.allSchools[index]}" okulunu silmek istediğinize emin misiniz?`)) {
-this.allSchools.splice(index, 1);
-await setDoc(doc(db, "config", "schools"), { list: this.allSchools });
-this.toast("Okul listeden başarıyla silindi!", "success");
-this.renderAdminPanel();
-}
-},
-
-listenRegistrationCodes() {
-onSnapshot(collection(db, "registration_codes"), (snap) => {
-const listCont = document.getElementById('adm-generated-codes-list');
-if(!listCont) return;
-listCont.innerHTML = "";
-if(snap.empty) {
-listCont.innerHTML = "<p style='color:#999; font-size:12px;'>Kayıtlı aktif kod bulunmuyor.</p>";
-return;
-}
-snap.forEach(d => {
-const data = d.data();
-const typeText = data.type === 'teacher' ? '👨‍🏫 Öğretmen' : '💼 İdareci';
-let codeDisplay = `<b>Kod:</b> ${data.code}`;
-if(data.type === 'manager' && data.password) {
-codeDisplay += ` | <b>Şifre:</b> ${data.password}`;
-}
-if(data.type === 'manager' && data.school) {
-codeDisplay += ` | <b>Okul:</b> <span style="color:#2980b9;">${data.school}</span>`;
-}
-if(data.usedBy) {
-codeDisplay += ` <span style="color:#d63031; font-size:11px;">(Kullanan: ${data.usedBy})</span>`;
-} else {
-codeDisplay += ` <span style="color:#27ae60; font-size:11px;">(Kullanılmadı)</span>`;
-}
-listCont.innerHTML += `
-                           <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.03); padding:6px; margin-bottom:4px; border-radius:5px;">
-                               <span>[${typeText}] ${codeDisplay}</span>
-                               <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteRegistrationCode('${d.id}')"></i>
-                           </div>`;
-});
-});
-},
-
-onAdmCodeTypeChange() {
-const type = document.getElementById('adm-code-type').value;
-const schoolSelectorDiv = document.getElementById('adm-code-school-selector');
-if(schoolSelectorDiv) {
-if(type === 'manager') {
-schoolSelectorDiv.classList.remove('hidden');
-} else {
-schoolSelectorDiv.classList.add('hidden');
-}
-}
-
-// Güncelleme: Gerçek admin, öğretmen kodu oluştururken de hedef okulu bilinçli olarak seçebilsin
-const lowerNameForCodeSchool = this.currentUser.username.toLowerCase();
-const isRealAdminForCodeSchool = lowerNameForCodeSchool === "künefe" || this.currentUser.isAdmin;
-if(schoolSelectorDiv && isRealAdminForCodeSchool && type === 'teacher') {
-schoolSelectorDiv.classList.remove('hidden');
-const labelEl = schoolSelectorDiv.querySelector('label');
-if(labelEl) labelEl.innerText = "Bu Öğretmen Kodunun Geçerli Olacağı Okul:";
-}
-if(schoolSelectorDiv && isRealAdminForCodeSchool && type === 'manager') {
-const labelEl2 = schoolSelectorDiv.querySelector('label');
-if(labelEl2) labelEl2.innerText = "Bu İdareci Kodunun Geçerli Olacağı Okul:";
-}
-
-// Güncelleme: Öğretmen kodu seçilince, idarecinin öğretmen için sınıf(lar) seçebileceği alan gösterilsin
-const classSelectorDiv = document.getElementById('adm-code-class-selector');
-if(classSelectorDiv) {
-classSelectorDiv.classList.toggle('hidden', type !== 'teacher');
-}
-},
-
-async generateRegistrationCode() {
-const type = document.getElementById('adm-code-type').value;
-const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-
-const createRandomString = (length) => {
-let result = "";
-for (let i = 0; i < length; i++) {
-result += chars.charAt(Math.floor(Math.random() * chars.length));
-}
-return result;
-};
-
-const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
-
-// Güncelleme: İdareciler artık SADECE KENDİ OKULLARI için geçerli idareci kodu oluşturabiliyor
-if (!isRealAdmin && type === 'manager') {
-const modManagerCodeData = {
-type: 'manager',
-code: createRandomString(10),
-password: createRandomString(10),
-school: this.currentUser.school,
-createdAt: serverTimestamp(),
-usedBy: ""
-};
-await addDoc(collection(db, "registration_codes"), modManagerCodeData);
-this.toast("İdareci kodu başarıyla üretildi! (Sadece kendi okulunuz için geçerli)", "success");
-return;
-}
-
-// İdareciler (moderatörler) yalnızca öğretmen kodu oluşturabilir, idareci kodu oluşturamaz
-if (!isRealAdmin && type === 'manager') {
-return this.toast("İdareciler yalnızca kendi okulları için öğretmen kodu oluşturabilir!", "error");
-}
-
-const codeData = {
-type: type,
-code: createRandomString(10),
-createdAt: serverTimestamp(),
-usedBy: ""
-};
-
-if(type === 'manager') {
-codeData.password = createRandomString(10);
-const admCodeSchoolSel = document.getElementById('adm-code-school');
-if(isRealAdmin) {
-// Gerçek admin istediği okul için idareci kodu oluşturabilir
-if(admCodeSchoolSel && admCodeSchoolSel.value) {
-codeData.school = admCodeSchoolSel.value;
-} else {
-codeData.school = this.currentUser.school;
-}
-} else {
-// Moderatör (idareci) sadece kendi okulu için idareci kodu oluşturabilir
-codeData.school = this.currentUser.school;
-}
-}
-
-if(type === 'teacher') {
-if(this.admCodeClasses.length === 0) return this.toast("Lütfen öğretmenin sınıf öğretmeni olacağı en az bir sınıf seçin!", "error");
-codeData.classes = this.admCodeClasses.slice();
-codeData.subjectClasses = this.admCodeSubjectClasses.slice();
-// İdareci (moderatör) öğretmen kodu oluştururken yalnızca kendi okuluna geçerli kod oluşturabilir
-if(isRealAdmin) {
-// Gerçek admin: seçilen hedef okul için öğretmen kodu oluştur
-const admSchoolSel = document.getElementById('adm-code-school');
-if(admSchoolSel && admSchoolSel.value) {
-codeData.school = admSchoolSel.value;
-} else {
-codeData.school = this.currentUser.school;
-}
-} else {
-// Moderatör (idareci): sadece kendi okuluna geçerli öğretmen kodu üretebilir
-codeData.school = this.currentUser.school;
-}
-}
-
-await addDoc(collection(db, "registration_codes"), codeData);
-this.toast(`${type === 'teacher' ? 'Öğretmen' : 'İdareci'} kodu başarıyla üretildi!`, "success");
-this.admCodeClasses = [];
-this.renderAdminCodeClasses();
-this.admCodeSubjectClasses = [];
-this.renderAdminCodeSubjectClasses();
-},
-
-async deleteRegistrationCode(id) {
-if(await this.customConfirm("Bu kodu tamamen silmek istediğinize emin misiniz?")) {
-await deleteDoc(doc(db, "registration_codes", id));
-this.toast("Kod başarıyla silindi!", "success");
-}
-},
-
-async renderAdminUserList(isRealAdmin) {
-const listCont = document.getElementById('adm-user-list-container');
-if(!listCont) return;
-
-let snap;
-if(isRealAdmin) {
-snap = await getDocs(collection(db, "users"));
-} else {
-const q = query(collection(db, "users"), where("school", "==", this.currentUser.school));
-snap = await getDocs(q);
-}
-
-listCont.innerHTML = "";
-if(snap.empty) {
-listCont.innerHTML = "<p style='font-size:12px; color:#999;'>Yönetilecek kullanıcı bulunamadı.</p>";
-return;
-}
-
-snap.forEach(uDoc => {
-const u = uDoc.data();
-const item = document.createElement('div');
-item.className = 'user-item';
-const badges = this.buildUserBadges(u);
-const isOnline = this.activeUsers.has(u.username);
-const dotClass = u.isBlocked ? 'status-blocked' : (isOnline ? 'status-active' : 'status-offline');
-
-item.innerHTML = `<span><span class="status-dot ${dotClass}"></span><b>${u.username}</b> ${badges}</span><small>${u.grade}/${u.section} - ${u.school}</small>`;
-item.onclick = () => this.openAdminUserModal(u);
-listCont.appendChild(item);
-});
-},
-
-openAdminUserModal(u) {
-this.selectedEditUser = u;
-const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
-
-document.getElementById('edit-user-title').innerText = `${u.username} - Düzenle`;
-document.getElementById('admin-user-modal').classList.remove('hidden');
-
-document.getElementById('edit-grade').value = u.grade || "1";
-document.getElementById('edit-section').value = u.section || "A";
-
-document.getElementById('leader-btn').classList.remove('hidden');
-document.getElementById('teacher-btn').classList.remove('hidden');
-
-if(isRealAdmin) {
-document.getElementById('name-edit-area').classList.remove('hidden');
-document.getElementById('edit-username-input').value = u.username;
-document.getElementById('edit-school-label').classList.remove('hidden');
-document.getElementById('edit-school').classList.remove('hidden');
-document.getElementById('edit-school').value = u.school;
-
-document.getElementById('mod-btn').classList.remove('hidden');
-document.getElementById('admin-make-btn').classList.remove('hidden');
-document.getElementById('admin-only-tools').classList.remove('hidden');
-
-document.getElementById('block-btn').classList.toggle('hidden', u.isBlocked);
-document.getElementById('unblock-btn').classList.toggle('hidden', !u.isBlocked);
-
-document.getElementById('edit-rank').value = u.rank || "";
-document.getElementById('edit-rank-color').value = u.rankColor || "#ff9f43";
-} else {
-document.getElementById('name-edit-area').classList.add('hidden');
-document.getElementById('edit-school-label').classList.add('hidden');
-document.getElementById('edit-school').classList.add('hidden');
-
-document.getElementById('mod-btn').classList.add('hidden');
-document.getElementById('admin-make-btn').classList.add('hidden');
-document.getElementById('admin-only-tools').classList.add('hidden');
-}
-},
-
-async adminToggleRole(roleField) {
-if(!this.selectedEditUser) return;
-const currentStatus = this.selectedEditUser[roleField] || false;
-const newStatus = !currentStatus;
-
-await updateDoc(doc(db, "users", this.selectedEditUser.username), { [roleField]: newStatus });
-this.selectedEditUser[roleField] = newStatus;
-this.toast("Rol durumu başarıyla güncellendi!", "success");
-
-const lowerName = this.currentUser.username.toLowerCase();
-this.renderAdminUserList(lowerName === "künefe" || this.currentUser.isAdmin);
-},
-
-async adminUpdateStatus(blockStatus) {
-if(!this.selectedEditUser) return;
-await updateDoc(doc(db, "users", this.selectedEditUser.username), { isBlocked: blockStatus });
-this.selectedEditUser.isBlocked = blockStatus;
-this.toast(blockStatus ? "Kullanıcı engellendi!" : "Kullanıcının cezası kaldırıldı!", "success");
-document.getElementById('block-btn').classList.toggle('hidden', blockStatus);
-document.getElementById('unblock-btn').classList.toggle('hidden', !blockStatus);
-
-const lowerName = this.currentUser.username.toLowerCase();
-this.renderAdminUserList(lowerName === "künefe" || this.currentUser.isAdmin);
-},
-
-async adminChangeUsername() {
-if(!this.selectedEditUser) return;
-const newName = document.getElementById('edit-username-input').value.trim();
-if(!newName) return this.toast("Geçersiz veya aynı isim!", "error");
-if(newName.toLowerCase() === this.selectedEditUser.username.toLowerCase()) return this.toast("Geçersiz veya aynı isim!", "error");
-if(await this.isUsernameTaken(newName)) return this.toast("Bu kullanıcı adı zaten alınmış! (Büyük/küçük harf farkı önemli değil)", "error");
-
-const oldData = { ...this.selectedEditUser, username: newName };
-await setDoc(doc(db, "users", newName), oldData);
-await deleteDoc(doc(db, "users", this.selectedEditUser.username));
-
-this.toast("Kullanıcı adı başarıyla değiştirildi!", "success");
-document.getElementById('admin-user-modal').classList.add('hidden');
-
-const lowerName = this.currentUser.username.toLowerCase();
-this.navigate('admin');
-},
-
-async adminDeleteUser() {
-if(!this.selectedEditUser) return;
-if(await this.customConfirm(`${this.selectedEditUser.username} isimli hesabı tamamen silmek istediğinize emin misiniz?`)) {
-await deleteDoc(doc(db, "users", this.selectedEditUser.username));
-await deleteDoc(doc(db, "status", this.selectedEditUser.username));
-this.toast("Hesap sistemden silindi.", "success");
-document.getElementById('admin-user-modal').classList.add('hidden');
-
-const lowerName = this.currentUser.username.toLowerCase();
-this.renderAdminPanel();
-}
-},
-
-async saveUserEdits() {
-if(!this.selectedEditUser) return;
-const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
-
-const updates = {
-grade: document.getElementById('edit-grade').value,
-section: document.getElementById('edit-section').value
-};
-
-if(isRealAdmin) {
-updates.school = document.getElementById('edit-school').value;
-updates.rank = document.getElementById('edit-rank').value.trim();
-updates.rankColor = document.getElementById('edit-rank-color').value;
-}
-
-await updateDoc(doc(db, "users", this.selectedEditUser.username), updates);
-this.toast("Değişiklikler başarıyla kaydedildi!", "success");
-document.getElementById('admin-user-modal').classList.add('hidden');
-this.renderAdminPanel();
-},
-
-toggleAdminClassSelectors() {
-const mode = document.getElementById('adm-target-mode').value;
-document.getElementById('adm-class-selectors').classList.toggle('hidden', mode === 'school');
-},
-
-addAdminClass() {
-const g = document.getElementById('adm-grade-select').value;
-const s = document.getElementById('adm-section-select').value;
-if(!g || !s) return;
-const classStr = `${g}-${s}`;
-if(this.admSelectedClasses.includes(classStr)) return this.toast("Bu sınıf zaten eklendi!", "error");
-this.admSelectedClasses.push(classStr);
-this.renderAdminClasses();
-},
-
-removeAdminClass(c) {
-this.admSelectedClasses = this.admSelectedClasses.filter(x => x !== c);
-this.renderAdminClasses();
-},
-
-renderAdminClasses() {
-const cont = document.getElementById('adm-added-classes');
-if(!cont) return;
-cont.innerHTML = "";
-this.admSelectedClasses.forEach(c => {
-const [g, s] = c.split('-');
-cont.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; border-radius:5px; font-size:12px;">
-                       <span><b>Sınıf:</b> ${g}. Sınıf - ${s} Şubesi</span>
-                       <i class="fas fa-times" style="color:#d63031; cursor:pointer;" onclick="app.removeAdminClass('${c}')"></i>
-                   </div>`;
-});
-},
-
-addAdminCodeClass() {
-const g = document.getElementById('adm-code-grade-select').value;
-const s = document.getElementById('adm-code-section-select').value;
-if(!g || !s) return;
-const classStr = `${g}-${s}`;
-if(this.admCodeClasses.includes(classStr)) return this.toast("Bu sınıf zaten eklendi!", "error");
-this.admCodeClasses.push(classStr);
-this.renderAdminCodeClasses();
-},
-
-removeAdminCodeClass(c) {
-this.admCodeClasses = this.admCodeClasses.filter(x => x !== c);
-this.renderAdminCodeClasses();
-},
-
-renderAdminCodeClasses() {
-const cont = document.getElementById('adm-code-added-classes');
-if(!cont) return;
-cont.innerHTML = "";
-this.admCodeClasses.forEach(c => {
-const [g, s] = c.split('-');
-cont.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; border-radius:5px; font-size:12px;">
-                       <span><b>Sınıf:</b> ${g}. Sınıf - ${s} Şubesi</span>
-                       <i class="fas fa-times" style="color:#d63031; cursor:pointer;" onclick="app.removeAdminCodeClass('${c}')"></i>
-                   </div>`;
-});
-},
-
-addAdminCodeSubjectClass() {
-const g = document.getElementById('adm-code-subject-grade-select').value;
-const s = document.getElementById('adm-code-subject-section-select').value;
-if(!g || !s) return;
-const classStr = `${g}-${s}`;
-if(this.admCodeSubjectClasses.includes(classStr)) return this.toast("Bu sınıf zaten eklendi!", "error");
-this.admCodeSubjectClasses.push(classStr);
-this.renderAdminCodeSubjectClasses();
-},
-
-removeAdminCodeSubjectClass(c) {
-this.admCodeSubjectClasses = this.admCodeSubjectClasses.filter(x => x !== c);
-this.renderAdminCodeSubjectClasses();
-},
-
-renderAdminCodeSubjectClasses() {
-const cont = document.getElementById('adm-code-subject-added-classes');
-if(!cont) return;
-cont.innerHTML = "";
-this.admCodeSubjectClasses.forEach(c => {
-const [g, s] = c.split('-');
-cont.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; border-radius:5px; font-size:12px;">
-                       <span><b>Sınıf:</b> ${g}. Sınıf - ${s} Şubesi</span>
-                       <i class="fas fa-times" style="color:#d63031; cursor:pointer;" onclick="app.removeAdminCodeSubjectClass('${c}')"></i>
-                   </div>`;
-});
-},
-
-// Link ile Sınav Tarihi Yükleme Mantığıyla Güncellenmiş Metot
-async adminPublishAnnouncement() {
-const text = document.getElementById('adm-ann-text').value.trim();
-if(!text) return this.toast("Lütfen başlık veya metin giriniz!", "error");
-
-const mode = document.getElementById('adm-target-mode').value;
-const school = document.getElementById('adm-school-select').value;
-const annType = document.getElementById('adm-ann-type').value;
-
-if(mode === 'class' && this.admSelectedClasses.length > 0) {
-let examUrlMulti = "";
-if(annType === 'exam') {
-examUrlMulti = document.getElementById('adm-exam-url-input').value.trim();
-if(!examUrlMulti) return this.toast("Sınav takvimi için URL bağlantı linki girmek zorunludur!", "error");
-}
-for (const c of this.admSelectedClasses) {
-const [g, s] = c.split('-');
-const multiDocData = {
-text, school, grade: g, section: s, targetType: "class",
-homeDocType: annType,
-sender: this.currentUser.username,
-createdAt: serverTimestamp()
-};
-if(annType === 'exam') multiDocData.examUrl = examUrlMulti;
-await addDoc(collection(db, "announcements"), multiDocData);
-}
-this.toast(annType === 'exam' ? "Sınav tarihi bağlantısı başarıyla yüklendi!" : "Duyuru başarıyla yayınlandı!", "success");
-document.getElementById('adm-ann-text').value = "";
-const urlFieldMulti = document.getElementById('adm-exam-url-input');
-if(urlFieldMulti) {
-urlFieldMulti.value = "";
-urlFieldMulti.classList.add('hidden');
-}
-document.getElementById('adm-ann-type').value = "general";
-this.admSelectedClasses = [];
-this.renderAdminClasses();
-this.renderAdminControlList();
-return;
-}
-
-let grade = "";
-let section = "";
-let targetType = "school-all";
-
-if(mode === 'class') {
-grade = document.getElementById('adm-grade-select').value;
-section = document.getElementById('adm-section-select').value;
-targetType = "class";
-}
-
-const docData = {
-text, school, grade, section, targetType,
-homeDocType: annType,
-sender: this.currentUser.username,
-createdAt: serverTimestamp()
-};
-
-// Eğer sınav tarihi türü seçildiyse link bilgisini ekliyoruz
-if(annType === 'exam') {
-const examUrl = document.getElementById('adm-exam-url-input').value.trim();
-if(!examUrl) return this.toast("Sınav takvimi için URL bağlantı linki girmek zorunludur!", "error");
-docData.examUrl = examUrl;
-}
-
-await addDoc(collection(db, "announcements"), docData);
-
-this.toast(annType === 'exam' ? "Sınav tarihi bağlantısı başarıyla yüklendi!" : "Duyuru başarıyla yayınlandı!", "success");
-document.getElementById('adm-ann-text').value = "";
-const urlField = document.getElementById('adm-exam-url-input');
-if(urlField) {
-urlField.value = "";
-urlField.classList.add('hidden');
-}
-document.getElementById('adm-ann-type').value = "general";
-this.renderAdminControlList();
-},
-
-async adminPublishHomework() {
-const title = document.getElementById('adm-hw-title').value.trim();
-const deadline = document.getElementById('adm-hw-date').value;
-if(!title || !deadline) return this.toast("Başlık ve Tarih zorunludur!", "error");
-
-const mode = document.getElementById('adm-target-mode').value;
-const school = document.getElementById('adm-school-select').value;
-
-if(mode === 'class' && this.admSelectedClasses.length > 0) {
-for (const c of this.admSelectedClasses) {
-const [g, s] = c.split('-');
-await addDoc(collection(db, "homeworks"), {
-title,
-subject: document.getElementById('adm-hw-subject').value,
-book: document.getElementById('adm-hw-book').value,
-pages: document.getElementById('adm-hw-pages').value,
-deadline, school, grade: g, section: s, targetType: "class",
-sender: this.currentUser.username,
-createdAt: serverTimestamp()
-});
-}
-this.toast("Ödev başarıyla yayınlandı!", "success");
-document.getElementById('adm-hw-title').value = "";
-this.admSelectedClasses = [];
-this.renderAdminClasses();
-this.renderAdminControlList();
-return;
-}
-
-let grade = "";
-let section = "";
-let targetType = "school-all";
-
-if(mode === 'class') {
-grade = document.getElementById('adm-grade-select').value;
-section = document.getElementById('adm-section-select').value;
-targetType = "class";
-}
-
-await addDoc(collection(db, "homeworks"), {
-title,
-subject: document.getElementById('adm-hw-subject').value,
-book: document.getElementById('adm-hw-book').value,
-pages: document.getElementById('adm-hw-pages').value,
-deadline, school, grade, section, targetType,
-sender: this.currentUser.username,
-createdAt: serverTimestamp()
-});
-
-this.toast("Ödev başarıyla yayınlandı!", "success");
-document.getElementById('adm-hw-title').value = "";
-this.renderAdminControlList();
-},
-
-async renderAdminControlList() {
-const cont = document.getElementById('admin-control-list');
-if(!cont) return;
-cont.innerHTML = "Yükleniyor...";
-
-let html = "";
-const school = document.getElementById('adm-school-select').value;
-const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
-
-const annSnap = await getDocs(collection(db, "announcements"));
-annSnap.forEach(d => {
-const data = d.data();
-if(isRealAdmin || data.school === school) {
-const targetInfo = data.targetType === 'school-all' ? 'Tüm Okul' : `${data.grade}/${data.section}`;
-const subType = data.homeDocType === 'exam' ? 'Sınav Planı' : 'Duyuru';
-html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:12px;">
-                                   <span><b>[${subType} - ${targetInfo}]</b> ${data.text}</span>
-                                   <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteItem('announcements', '${d.id}')"></i>
-                                </div>`;
-}
-});
-
-const hwSnap = await getDocs(collection(db, "homeworks"));
-hwSnap.forEach(d => {
-const data = d.data();
-if(isRealAdmin || data.school === school) {
-const targetInfo = data.targetType === 'school-all' ? 'Tüm Okul' : `${data.grade}/${data.section}`;
-html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:12px;">
-                                   <span><b>[Ödev - ${targetInfo}]</b> ${data.title}</span>
-                                   <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteItem('homeworks', '${d.id}')"></i>
-                                </div>`;
-}
-});
-
-const imgSnap = await getDocs(collection(db, "images"));
-imgSnap.forEach(d => {
-const data = d.data();
-if(isRealAdmin || data.school === school) {
-const targetInfo = data.targetType === 'school-all' ? 'Tüm Okul' : `${data.grade}/${data.section}`;
-const subType = data.homeDocType === 'worksheet' ? 'Çalışma Kağıdı' : 'Dosya';
-html += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:12px;">
-                                   <span><b>[${subType} - ${targetInfo}]</b> ${data.fileName || 'Medya'}</span>
-                                   <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteItem('images', '${d.id}', '${data.storagePath || ''}')"></i>
-                                </div>`;
-}
-});
-
-cont.innerHTML = html === "" ? "<p style='font-size:11px; color:#999;'>Bu okula ait yayınlanmış içerik yok.</p>" : html;
-},
-
-onAdminSchoolChange() {
-this.renderAdminControlList();
-},
-
-async adminAddSchool() {
-const name = document.getElementById('new-school-name').value.trim();
-if(!name) return;
-this.allSchools.push(name);
-await setDoc(doc(db, "config", "schools"), { list: this.allSchools });
-this.toast("Okul Ekleme Başarılı!", "success");
-this.renderAdminPanel();
-},
-
-async adminSaveUpdate(active) {
-const link = document.getElementById('cfg-link').value;
-await setDoc(doc(db, "config", "updates"), { active, link });
-this.toast("Güncelleme Ayarı Kaydedildi!", "success");
-},
-
-async resetSystemData() {
-if(await this.customConfirm("DİKKAT! Tüm öğrenci hesapları ve durum verileri silinecek (Admin/Mod hariç). Emin misiniz?")) {
-const userSnap = await getDocs(collection(db, "users"));
-userSnap.forEach(async (uDoc) => {
-const u = uDoc.data();
-const lowerName = u.username.toLowerCase();
-const isAdminUser = lowerName === "künefe" || u.isAdmin;
-
-if(!isAdminUser) {
-await deleteDoc(doc(db, "users", u.username));
-await deleteDoc(doc(db, "status", u.username));
-}
-});
-this.toast("Sistem başarıyla sıfırlandı!", "success");
-setTimeout(() => location.reload(), 1000);
-}
-},
-
-async renderTeacherPanel() {
-const main = document.getElementById('main-content');
-let gradeOptionsMarkup = "";
-for(let i=1; i<=12; i++) {
-gradeOptionsMarkup += `<option value="${i}">${i}. Sınıf Kademesi</option>`;
-}
-
-main.innerHTML = `
-                   <h3>Öğretmen Paneli</h3>
-                   <p style="font-size:13px; margin-bottom:10px;">Sınıfınız: ${this.currentUser.grade}/${this.currentUser.section}</p>
-                   
-                   <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px; border: 1.5px solid #eee;">
-                       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                           <p style="font-weight:bold; color:#2ecc71; margin:0;"><i class="fas fa-file-upload"></i> Künefe Al - Çalışma Kağıdı Ekle</p>
-                           <button type="button" class="btn-main" style="width:auto; margin:0; padding:6px 12px; font-size:13px; border-radius:20px;" onclick="app.openTeacherFileBrowser()"><i class="fas fa-plus"></i></button>
-                       </div>
-                       
-                       <input type="file" id="teacher-hidden-file-input" class="hidden" onchange="app.uploadUniversalFile('teacher-hidden-file-input', 'teacher_worksheet')">
-                       
-                       <label style="font-size:12px;">Hedef Sınıf Kademesi:</label>
-                       <select id="teacher-ws-grade-select" onchange="app.onTeacherGradeSelectChange()" style="margin-bottom:10px;">${gradeOptionsMarkup}</select>
-                       
-                       <label style="font-size:12px;">Ders Kategorisi:</label>
-                       <select id="teacher-ws-subject-select" style="margin-bottom:10px;">
-                           <option value="">-- Ders Seçin --</option>
-                       </select>
-
-                       <input type="text" id="teacher-ws-title" placeholder="Çalışma Kağıdı Başlığı">
-                       <input type="url" id="teacher-ws-url" placeholder="Çalışma Kağıdı Linki (URL)">
-                       
-                       <button class="btn-success" onclick="app.addWorksheetLink()">Bağlantıyı Yayınla</button>
-                   </div>
-
-                   <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px;">
-                       <p style="margin-bottom:10px;"><b>Yayınladığınız Çalışma Kağıtları</b></p>
-                       <div id="teacher-worksheets-list">Yükleniyor...</div>
-                   </div>
-
-                   <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px; border: 1.5px solid #ff9f43;">
-                       <p style="font-weight:bold; color:#ff9f43; margin:0 0 5px 0;"><i class="fas fa-user-check"></i> Sınıf Öğrenci Katılım</p>
-                       <p style="font-size:12px; color:#888; margin-bottom:10px;">Bu sınıfa kayıt olmak isteyen ve onayınızı bekleyen öğrenciler.</p>
-                       <div id="teacher-pending-list">Yükleniyor...</div>
-                   </div>
-               `;
-this.onTeacherGradeSelectChange();
-this.renderTeacherWorksheetsList();
-this.renderTeacherPendingRequests();
-},
-
-// === [YENİ] Sınıf öğretmeni onay sistemi yardımcı metotları ===
-async findHomeroomTeacher(school, grade, section) {
-const classStr = String(grade) + "-" + String(section);
-const snap = await getDocs(query(collection(db, "users"), where("isTeacher", "==", true)));
-let found = null;
-snap.forEach(d => {
-const u = d.data();
-if(u.school === school && u.homeroomClasses && u.homeroomClasses.includes(classStr)) {
-found = d.id;
-}
-});
-return found;
-},
-
-async renderTeacherPendingRequests() {
-const cont = document.getElementById('teacher-pending-list');
-if(!cont) return;
-cont.innerHTML = "<p style='font-size:12px; color:#666;'>Yükleniyor...</p>";
-const snap = await getDocs(query(collection(db, "pending_students"), where("teacherUsername", "==", this.currentUser.username), where("status", "==", "pending")));
-if(snap.empty) {
-cont.innerHTML = "<p style='font-size:12px; color:#999;'>Onay bekleyen öğrenci bulunmuyor.</p>";
-return;
-}
-cont.innerHTML = "";
-snap.forEach(d => {
-const p = d.data();
-const item = document.createElement('div');
-item.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:10px; margin-bottom:8px; border-radius:8px;";
-item.innerHTML = `
-<div style="flex:1;">
-<div style="font-weight:bold; font-size:14px;"><i class="fas fa-user-graduate"></i> ${p.username}</div>
-<div style="font-size:12px; color:#666; margin-top:3px;">${p.school} — ${p.grade}/${p.section}</div>
-</div>
-<div style="display:flex; gap:6px;">
-<button class="btn-success" style="width:auto; margin:0; padding:8px 14px; font-size:12px; border-radius:20px;" onclick="app.approveStudent('${p.username}')"><i class="fas fa-check"></i> Kabul Et</button>
-<button class="btn-danger" style="width:auto; margin:0; padding:8px 14px; font-size:12px; border-radius:20px;" onclick="app.rejectStudent('${p.username}')"><i class="fas fa-times"></i> Reddet</button>
-</div>`;
-cont.appendChild(item);
-});
-},
-
-async approveStudent(username) {
-if(!(await this.customConfirm(username + " isimli öğrenciyi sınıfınıza kabul ediyor musunuz?"))) return;
-const pDoc = await getDoc(doc(db, "pending_students", username));
-if(!pDoc.exists()) return this.toast("Bu başvuru bulunamadı.", "error");
-const p = pDoc.data();
-const userData = { ...(p.userData || p) };
-userData.isBlocked = false;
-delete userData.teacherUsername;
-delete userData.classStr;
-delete userData.status;
-delete userData.createdAt;
-await setDoc(doc(db, "users", username), userData);
-await updateDoc(doc(db, "pending_students", username), { status: "accepted" });
-this.toast(username + " sınıfınıza kabul edildi! Hesabı açıldı.", "success");
-this.renderTeacherPendingRequests();
-},
-
-async rejectStudent(username) {
-if(!(await this.customConfirm(username + " isimli öğrencinin kaydını reddetmek istiyor musunuz? Hesabı açılmayacaktır."))) return;
-await deleteDoc(doc(db, "pending_students", username));
-this.toast(username + " reddedildi, hesabı açılmayacak.", "success");
-this.renderTeacherPendingRequests();
-},
-
-async onTeacherGradeSelectChange() {
-const gradeSelect = document.getElementById('teacher-ws-grade-select');
-const subjectSelect = document.getElementById('teacher-ws-subject-select');
-if(!gradeSelect || !subjectSelect) return;
-
-subjectSelect.innerHTML = `<option value="">-- Ders Seçin --</option>`;
-const selectedGrade = gradeSelect.value;
-if(!selectedGrade) return;
-
-const q = query(collection(db, "subjects"), where("grades", "array-contains", String(selectedGrade)));
-const snap = await getDocs(q);
-snap.forEach(d => {
-const data = d.data();
-if(data.school && data.school !== this.currentUser.school) return;
-subjectSelect.innerHTML += `<option value="${data.name}">${data.name}</option>`;
-});
-},
-
-async renderTeacherWorksheetsList() {
-const cont = document.getElementById('teacher-worksheets-list');
-if(!cont) return;
-cont.innerHTML = "";
-
-const q = query(collection(db, "images"), where("sender", "==", this.currentUser.username), where("homeDocType", "==", "worksheet"));
-const snap = await getDocs(q);
-if(snap.empty) {
-cont.innerHTML = "<p style='font-size:12px; color:#999;'>Henüz bir çalışma kağıdı yüklemediniz.</p>";
-return;
-}
-
-snap.forEach(d => {
-const data = d.data();
-cont.innerHTML += `
-                       <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:8px; margin-bottom:5px; border-radius:5px; font-size:12px;">
-                           <span><b>[${data.grade}. Sınıf - ${data.subjectCategory || 'Genel'}]</b> ${data.fileName}</span>
-                           <i class="fas fa-trash" style="color:#d63031; cursor:pointer;" onclick="app.deleteTeacherItem('${d.id}', '${data.storagePath || ''}')"></i>
-                       </div>
-                   `;
-});
-},
-
-async deleteTeacherItem(id, storagePath) {
-if(await this.customConfirm("Bu çalışma kağıdını kaldırmak istediğinize emin misiniz?")) {
-if(storagePath) {
-const fileRef = ref(storage, storagePath);
-await deleteObject(fileRef).catch(e => console.log("Dosya bulunamadı."));
-}
-await deleteDoc(doc(db, "images", id));
-this.toast("İçerik kaldırıldı.", "success");
-this.renderTeacherWorksheetsList();
-}
-},
-
-renderSettings() {
-const main = document.getElementById('main-content');
-                const u = this.currentUser;
-                const lowerName = u.username.toLowerCase();
-                const isRealAdmin = lowerName === "künefe" || u.isAdmin;
-                const isMod = u.isMod;
-                const isTeacher = u.isTeacher;
-
-                const currentTheme = this.getUserTheme();
-                const themes = [
-                    { id: 'light', label: 'Klasik Açık', bg: '#f0f2f5', card: '#ffffff', accent: '#ff9f43' },
-                    { id: 'dark', label: 'Karanlık', bg: '#18191a', card: '#242526', accent: '#ff9f43' },
-                    { id: 'dark-blue', label: 'Gece Mavisi', bg: '#0d1b2a', card: '#1b2a3b', accent: '#4fc3f7' },
-                    { id: 'dark-purple', label: 'Mor Gece', bg: '#1a0a2e', card: '#2d1b4e', accent: '#ce93d8' },
-                    { id: 'dark-green', label: 'Orman', bg: '#0a1f0a', card: '#1b3a1b', accent: '#81c784' },
-                    { id: 'dark-red', label: 'Kızıl', bg: '#1f0a0a', card: '#3a1b1b', accent: '#ef9a9a' },
-                    { id: 'light-blue', label: 'Gün Mavisi', bg: '#e3f2fd', card: '#ffffff', accent: '#1976d2' },
-                    { id: 'light-green', label: 'Bahar', bg: '#e8f5e9', card: '#ffffff', accent: '#43a047' },
-                    { id: 'light-purple', label: 'Lavanta', bg: '#f3e5f5', card: '#ffffff', accent: '#8e24aa' },
-                    { id: 'sunset', label: 'Gün Batımı', bg: '#fff3e0', card: '#ffe0b2', accent: '#ff5722' },
-                    { id: 'ocean', label: 'Okyanus', bg: '#e0f7fa', card: '#b2ebf2', accent: '#0097a7' },
-                    { id: 'custom', label: '🎨 Özel Renk', bg: '#ffffff', card: '#f5f5f5', accent: '#ff9f43' },
-                ];
-
-                let themeGridHtml = '';
-                themes.forEach(t => {
-                    const sel = currentTheme === t.id ? 'selected' : '';
-                    themeGridHtml += `
-                        <div class="theme-option ${sel}" onclick="app.selectTheme('${t.id}')" id="theme-opt-${t.id}">
-                            <div class="theme-preview-dot" style="background:${t.accent}; box-shadow: 0 0 0 4px ${t.bg}, 0 0 0 6px ${t.card};"></div>
-                            <div style="color:var(--text);">${t.label}</div>
-                        </div>
-                    `;
-                });
-
-                const savedCustom = this.getCustomColors();
-                const customHidden = currentTheme !== 'custom' ? 'style="display:none;"' : '';
-
-main.innerHTML = `
-                    <h3>Ayarlar</h3>
-                    <div style="background:var(--card); padding:15px; border-radius:15px; margin-top:15px;">
-                        <button class="btn-main" style="background:#34495e; margin-bottom:10px;" onclick="document.body.classList.toggle('dark-mode')"><i class="fas fa-moon"></i> Görünüm Modu Değiştir</button>
-                    <h3><i class="fas fa-cog"></i> Ayarlar</h3>
-
-                    <!-- KULLANICI ADI DEĞİŞTİRME -->
-                    <div class="settings-section" style="margin-top:15px;">
-                        <h4><i class="fas fa-user-edit"></i> Kullanıcı Adı Değiştir</h4>
-                        <input type="text" id="settings-new-username" placeholder="Yeni Kullanıcı Adı" value="${u.username}">
-                        <button class="btn-main" style="background:#2ecc71;" onclick="app.settingsChangeUsername()"><i class="fas fa-check"></i> Kullanıcı Adını Güncelle</button>
-                    </div>
-
-                    <!-- ŞİFRE DEĞİŞTİRME -->
-                    <div class="settings-section">
-                        <h4><i class="fas fa-lock"></i> Şifre Değiştir</h4>
-                        <input type="password" id="settings-old-pass" placeholder="Mevcut Şifreniz">
-                        <input type="password" id="settings-new-pass" placeholder="Yeni Şifre">
-                        <input type="password" id="settings-new-pass2" placeholder="Yeni Şifre (Tekrar)">
-                        <button class="btn-main" style="background:#e74c3c;" onclick="app.settingsChangePassword()"><i class="fas fa-key"></i> Şifreyi Güncelle</button>
-                    </div>
-
-                    <!-- ÖĞRETMEN KODU DEĞİŞTİRME (sadece öğretmenler) -->
-                    ${isTeacher || isMod || isRealAdmin ? `
-                    <div class="settings-section">
-                        <h4><i class="fas fa-id-badge"></i> ${isTeacher ? 'Öğretmen Kodunu' : 'Kodları'} Değiştir</h4>
-                        ${isTeacher ? `
-                        <label style="font-size:12px; font-weight:bold; margin-bottom:5px; display:block;">Öğretmen Kodu (Kayıt için kullanılan kod)</label>
-                        <input type="text" id="settings-teacher-code" placeholder="Yeni Öğretmen Kodu">
-                        <button class="btn-teacher" onclick="app.settingsChangeTeacherCode()"><i class="fas fa-sync"></i> Öğretmen Kodunu Güncelle</button>
-                        ` : ''}
-                        ${isMod || isRealAdmin ? `
-                        <label style="font-size:12px; font-weight:bold; margin-top:10px; margin-bottom:5px; display:block;">İdareci Kodu (1. Kod)</label>
-                        <input type="text" id="settings-manager-code1" placeholder="Yeni İdareci Kodu (1. Kod)">
-                        <label style="font-size:12px; font-weight:bold; margin-top:8px; margin-bottom:5px; display:block;">İdareci 2. Şifresi</label>
-                        <input type="password" id="settings-manager-code2" placeholder="Yeni 2. Şifre">
-                        <button class="btn-admin" style="margin-top:5px;" onclick="app.settingsChangeManagerCodes()"><i class="fas fa-sync"></i> İdareci Kodlarını Güncelle</button>
-                        ` : ''}
-                    </div>
-                    ` : ''}
-
-                    <!-- TEMA SEÇİCİ -->
-                    <div class="settings-section">
-                        <h4><i class="fas fa-palette"></i> Tema Seçimi</h4>
-                        <p style="font-size:12px; color:#888; margin-bottom:10px;">Seçtiğiniz tema yalnızca size özel kaydedilir ve her oturumda otomatik uygulanır.</p>
-                        <div class="theme-grid" id="theme-grid-container">
-                            ${themeGridHtml}
-                        </div>
-
-                        <!-- ÖZEL RENK ALANI -->
-                        <div class="custom-colors-section" id="custom-color-section" ${customHidden}>
-                            <p style="font-size:13px; font-weight:bold; margin-bottom:10px; color:var(--text);">🎨 Kendi Renk Paletini Oluştur</p>
-                            <div class="color-row">
-                                <label>Arka Plan Rengi</label>
-                                <input type="color" id="custom-bg-color" value="${savedCustom.bg}" oninput="app.previewCustomTheme()">
-                            </div>
-                            <div class="color-row">
-                                <label>Kart / Panel Rengi</label>
-                                <input type="color" id="custom-card-color" value="${savedCustom.card}" oninput="app.previewCustomTheme()">
-                            </div>
-                            <div class="color-row">
-                                <label>Yazı Rengi</label>
-                                <input type="color" id="custom-text-color" value="${savedCustom.text}" oninput="app.previewCustomTheme()">
-                            </div>
-                            <div class="color-row">
-                                <label>Alt Bar / Nav Rengi</label>
-                                <input type="color" id="custom-nav-color" value="${savedCustom.nav}" oninput="app.previewCustomTheme()">
-                            </div>
-                            <div class="color-row">
-                                <label>Ana Vurgu Rengi</label>
-                                <input type="color" id="custom-accent-color" value="${savedCustom.accent}" oninput="app.previewCustomTheme()">
-                            </div>
-                            <div class="color-row">
-                                <label>İkincil Vurgu</label>
-                                <input type="color" id="custom-accent2-color" value="${savedCustom.accent2}" oninput="app.previewCustomTheme()">
-                            </div>
-                            <button class="btn-main" style="background:linear-gradient(135deg,#ff9f43,#e84393);" onclick="app.saveCustomTheme()"><i class="fas fa-save"></i> Özel Temayı Kaydet</button>
-                        </div>
-                    </div>
-
-                    <!-- ÇIKIŞ -->
-                    <div class="settings-section">
-                        <h4><i class="fas fa-sign-out-alt"></i> Hesap</h4>
-                       <button class="btn-danger" onclick="app.logout()"><i class="fas fa-sign-out-alt"></i> Güvenli Çıkış Yap</button>
-                   </div>
-               `;
-},
-
-            // =============================================
-            // TEMA SİSTEMİ FONKSİYONLARI
-            // =============================================
-
-            getUserTheme() {
-                if(!this.currentUser) return 'light';
-                return localStorage.getItem('theme_' + this.currentUser.username) || 'light';
-            },
-
-            getCustomColors() {
-                if(!this.currentUser) return { bg:'#f0f2f5', card:'#ffffff', text:'#333333', nav:'#ffffff', accent:'#ff9f43', accent2:'#e67e22' };
-                const saved = localStorage.getItem('custom_theme_' + this.currentUser.username);
-                if(saved) {
-                    try { return JSON.parse(saved); } catch(e) {}
-                }
-                return { bg:'#f0f2f5', card:'#ffffff', text:'#333333', nav:'#ffffff', accent:'#ff9f43', accent2:'#e67e22' };
-            },
-
-            applyUserTheme() {
-                if(!this.currentUser) return;
-                const theme = this.getUserTheme();
-                // Tüm tema classlarını temizle
-                const allThemeClasses = ['theme-dark','theme-dark-blue','theme-dark-purple','theme-dark-green','theme-dark-red','theme-light','theme-light-blue','theme-light-green','theme-light-purple','theme-sunset','theme-ocean','theme-custom','dark-mode'];
-                allThemeClasses.forEach(c => document.body.classList.remove(c));
-
-                if(theme === 'light') {
-                    // varsayılan, class eklemeye gerek yok
-                } else if(theme === 'custom') {
-                    document.body.classList.add('theme-custom');
-                    const colors = this.getCustomColors();
-                    this.applyCSSCustomColors(colors);
-                } else {
-                    document.body.classList.add('theme-' + theme);
-                    if(theme === 'dark') document.body.classList.add('dark-mode');
-                }
-            },
-
-            applyCSSCustomColors(colors) {
-                const root = document.documentElement;
-                root.style.setProperty('--custom-bg', colors.bg);
-                root.style.setProperty('--custom-card', colors.card);
-                root.style.setProperty('--custom-text', colors.text);
-                root.style.setProperty('--custom-nav', colors.nav);
-                root.style.setProperty('--custom-accent', colors.accent);
-                root.style.setProperty('--custom-accent2', colors.accent2);
-            },
-
-            selectTheme(themeId) {
-                if(!this.currentUser) return;
-
-                // Özel tema seçildiyse paneli göster
-                const customSection = document.getElementById('custom-color-section');
-                if(customSection) {
-                    customSection.style.display = themeId === 'custom' ? 'block' : 'none';
-                }
-
-                // Seçili görsel işaretlemesi
-                document.querySelectorAll('.theme-option').forEach(el => el.classList.remove('selected'));
-                const optEl = document.getElementById('theme-opt-' + themeId);
-                if(optEl) optEl.classList.add('selected');
-
-                // Eğer özel değilse hemen uygula ve kaydet
-                if(themeId !== 'custom') {
-                    localStorage.setItem('theme_' + this.currentUser.username, themeId);
-                    this.applyUserTheme();
-                    this.toast('Tema uygulandı: ' + themeId.replace(/-/g,' '), 'success');
-                }
-            },
-
-            previewCustomTheme() {
-                const bgEl = document.getElementById('custom-bg-color');
-                const cardEl = document.getElementById('custom-card-color');
-                const textEl = document.getElementById('custom-text-color');
-                const navEl = document.getElementById('custom-nav-color');
-                const accentEl = document.getElementById('custom-accent-color');
-                const accent2El = document.getElementById('custom-accent2-color');
-                if(!bgEl) return;
-                const colors = {
-                    bg: bgEl.value, card: cardEl.value, text: textEl.value,
-                    nav: navEl.value, accent: accentEl.value, accent2: accent2El.value
-                };
-                // Tüm diğer tema classlarını kaldır, özel uygula
-                const allThemeClasses = ['theme-dark','theme-dark-blue','theme-dark-purple','theme-dark-green','theme-dark-red','theme-light','theme-light-blue','theme-light-green','theme-light-purple','theme-sunset','theme-ocean','dark-mode'];
-                allThemeClasses.forEach(c => document.body.classList.remove(c));
-                document.body.classList.add('theme-custom');
-                this.applyCSSCustomColors(colors);
-            },
-
-            saveCustomTheme() {
-                if(!this.currentUser) return;
-                const bgEl = document.getElementById('custom-bg-color');
-                const cardEl = document.getElementById('custom-card-color');
-                const textEl = document.getElementById('custom-text-color');
-                const navEl = document.getElementById('custom-nav-color');
-                const accentEl = document.getElementById('custom-accent-color');
-                const accent2El = document.getElementById('custom-accent2-color');
-                if(!bgEl) return;
-                const colors = {
-                    bg: bgEl.value, card: cardEl.value, text: textEl.value,
-                    nav: navEl.value, accent: accentEl.value, accent2: accent2El.value
-                };
-                localStorage.setItem('custom_theme_' + this.currentUser.username, JSON.stringify(colors));
-                localStorage.setItem('theme_' + this.currentUser.username, 'custom');
-                this.applyUserTheme();
-                this.toast('Özel tema başarıyla kaydedildi!', 'success');
-            },
-
-            // =============================================
-            // AYARLAR: ŞİFRE & KULLANICI ADI DEĞİŞTİRME
-            // =============================================
-
-            async settingsChangeUsername() {
-const newName = document.getElementById('settings-new-username').value.trim();
-if(!newName) return this.toast('Kullanıcı adı boş olamaz!', 'error');
-if(newName.toLowerCase() === this.currentUser.username.toLowerCase()) return this.toast('Bu zaten mevcut kullanıcı adınız!', 'error');
-if(await this.isUsernameTaken(newName)) return this.toast('Bu kullanıcı adı zaten alınmış! (Büyük/küçük harf farkı önemli değil)', 'error');
-
-                const oldUsername = this.currentUser.username;
-                const oldData = { ...this.currentUser, username: newName };
-                await setDoc(doc(db, 'users', newName), oldData);
-                await deleteDoc(doc(db, 'users', oldUsername));
-
-                // Durum verisini de taşı
-                try {
-                    const statusData = await getDoc(doc(db, 'status', oldUsername));
-                    if(statusData.exists()) {
-                        await setDoc(doc(db, 'status', newName), statusData.data());
-                        await deleteDoc(doc(db, 'status', oldUsername));
-                    }
-                } catch(e) {}
-
-                this.currentUser = oldData;
-                document.getElementById('display-name').innerText = newName;
-                this.toast('Kullanıcı adı başarıyla değiştirildi!', 'success');
-            },
-
-            async settingsChangePassword() {
-                const oldPass = document.getElementById('settings-old-pass').value;
-                const newPass = document.getElementById('settings-new-pass').value;
-                const newPass2 = document.getElementById('settings-new-pass2').value;
-
-                if(!oldPass || !newPass || !newPass2) return this.toast('Lütfen tüm şifre alanlarını doldurun!', 'error');
-                if(oldPass !== this.currentUser.password) return this.toast('Mevcut şifreniz yanlış!', 'error');
-                if(newPass !== newPass2) return this.toast('Yeni şifreler eşleşmiyor!', 'error');
-                if(newPass.length < 4) return this.toast('Yeni şifre en az 4 karakter olmalıdır!', 'error');
-
-                await updateDoc(doc(db, 'users', this.currentUser.username), { password: newPass });
-                this.currentUser.password = newPass;
-                document.getElementById('settings-old-pass').value = '';
-                document.getElementById('settings-new-pass').value = '';
-                document.getElementById('settings-new-pass2').value = '';
-                this.toast('Şifreniz başarıyla güncellendi!', 'success');
-            },
-
-            async settingsChangeTeacherCode() {
-                const newCode = document.getElementById('settings-teacher-code').value.trim();
-                if(!newCode) return this.toast('Yeni öğretmen kodu boş olamaz!', 'error');
-
-                // Mevcut öğretmen kodunu bul ve güncelle (registration_codes koleksiyonunda)
-                const q = query(collection(db, 'registration_codes'), where('type', '==', 'teacher'), where('usedBy', '==', this.currentUser.username));
-                const snap = await getDocs(q);
-                if(snap.empty) return this.toast('Mevcut öğretmen kodunuz bulunamadı!', 'error');
-
-                snap.forEach(async d => {
-                    await updateDoc(doc(db, 'registration_codes', d.id), { code: newCode });
-                });
-                document.getElementById('settings-teacher-code').value = '';
-                this.toast('Öğretmen kodunuz başarıyla güncellendi!', 'success');
-            },
-
-            async settingsChangeManagerCodes() {
-                const newCode1 = document.getElementById('settings-manager-code1').value.trim();
-                const newCode2 = document.getElementById('settings-manager-code2').value.trim();
-
-                if(!newCode1 && !newCode2) return this.toast('En az bir alan doldurulmalıdır!', 'error');
-
-                // Mevcut idareci kodunu bul
-                const q = query(collection(db, 'registration_codes'), where('type', '==', 'manager'), where('usedBy', '==', this.currentUser.username));
-                const snap = await getDocs(q);
-                if(snap.empty) return this.toast('Mevcut idareci kodunuz bulunamadı!', 'error');
-
-                const updates = {};
-                if(newCode1) updates.code = newCode1;
-                if(newCode2) updates.password = newCode2;
-
-                snap.forEach(async d => {
-                    await updateDoc(doc(db, 'registration_codes', d.id), updates);
-                });
-
-                // LocalStorage'daki kayıtlı kodları da güncelle
-                if(newCode1) localStorage.setItem('saved_manager_code1', newCode1);
-                if(newCode2) localStorage.setItem('saved_manager_code2', newCode2);
-
-                document.getElementById('settings-manager-code1').value = '';
-                document.getElementById('settings-manager-code2').value = '';
-                this.toast('İdareci kodlarınız başarıyla güncellendi!', 'success');
-            },
-
-openChat(targetUsername) {
-if(targetUsername === this.currentUser.username) return this.toast("Kendinizle mesajlaşamazsınız!", "error");
-this.activeChat = targetUsername;
-document.getElementById('chat-target-name').innerText = targetUsername;
-document.getElementById('chat-window').classList.remove('hidden');
-document.getElementById('chat-messages').innerHTML = "Yükleniyor...";
-this.listenMessages();
-},
-
-listenMessages() {
-if(this.unsubscribeChat) this.unsubscribeChat();
-
-const cont = document.getElementById('chat-messages');
-const q = query(collection(db, "messages"), orderBy("createdAt", "asc"));
-
-this.unsubscribeChat = onSnapshot(q, (snap) => {
-cont.innerHTML = "";
-snap.forEach(d => {
-const m = d.data();
-const isMe = m.sender === this.currentUser.username && m.receiver === this.activeChat;
-const isThem = m.sender === this.activeChat && m.receiver === this.currentUser.username;
-
-if(isMe || isThem) {
-const bubble = document.createElement('div');
-bubble.className = `bubble ${isMe ? 'msg-me' : 'msg-them'}`;
-bubble.innerText = m.text;
-cont.appendChild(bubble);
-}
-});
-cont.scrollTop = cont.scrollHeight;
-});
-},
-
-async sendMessage() {
-const input = document.getElementById('msg-input');
-const text = input.value.trim();
-if(!text || !this.activeChat) return;
-
-await addDoc(collection(db, "messages"), {
-sender: this.currentUser.username,
-receiver: this.activeChat,
-text: text,
-createdAt: serverTimestamp()
-});
-input.value = "";
-},
-
-async renderMessageList() {
-const main = document.getElementById('main-content');
-main.innerHTML = `<h3>Mesajlar</h3><div id="msg-inbox-list" style="margin-top:10px;">Yükleniyor...</div>`;
-
-const snap = await getDocs(collection(db, "users"));
-const inboxCont = document.getElementById('msg-inbox-list');
-inboxCont.innerHTML = "";
-
-snap.forEach(uDoc => {
-const u = uDoc.data();
-if(u.username !== this.currentUser.username) {
-const item = document.createElement('div');
-item.className = 'user-item';
-const isOnline = this.activeUsers.has(u.username);
-const dotClass = isOnline ? 'status-active' : 'status-offline';
-
-item.innerHTML = `<span><span class="status-dot ${dotClass}"></span><b>${u.username}</b></span><i class="fas fa-chevron-right" style="color:#ccc;"></i>`;
-item.onclick = () => this.openChat(u.username);
-inboxCont.appendChild(item);
-}
-});
-if(inboxCont.innerHTML === "") inboxCont.innerHTML = "<p style='font-size:12px; color:#999;'>Mesajlaşabileceğiniz kimse bulunmuyor.</p>";
-}
-};
-
-window.addEventListener('DOMContentLoaded', () => { app.init(); });
-</script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286066428c06055',t:'MTc4NjI3MDc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
-</html>
+23An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+displayBid @ hbdbrk_213686de40e315b19b70_m.js:1
+showAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+onEvent @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+displayBid @ hbdbrk_213686de40e315b19b70_m.js:1
+showAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+onEvent @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+renderedAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+onEndPosRender @ hbdbrk_213686de40e315b19b70_m.js:1
+register @ hbdbrk_213686de40e315b19b70_m.js:1
+register @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+trigger @ hbdbrk_213686de40e315b19b70_m.js:1
+handle @ hbdbrk_213686de40e315b19b70_m.js:1
+ut @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+displayBid @ hbdbrk_213686de40e315b19b70_m.js:1
+showAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+onEvent @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+renderedAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+onEndPosRender @ hbdbrk_213686de40e315b19b70_m.js:1
+register @ hbdbrk_213686de40e315b19b70_m.js:1
+register @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+trigger @ hbdbrk_213686de40e315b19b70_m.js:1
+handle @ hbdbrk_213686de40e315b19b70_m.js:1
+ut @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+displayBid @ hbdbrk_213686de40e315b19b70_m.js:1
+showAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+onEvent @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+renderedAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+onEndPosRender @ hbdbrk_213686de40e315b19b70_m.js:1
+register @ hbdbrk_213686de40e315b19b70_m.js:1
+register @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+trigger @ hbdbrk_213686de40e315b19b70_m.js:1
+handle @ hbdbrk_213686de40e315b19b70_m.js:1
+ut @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+displayBid @ hbdbrk_213686de40e315b19b70_m.js:1
+showAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+onEvent @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+renderedAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+onEndPosRender @ hbdbrk_213686de40e315b19b70_m.js:1
+register @ hbdbrk_213686de40e315b19b70_m.js:1
+register @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+trigger @ hbdbrk_213686de40e315b19b70_m.js:1
+handle @ hbdbrk_213686de40e315b19b70_m.js:1
+ut @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+displayBid @ hbdbrk_213686de40e315b19b70_m.js:1
+showAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+onEvent @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+showAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+onEvent @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+renderedAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+onEndPosRender @ hbdbrk_213686de40e315b19b70_m.js:1
+register @ hbdbrk_213686de40e315b19b70_m.js:1
+register @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+trigger @ hbdbrk_213686de40e315b19b70_m.js:1
+handle @ hbdbrk_213686de40e315b19b70_m.js:1
+ut @ hbdbrk_213686de40e315b19b70_m.js:1
+hbdbrk_213686de40e315b19b70_m.js:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+_displayCreative @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+displayBid @ hbdbrk_213686de40e315b19b70_m.js:1
+showAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+onEvent @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+showAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+onEvent @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+showAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+onEvent @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+showAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+onEvent @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_refreshSlot @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+setTimeout
+registerRefresh @ hbdbrk_213686de40e315b19b70_m.js:1
+showAd @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+onEvent @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+Promise.then
+_launchBids @ hbdbrk_213686de40e315b19b70_m.js:1
+_launchBidsFromElements @ hbdbrk_213686de40e315b19b70_m.js:1
+displayAdsOnElement @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+_execBidingCallback @ hbdbrk_213686de40e315b19b70_m.js:1
+(anonymous) @ hbdbrk_213686de40e315b19b70_m.js:1
+tryit.asp?filename=tryhtml_basic:1 Uncaught (in promise) InvalidStateError: Failed to register a ServiceWorker: The document is in an invalid state.
+/cdn-cgi/challenge-platform/scripts/jsd/main.js:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/rum?:1  Failed to load resource: the server responded with a status of 404 ()
+2tryit.asp?filename=tryhtml_basic:281 Uncaught (in promise) The public key is required. Visit https://dashboard.emailjs.com/admin/account
+tryit.asp?filename=tryhtml_basic:1 Uncaught (in promise) InvalidStateError: Failed to register a ServiceWorker: The document is in an invalid state.
+/cdn-cgi/challenge-platform/scripts/jsd/main.js:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/rum?:1  Failed to load resource: the server responded with a status of 404 ()
+20tryit.asp?filename=tryhtml_basic:281 Uncaught (in promise) The public key is required. Visit https://dashboard.emailjs.com/admin/account
+/cdn-cgi/rum?:1  Failed to load resource: the server responded with a status of 404 ()
+tryit.asp?filename=tryhtml_basic:1 Uncaught (in promise) InvalidStateError: Failed to register a ServiceWorker: The document is in an invalid state.
+4tryit.asp?filename=tryhtml_basic:281 Uncaught (in promise) The public key is required. Visit https://dashboard.emailjs.com/admin/account
+/html/manifest.json:1  Failed to load resource: the server responded with a status of 404 ()
+ Uncaught (in promise) InvalidStateError: Failed to register a ServiceWorker: The document is in an invalid state.
+(anonymous) @ (unknown)
+submitTryit @ tryit.asp?filename=tryhtml_basic:819
+onclick @ tryit.asp?filename=tryhtml_basic:730
+14 Uncaught (in promise) The public key is required. Visit https://dashboard.emailjs.com/admin/account
+startRegister @ (unknown)
+ Uncaught (in promise) InvalidStateError: Failed to register a ServiceWorker: The document is in an invalid state.
+(anonymous) @ (unknown)
+submitTryit @ tryit.asp?filename=tryhtml_basic:819
+onclick @ tryit.asp?filename=tryhtml_basic:730
+/cdn-cgi/challenge-platform/scripts/jsd/main.js:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/challenge-platform/scripts/jsd/main.js:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/rum?:1  Failed to load resource: the server responded with a status of 404 ()
+19 Uncaught (in promise) The public key is required. Visit https://dashboard.emailjs.com/admin/account
+startRegister @ (unknown)
+/cdn-cgi/rum?:1  Failed to load resource: the server responded with a status of 404 ()
+ Uncaught (in promise) InvalidStateError: Failed to register a ServiceWorker: The document is in an invalid state.
+(anonymous) @ (unknown)
+submitTryit @ tryit.asp?filename=tryhtml_basic:819
+onclick @ tryit.asp?filename=tryhtml_basic:730
+/cdn-cgi/challenge-platform/scripts/jsd/main.js:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/challenge-platform/scripts/jsd/main.js:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/rum?:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/rum?:1  Failed to load resource: the server responded with a status of 404 ()
+ Uncaught (in promise) InvalidStateError: Failed to register a ServiceWorker: The document is in an invalid state.
+(anonymous) @ (unknown)
+submitTryit @ tryit.asp?filename=tryhtml_basic:819
+onclick @ tryit.asp?filename=tryhtml_basic:730
+/cdn-cgi/challenge-platform/scripts/jsd/main.js:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/challenge-platform/scripts/jsd/main.js:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/rum?:1  Failed to load resource: the server responded with a status of 404 ()
+ Uncaught (in promise) InvalidStateError: Failed to register a ServiceWorker: The document is in an invalid state.
+(anonymous) @ (unknown)
+submitTryit @ tryit.asp?filename=tryhtml_basic:819
+onclick @ tryit.asp?filename=tryhtml_basic:730
+/cdn-cgi/challenge-platform/scripts/jsd/main.js:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/challenge-platform/scripts/jsd/main.js:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/rum?:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/rum?:1  Failed to load resource: the server responded with a status of 404 ()
+tryit.asp?filename=tryhtml_basic:1 Uncaught (in promise) InvalidStateError: Failed to register a ServiceWorker: The document is in an invalid state.
+/cdn-cgi/challenge-platform/scripts/jsd/main.js:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/challenge-platform/scripts/jsd/main.js:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/rum?:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/rum?:1  Failed to load resource: the server responded with a status of 404 ()
+VM4672:1 Uncaught (in promise) InvalidStateError: Failed to register a ServiceWorker: The document is in an invalid state.
+/cdn-cgi/challenge-platform/scripts/jsd/main.js:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/challenge-platform/scripts/jsd/main.js:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/challenge-platform/scripts/jsd/main.js:1  Failed to load resource: the server responded with a status of 404 ()
+/cdn-cgi/rum?:1  Failed to load resource: the server responded with a status of 404 ()
+VM4680 firebase-firestore.js:1 [2026-08-09T10:55:12.535Z]  @firebase/firestore: Firestore (10.7.1): Uncaught Error in snapshot listener: FirebaseError: [code=failed-precondition]: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bizimokul14-4d546/firestore/indexes?create_composite=ClJwcm9qZWN0cy9iaXppbW9rdWwxNC00ZDU0Ni9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvbWVzc2FnZXMvaW5kZXhlcy9fEAEaDAoIZ3JvdXBLZXkQARoNCgljcmVhdGVkQXQQARoMCghfX25hbWVfXxAB
+defaultLogHandler @ VM4680 firebase-firestore.js:1
+VM4680 firebase-firestore.js:1 [2026-08-09T10:55:25.601Z]  @firebase/firestore: Firestore (10.7.1): Uncaught Error in snapshot listener: FirebaseError: [code=failed-precondition]: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bizimokul14-4d546/firestore/indexes?create_composite=ClJwcm9qZWN0cy9iaXppbW9rdWwxNC00ZDU0Ni9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvbWVzc2FnZXMvaW5kZXhlcy9fEAEaDAoIZ3JvdXBLZXkQARoNCgljcmVhdGVkQXQQARoMCghfX25hbWVfXxAB
+defaultLogHandler @ VM4680 firebase-firestore.js:1
+VM4678 v4513226cdae34746b4dedf0b4dfa099e1781791509496:1  POST https://www.w3schools.com/cdn-cgi/rum? 404 (Not Found)
+e.sendObjectBeacon @ VM4678 v4513226cdae34746b4dedf0b4dfa099e1781791509496:1
+E @ VM4678 v4513226cdae34746b4dedf0b4dfa099e1781791509496:1
+(anonymous) @ VM4678 v4513226cdae34746b4dedf0b4dfa099e1781791509496:1
+VM5886:1 Uncaught (in promise) InvalidStateError: Failed to register a ServiceWorker: The document is in an invalid state.
+(anonymous) @ VM5886:1
+submitTryit @ tryit.asp?filename=tryhtml_basic:819
+onclick @ tryit.asp?filename=tryhtml_basic:730
+PendingScript
+submitTryit @ tryit.asp?filename=tryhtml_basic:819
+onclick @ tryit.asp?filename=tryhtml_basic:730
+VM5902:1  GET https://www.w3schools.com/cdn-cgi/challenge-platform/scripts/jsd/main.js net::ERR_ABORTED 404 (Not Found)
+(anonymous) @ VM5902:1
+c @ VM5889:1
+PendingScript
+c @ VM5889:1
+VM5903:1  GET https://www.w3schools.com/cdn-cgi/challenge-platform/scripts/jsd/main.js net::ERR_ABORTED 404 (Not Found)
+(anonymous) @ VM5903:1
+c @ VM5892:1
+PendingScript
+c @ VM5892:1
+VM5904:1  GET https://www.w3schools.com/cdn-cgi/challenge-platform/scripts/jsd/main.js net::ERR_ABORTED 404 (Not Found)
+(anonymous) @ VM5904:1
+c @ VM5895:1
+PendingScript
+c @ VM5895:1
+v4513226cdae34746b4dedf0b4dfa099e1781791509496:1  POST https://www.w3schools.com/cdn-cgi/rum? 404 (Not Found)
+e.sendObjectBeacon @ v4513226cdae34746b4dedf0b4dfa099e1781791509496:1
+S @ v4513226cdae34746b4dedf0b4dfa099e1781791509496:1
+L @ v4513226cdae34746b4dedf0b4dfa099e1781791509496:1
+(anonymous) @ v4513226cdae34746b4dedf0b4dfa099e1781791509496:1
+(anonymous) @ v4513226cdae34746b4dedf0b4dfa099e1781791509496:1
+(anonymous) @ v4513226cdae34746b4dedf0b4dfa099e1781791509496:1
+(anonymous) @ v4513226cdae34746b4dedf0b4dfa099e1781791509496:1
+(anonymous) @ v4513226cdae34746b4dedf0b4dfa099e1781791509496:1
+PendingScript
+submitTryit @ tryit.asp?filename=tryhtml_basic:819
+onclick @ tryit.asp?filename=tryhtml_basic:730
+log.ts:25 [2026-08-09T10:59:45.636Z]  @firebase/firestore: Firestore (10.7.1): Uncaught Error in snapshot listener: FirebaseError: [code=failed-precondition]: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bizimokul14-4d546/firestore/indexes?create_composite=ClJwcm9qZWN0cy9iaXppbW9rdWwxNC00ZDU0Ni9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvbWVzc2FnZXMvaW5kZXhlcy9fEAEaDAoIZ3JvdXBLZXkQARoNCgljcmVhdGVkQXQQARoMCghfX25hbWVfXxAB
+(anonymous) @ base.js:1
+(anonymous) @ log.ts:25
+map @ log.ts:66
+error @ async_observer.ts:48
+onlineState @ event_manager.ts:345
+__PRIVATE_eventManagerOnWatchError @ event_manager.ts:238
+__PRIVATE_removeAndCleanupTarget @ sync_engine_impl.ts:875
+catch @ sync_engine_impl.ts:666
+Promise.then
+__PRIVATE_syncEngineRejectListen @ sync_engine_impl.ts:665
+__PRIVATE_handleTargetError @ remote_store.ts:648
+__PRIVATE_onWatchStreamChange @ remote_store.ts:59
+(anonymous) @ persistent_stream.ts:655
+(anonymous) @ persistent_stream.ts:529
+(anonymous) @ persistent_stream.ts:574
+then @ async_queue_impl.ts:137
+__PRIVATE_operationInProgress @ async_queue_impl.ts:327
+Promise.then
+op @ async_queue_impl.ts:188
+enqueue @ async_queue_impl.ts:135
+enqueueAndForget @ async_queue_impl.ts:96
+(anonymous) @ persistent_stream.ts:572
+(anonymous) @ persistent_stream.ts:527
+Vo @ webchannel_connection.ts:56
+(anonymous) @ webchannel_connection.ts:397
+(anonymous) @ webchannel_connection.ts:298
+B$1 @ eventtarget.js:91
+C$1 @ eventtarget.js:490
+(anonymous) @ webchannelbasetransport.js:429
+(anonymous) @ structs.js:194
+rc @ channelrequest.js:950
+(anonymous) @ channelrequest.js:626
+(anonymous) @ channelrequest.js:656
+B$1 @ eventtarget.js:91
+C$1 @ eventtarget.js:490
+Ad @ xhrio.js:922
+(anonymous) @ xhrio.js:1052
+this @ xhrio.js:1050
+od @ fetchxmlhttpfactory.js:237
+(anonymous) @ fetchxmlhttpfactory.js:419
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:425
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:358
+Promise.then
+(anonymous) @ fetchxmlhttpfactory.js:272
+(anonymous) @ xhrio.js:739
+requestUri_ @ webchanneldebug.js:83
+httpHeadersOverwriteParam_ @ webchannelbase.js:2079
+(anonymous) @ webchannelbase.js:1718
+(anonymous) @ freelist.js:55
+Promise.then
+(anonymous) @ run.js:115
+(anonymous) @ webchannelbase.js:1686
+(anonymous) @ webchannelbase.js:2328
+rc @ channelrequest.js:950
+(anonymous) @ channelrequest.js:626
+(anonymous) @ channelrequest.js:656
+B$1 @ eventtarget.js:91
+C$1 @ eventtarget.js:490
+Ad @ xhrio.js:922
+(anonymous) @ xhrio.js:1052
+this @ xhrio.js:1050
+od @ fetchxmlhttpfactory.js:237
+(anonymous) @ fetchxmlhttpfactory.js:419
+Promise.then
+handleSendFailure_ @ fetchxmlhttpfactory.js:468
+(anonymous) @ fetchxmlhttpfactory.js:358
+Promise.then
+(anonymous) @ fetchxmlhttpfactory.js:272
+(anonymous) @ xhrio.js:739
+requestUri_ @ channelrequest.js:585
+sendXmlHttp_ @ channelrequest.js:547
+opt_retryRequest @ webchannelbase.js:1366
+(anonymous) @ freelist.js:55
+Promise.then
+(anonymous) @ run.js:115
+(anonymous) @ webchannelbase.js:1536
+(anonymous) @ webchannelbasetransport.js:216
+(anonymous) @ webchannel_connection.ts:265
+err @ stream_bridge.ts:85
+e_ @ persistent_stream.ts:319
+u_ @ persistent_stream.ts:672
+__PRIVATE_sendWatchRequest @ remote_store.ts:357
+(anonymous) @ remote_store.ts:414
+__PRIVATE_onWatchStreamOpen @ remote_store.ts:410
+(anonymous) @ persistent_stream.ts:512
+(anonymous) @ persistent_stream.ts:574
+then @ async_queue_impl.ts:137
+__PRIVATE_operationInProgress @ async_queue_impl.ts:327
+Promise.then
+op @ async_queue_impl.ts:188
+enqueue @ async_queue_impl.ts:135
+enqueueAndForget @ async_queue_impl.ts:96
+(anonymous) @ persistent_stream.ts:572
+(anonymous) @ persistent_stream.ts:497
+(anonymous) @ webchannel_connection.ts:50
+(anonymous) @ dom.ts:22
+setTimeout
+(anonymous) @ dom.ts:19
+(anonymous) @ persistent_stream.ts:640
+s_ @ persistent_stream.ts:492
+(anonymous) @ persistent_stream.ts:464
+Promise.then
+auth @ persistent_stream.ts:459
+start @ persistent_stream.ts:263
+__PRIVATE_startWatchStream @ remote_store.ts:389
+__PRIVATE_remoteStoreListen @ remote_store.ts:288
+__PRIVATE_syncEngineListen @ sync_engine_impl.ts:332
+await in __PRIVATE_syncEngineListen
+__PRIVATE_eventManagerListen @ event_manager.ts:99
+asyncQueue @ firestore_client.ts:484
+(anonymous) @ firestore_client.ts:487
+await in (anonymous)
+then @ async_queue_impl.ts:137
+__PRIVATE_operationInProgress @ async_queue_impl.ts:327
+Promise.then
+op @ async_queue_impl.ts:188
+enqueue @ async_queue_impl.ts:135
+enqueueAndForget @ async_queue_impl.ts:96
+__PRIVATE_firestoreClientGetDocumentViaSnapshotListener @ firestore_client.ts:650
+getDoc @ reference_impl.ts:105
+fetchSchools @ VM5888:143
+init @ VM5888:105
+(anonymous) @ VM5888:2928
+banner.js:11 Viewable Start Sun Aug 09 2026 14:02:06 GMT+0300 (Türkiye Standart Saati)
+vw.js:6 Uncaught ReferenceError: callback is not defined
+(anonymous) @ vw.js:6
+setInterval
+watch @ vw.js:6
+trackViewability @ vw.js:6
+l.tagMgr @ vw.js:6
+(anonymous) @ vw.js:6
+(anonymous) @ vw.js:6
+(anonymous) @ vw.js:6
+(anonymous) @ vw.js:6
+banner.js:11 Viewable Complete Sun Aug 09 2026 14:02:07 GMT+0300 (Türkiye Standart Saati)
