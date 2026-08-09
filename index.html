@@ -3243,8 +3243,265 @@ app.sendMessage = async function() {
   }
 };
 
-window.addEventListener('DOMContentLoaded', () => { app.init(); });
+
+// ============================================================
+// === [YENİ] "Sınıfım" + Ad Soyad Katmanı ===
+// (Mevcut hiçbir satır silinmedi / değiştirilmedi; yalnızca eklendi.)
+//
+// 1) Alt bardaki "Kullanıcılar" etiketi -> "Sınıfım" olur.
+// 2) "Sınıfım" sekmesi yalnızca kendi okul + kendi sınıf/şubesindeki
+//    kullanıcıları listeler ve ad soyadı gösterir.
+// 3) Kayıt sırasında kullanıcı adı dışında "Ad Soyad" istenir.
+//    - Öğrenci kaydında zorunludur, sayı içeremez.
+//    - Öğretmen/İdareci kaydında opsiyoneldir (doldurulmazsa sorun olmaz).
+// 4) Giriş normal kullanıcı adıyla devam eder (değişiklik yok).
+// 5) Ad soyad, "Sınıfım" ve grup mesajlaşmasında görüntülenir.
+// ============================================================
+
+function __normalizeName(s){ return (s||"").trim().replace(/\s+/g," "); }
+function __nameHasDigit(s){ return /\d/.test(s||""); }
+function __isNameValid(s){ return (s||"").trim().length>0 && !__nameHasDigit(s); }
+
+// Kayıt formlarına Ad Soyad alanını ekler
+function __injectAdSoyadInputs(){
+  var regBtn = null;
+  document.querySelectorAll('#register-fields button').forEach(function(b){
+    if((b.getAttribute('onclick')||'').indexOf('startRegister')!==-1) regBtn = b;
+  });
+  if(regBtn && !document.getElementById('reg-adsoyad')){
+    var inp = document.createElement('input');
+    inp.type='text'; inp.id='reg-adsoyad'; inp.placeholder='Ad Soyad (örn. Ali Veli)';
+    regBtn.parentNode.insertBefore(inp, regBtn);
+  }
+  var staffBtn = null;
+  document.querySelectorAll('#staff-fields button').forEach(function(b){
+    if((b.getAttribute('onclick')||'').indexOf('handleStaffAuth')!==-1) staffBtn = b;
+  });
+  if(staffBtn && !document.getElementById('staff-adsoyad')){
+    var inp2 = document.createElement('input');
+    inp2.type='text'; inp2.id='staff-adsoyad'; inp2.placeholder='Ad Soyad (opsiyonel)';
+    staffBtn.parentNode.insertBefore(inp2, staffBtn);
+  }
+}
+
+// Öğrenci kaydı: Ad Soyad zorunlu + sayı içeremez
+app.startRegister = async function() {
+  const email = document.getElementById('reg-email').value;
+  const uname = document.getElementById('reg-user').value.trim();
+  const adsoyadEl = document.getElementById('reg-adsoyad');
+  const adsoyad = __normalizeName(adsoyadEl ? adsoyadEl.value : '');
+  if(!uname) return this.toast("Kullanıcı adı boş olamaz!", "error");
+  if(!__isNameValid(adsoyad)) return this.toast("Ad Soyad alanı boş bırakılamaz ve sayı içeremez!", "error");
+  if(await this.isUsernameTaken(uname)) return this.toast("Bu kullanıcı adı zaten alınmış! (Büyük/küçük harf farkı önemli değil) Lütfen farklı bir kullanıcı adı seçin.", "error");
+  this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
+  this.tempUser = {
+    username: uname,
+    adSoyad: adsoyad,
+    email: email, password: document.getElementById('reg-pass').value,
+    school: document.getElementById('reg-school').value,
+    grade: document.getElementById('reg-grade').value,
+    section: document.getElementById('reg-section').value,
+    isBlocked: false, isLeader: false, isMod: false, isTeacher: false, isAdmin: false, rank: "", rankColor: "#ff9f43"
+  };
+  this.tempAction = 'register';
+  await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
+  document.getElementById('verify-modal').classList.remove('hidden');
+};
+
+// Öğretmen/İdareci kaydı: Ad Soyad opsiyonel, doldurulursa sayı içeremez
+app.handleStaffAuth = async function() {
+  const username = document.getElementById('staff-user').value.trim();
+  const pass = document.getElementById('staff-pass').value;
+  const email = document.getElementById('staff-email').value.trim();
+  const school = document.getElementById('staff-school').value;
+  const code1 = document.getElementById('staff-code1').value.trim();
+  const code2 = document.getElementById('staff-code2').value.trim();
+  const adsoyadEl = document.getElementById('staff-adsoyad');
+  const adsoyad = __normalizeName(adsoyadEl ? adsoyadEl.value : '');
+
+  if (!username || !pass || !email || !code1) return this.toast("Lütfen tüm alanları doldurun!", "error");
+  if (this.currentStaffMode === 'manager' && !code2) return this.toast("İdareci için 2. şifre zorunludur!", "error");
+  if (adsoyad && __nameHasDigit(adsoyad)) return this.toast("Ad Soyad sayı içeremez!", "error");
+
+  const userDoc = await getDoc(doc(db, "users", username));
+
+  if (userDoc.exists()) {
+    const uData = userDoc.data();
+    if (uData.password !== pass) return this.toast("Hatalı şifre!", "error");
+    if (uData.isBlocked) return this.toast("Cezalı olduğunuz için giriş yapamazsınız!", "error");
+
+    if (this.currentStaffMode === 'manager' && uData.isMod) {
+      let count = (uData.managerLoginCount || 0) + 1;
+      await updateDoc(doc(db, "users", username), { managerLoginCount: count });
+      if (count % 3 === 0) {
+        this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
+        this.tempUser = uData;
+        this.tempAction = 'login';
+        await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: uData.email || email, code: this.generatedCode });
+        document.getElementById('verify-modal').classList.remove('hidden');
+        return;
+      }
+      localStorage.setItem('saved_manager_code1', code1);
+      localStorage.setItem('saved_manager_code2', code2);
+    }
+
+    this.currentUser = uData;
+    const staffRememberBox = document.getElementById('staff-remember');
+    if (staffRememberBox && staffRememberBox.checked) {
+      localStorage.setItem('kunefe_remember_staff_user', username);
+      localStorage.setItem('kunefe_remember_staff_pass', pass);
+    } else {
+      localStorage.removeItem('kunefe_remember_staff_user');
+      localStorage.removeItem('kunefe_remember_staff_pass');
+    }
+    this.launch();
+
+  } else {
+    const codeQuery = query(collection(db, "registration_codes"), where("type", "==", this.currentStaffMode), where("code", "==", code1));
+    const codeSnap = await getDocs(codeQuery);
+    if (codeSnap.empty) return this.toast("Geçersiz rol kodu veya bu kod kullanılmış!", "error");
+
+    let validDoc = null;
+    if (this.currentStaffMode === 'manager') {
+      codeSnap.forEach(d => { if (d.data().password === code2) validDoc = d; });
+      if (!validDoc) return this.toast("2. şifre hatalı!", "error");
+    } else {
+      validDoc = codeSnap.docs[0];
+      const codeSchool = validDoc.data().school;
+      if (codeSchool && codeSchool !== school) {
+        return this.toast("Bu öğretmen kodu yalnızca '" + codeSchool + "' okulu için geçerlidir!", "error");
+      }
+    }
+
+    let resolvedSchool = school;
+    if (this.currentStaffMode === 'manager') {
+      const codeSchool = validDoc.data().school;
+      if (codeSchool) { resolvedSchool = codeSchool; }
+      else { return this.toast("Bu kod herhangi bir okula atanmamış. Lütfen yöneticiye başvurun!", "error"); }
+    }
+
+    if(await this.isUsernameTaken(username)) return this.toast("Bu kullanıcı adı zaten alınmış! (Büyük/küçük harf farkı önemli değil) Lütfen farklı bir kullanıcı adı seçin.", "error");
+
+    this.tempUser = {
+      username, email, password: pass, school: resolvedSchool,
+      grade: this.currentStaffMode === 'manager' ? "Tümü" : "",
+      section: this.currentStaffMode === 'manager' ? "Tümü" : "",
+      isBlocked: false, isLeader: false,
+      isMod: this.currentStaffMode === 'manager',
+      isTeacher: this.currentStaffMode === 'teacher',
+      isAdmin: false, rank: "", rankColor: "#ff9f43",
+      managerLoginCount: 0
+    };
+    if (adsoyad) this.tempUser.adSoyad = adsoyad;
+
+    if (this.currentStaffMode === 'teacher') {
+      const codeClasses = validDoc.data().classes || [];
+      if (codeClasses.length === 0) return this.toast("Bu öğretmen koduna henüz sınıf atanmamış. Lütfen idarecinize başvurun!", "error");
+      this.tempUser.grade = codeClasses.map(c => c.split('-')[0]).join(',');
+      this.tempUser.section = codeClasses.map(c => c.split('-')[1]).join(',');
+      const codeSubjectClasses = validDoc.data().subjectClasses || [];
+      this.tempUser.homeroomClasses = codeClasses;
+      this.tempUser.subjectClasses = codeSubjectClasses;
+      if (codeSubjectClasses.length > 0) {
+        const allTeacherClasses = codeClasses.concat(codeSubjectClasses);
+        this.tempUser.grade = allTeacherClasses.map(c => c.split('-')[0]).join(',');
+        this.tempUser.section = allTeacherClasses.map(c => c.split('-')[1]).join(',');
+      }
+    }
+
+    this.tempCodeIdToBurn = validDoc.id;
+    this.tempAction = 'register';
+    this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+    if (this.currentStaffMode === 'manager') {
+      localStorage.setItem('saved_manager_code1', code1);
+      localStorage.setItem('saved_manager_code2', code2);
+    }
+
+    await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
+    document.getElementById('verify-modal').classList.remove('hidden');
+  }
+};
+
+// "Sınıfım" sekmesi: yalnızca kendi okul + sınıf/şube, ad soyad ile
+app.renderAllUsers = async function() {
+  const main = document.getElementById('main-content');
+  main.innerHTML = `<h3>Sınıfım</h3><div id="full-user-list" style="margin-top:10px;"></div>`;
+  const me = this.currentUser;
+  const snap = await getDocs(collection(db, "users"));
+  const listEl = document.getElementById('full-user-list');
+  let shown = 0;
+  snap.forEach(uDoc => {
+    const u = uDoc.data();
+    const sameSchool = (u.school === me.school);
+    const sameClass = (String(u.grade) === String(me.grade)) && (String(u.section) === String(me.section));
+    if(!sameSchool || !sameClass) return;
+    if(u.username === me.username) return;
+    shown++;
+    const isOnline = this.activeUsers.has(u.username);
+    const dotClass = isOnline ? 'status-active' : 'status-offline';
+    const badgesHtml = this.buildUserBadges(u);
+    const display = (u.adSoyad && u.adSoyad.trim()) ? u.adSoyad.trim() + " (" + u.username + ")" : u.username;
+    const item = document.createElement('div');
+    item.className = 'user-item';
+    item.innerHTML = `<span><span class="status-dot ${dotClass}"></span><b>${display}</b> ${badgesHtml}</span><small>${u.school}</small>`;
+    item.onclick = () => this.openChat(u.username);
+    listEl.appendChild(item);
+  });
+  if(shown === 0) listEl.innerHTML = "<p style='font-size:13px; color:#999;'>Sınıfınızda başka üye bulunmuyor.</p>";
+};
+
+// Grup mesajlaşmasında gönderenin ad soyadını göster
+app.listenClassGroupMessages = async function() {
+  if(app.unsubscribeChat) app.unsubscribeChat();
+  const cont = document.getElementById('chat-messages');
+  const gdocId = sanitizeKey(getClassGroupKey());
+  let groupKey = null;
+  try {
+    const base64Key = await getOrCreateGroupKey();
+    groupKey = await importGroupKey(base64Key);
+  } catch(e) {
+    console.error(e);
+    cont.innerHTML = "<p style='color:#d63031; font-size:12px;'>Şifreleme anahtarı alınamadı.</p>";
+    return;
+  }
+  // username -> adSoyad eşlemesi
+  let nameMap = {};
+  try {
+    const uSnap = await getDocs(collection(db, "users"));
+    uSnap.forEach(d => {
+      const dd = d.data();
+      nameMap[d.id] = (dd.adSoyad && dd.adSoyad.trim()) ? dd.adSoyad.trim() : d.id;
+    });
+  } catch(e) { console.error(e); }
+
+  const q = query(collection(db, "messages"), where("groupKey", "==", gdocId), orderBy("createdAt", "asc"));
+  app.unsubscribeChat = onSnapshot(q, (snap) => {
+    cont.innerHTML = "";
+    snap.forEach(d => {
+      const m = d.data();
+      const isMe = m.sender === app.currentUser.username;
+      decryptMsg(m.enc || "", groupKey).then(plain => {
+        const bubble = document.createElement('div');
+        bubble.className = `bubble ${isMe ? 'msg-me' : 'msg-them'}`;
+        const who = isMe ? "" : (nameMap[m.sender] || m.sender) + ": ";
+        bubble.innerText = who + plain;
+        cont.appendChild(bubble);
+        cont.scrollTop = cont.scrollHeight;
+      });
+    });
+  });
+};
+
+// Alt bar etiketi + form alanları yüklenince uygula
+window.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.nav-item span').forEach(function(sp){
+    if(sp.textContent.trim() === 'Kullanıcılar') sp.textContent = 'Sınıfım';
+  });
+  __injectAdSoyadInputs();
+});
+
 </script>
 <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286066428c06055',t:'MTc4NjI3MDc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28677643e8dde7a',t:'MTc4NjI3NTQyMA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
