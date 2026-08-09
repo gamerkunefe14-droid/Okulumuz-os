@@ -333,6 +333,7 @@ appId: "1:144133286740:web:5ce1ad633fed06233376c1"
 const fApp = initializeApp(firebaseConfig);
 const db = getFirestore(fApp);
 const storage = getStorage(fApp);
+emailjs.init("bgyhgWde8icqWQ5gB");
 window.app = {
 currentUser: null,
 allSchools: [],
@@ -573,10 +574,16 @@ async isUsernameTaken(username) {
 // Firestore'a kullanıcı adları belge kimliği olarak kaydediliyor; harf duyarsız karşılaştırma için tüm kullanıcıları tararız.
 const name = (username || "").trim().toLowerCase();
 if(!name) return true;
+// [GÜVENLİ] Sorgu hata verirse kayıt akışını durdurma; bu durumda ad alınmamış varsayılır.
+try {
 const snap = await getDocs(collection(db, "users"));
 let taken = false;
 snap.forEach(d => { if(d.id.toLowerCase() === name) taken = true; });
 return taken;
+} catch(e) {
+console.error("isUsernameTaken hatası:", e);
+return false;
+}
 },
 
 async startRegister() {
@@ -734,6 +741,24 @@ this.launch();
 if(await this.isUsernameTaken(this.tempUser.username)) {
 this.toast("Bu kullanıcı adı zaten alınmış! Lütfen farklı bir kullanıcı adı seçin.", "error");
 return;
+}
+// === [YENİ] Sınıf öğretmeni onay kapısı ===
+// Öğrenci, sınıf öğretmeni olan bir sınıfa kaydoluyorsa hesap anında açılmaz;
+// başvuru öğretmenin "Sınıf Öğrenci Katılım" bölümüne düşer. Kabul edilirse hesap açılır.
+if(!this.tempUser.isTeacher && !this.tempUser.isMod && !this.tempUser.isAdmin && !this.tempUser.isLeader) {
+const hrTeacher = await this.findHomeroomTeacher(this.tempUser.school, this.tempUser.grade, this.tempUser.section);
+if(hrTeacher) {
+await setDoc(doc(db, "pending_students", this.tempUser.username), {
+...this.tempUser,
+teacherUsername: hrTeacher,
+classStr: String(this.tempUser.grade) + "-" + String(this.tempUser.section),
+status: "pending",
+createdAt: serverTimestamp()
+});
+this.toast("Bu sınıfta bir sınıf öğretmeni bulunuyor. Hesabınız, sınıf öğretmeninizin onayının ardından açılacaktır.", "info");
+document.getElementById('verify-modal').classList.add('hidden');
+return;
+}
 }
 document.getElementById('verify-modal').classList.add('hidden');
 
@@ -2554,9 +2579,81 @@ main.innerHTML = `
                        <p style="margin-bottom:10px;"><b>Yayınladığınız Çalışma Kağıtları</b></p>
                        <div id="teacher-worksheets-list">Yükleniyor...</div>
                    </div>
+
+                   <div style="background:var(--card); padding:15px; border-radius:15px; margin-bottom:15px; border: 1.5px solid #ff9f43;">
+                       <p style="font-weight:bold; color:#ff9f43; margin:0 0 5px 0;"><i class="fas fa-user-check"></i> Sınıf Öğrenci Katılım</p>
+                       <p style="font-size:12px; color:#888; margin-bottom:10px;">Bu sınıfa kayıt olmak isteyen ve onayınızı bekleyen öğrenciler.</p>
+                       <div id="teacher-pending-list">Yükleniyor...</div>
+                   </div>
                `;
 this.onTeacherGradeSelectChange();
 this.renderTeacherWorksheetsList();
+this.renderTeacherPendingRequests();
+},
+
+// === [YENİ] Sınıf öğretmeni onay sistemi yardımcı metotları ===
+async findHomeroomTeacher(school, grade, section) {
+const classStr = String(grade) + "-" + String(section);
+const snap = await getDocs(query(collection(db, "users"), where("isTeacher", "==", true)));
+let found = null;
+snap.forEach(d => {
+const u = d.data();
+if(u.school === school && u.homeroomClasses && u.homeroomClasses.includes(classStr)) {
+found = d.id;
+}
+});
+return found;
+},
+
+async renderTeacherPendingRequests() {
+const cont = document.getElementById('teacher-pending-list');
+if(!cont) return;
+cont.innerHTML = "<p style='font-size:12px; color:#666;'>Yükleniyor...</p>";
+const snap = await getDocs(query(collection(db, "pending_students"), where("teacherUsername", "==", this.currentUser.username), where("status", "==", "pending")));
+if(snap.empty) {
+cont.innerHTML = "<p style='font-size:12px; color:#999;'>Onay bekleyen öğrenci bulunmuyor.</p>";
+return;
+}
+cont.innerHTML = "";
+snap.forEach(d => {
+const p = d.data();
+const item = document.createElement('div');
+item.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05); padding:10px; margin-bottom:8px; border-radius:8px;";
+item.innerHTML = `
+<div style="flex:1;">
+<div style="font-weight:bold; font-size:14px;"><i class="fas fa-user-graduate"></i> ${p.username}</div>
+<div style="font-size:12px; color:#666; margin-top:3px;">${p.school} — ${p.grade}/${p.section}</div>
+</div>
+<div style="display:flex; gap:6px;">
+<button class="btn-success" style="width:auto; margin:0; padding:8px 14px; font-size:12px; border-radius:20px;" onclick="app.approveStudent('${p.username}')"><i class="fas fa-check"></i> Kabul Et</button>
+<button class="btn-danger" style="width:auto; margin:0; padding:8px 14px; font-size:12px; border-radius:20px;" onclick="app.rejectStudent('${p.username}')"><i class="fas fa-times"></i> Reddet</button>
+</div>`;
+cont.appendChild(item);
+});
+},
+
+async approveStudent(username) {
+if(!(await this.customConfirm(username + " isimli öğrenciyi sınıfınıza kabul ediyor musunuz?"))) return;
+const pDoc = await getDoc(doc(db, "pending_students", username));
+if(!pDoc.exists()) return this.toast("Bu başvuru bulunamadı.", "error");
+const p = pDoc.data();
+const userData = { ...(p.userData || p) };
+userData.isBlocked = false;
+delete userData.teacherUsername;
+delete userData.classStr;
+delete userData.status;
+delete userData.createdAt;
+await setDoc(doc(db, "users", username), userData);
+await updateDoc(doc(db, "pending_students", username), { status: "accepted" });
+this.toast(username + " sınıfınıza kabul edildi! Hesabı açıldı.", "success");
+this.renderTeacherPendingRequests();
+},
+
+async rejectStudent(username) {
+if(!(await this.customConfirm(username + " isimli öğrencinin kaydını reddetmek istiyor musunuz? Hesabı açılmayacaktır."))) return;
+await deleteDoc(doc(db, "pending_students", username));
+this.toast(username + " reddedildi, hesabı açılmayacak.", "success");
+this.renderTeacherPendingRequests();
 },
 
 async onTeacherGradeSelectChange() {
@@ -3010,5 +3107,6 @@ if(inboxCont.innerHTML === "") inboxCont.innerHTML = "<p style='font-size:12px; 
 
 window.addEventListener('DOMContentLoaded', () => { app.init(); });
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28069434829c546',t:'MTc4NjIxMTkyNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286066428c06055',t:'MTc4NjI3MDc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
