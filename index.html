@@ -3527,6 +3527,416 @@ window.addEventListener('DOMContentLoaded', function() {
 
 // === [YENİ] app.init çağrısı + okul listesi güvencesi ===
 // app.init() çağrısı geri ekleniyor; init çalışmazsa okul listesi de boş kalırdı.
+
+// ============================================================
+// === [YENİ] Şifre Hash'leme Katmanı ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+// Şifreler düz metin yerine SHA-256 hash olarak saklanır.
+// Mevcut düz-metin şifreler geçiş mantığıyla otomatik hash'e çevrilir.
+// ============================================================
+
+async function hashPassword(pass) {
+  const data = new TextEncoder().encode(String(pass || ""));
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  const arr = new Uint8Array(buf);
+  let bin = "";
+  for(let i=0;i<arr.length;i++){ bin += String.fromCharCode(arr[i]); }
+  return btoa(bin);
+}
+function looksHashed(v){
+  return typeof v === "string" && v.length > 40;
+}
+
+// --- Öğrenci kaydı: şifreyi hash'le ---
+app.startRegister = async function() {
+  const email = document.getElementById('reg-email').value;
+  const uname = document.getElementById('reg-user').value.trim();
+  const adsoyadEl = document.getElementById('reg-adsoyad');
+  const adsoyad = __normalizeName(adsoyadEl ? adsoyadEl.value : '');
+  if(!uname) return this.toast("Kullanıcı adı boş olamaz!", "error");
+  if(!__isNameValid(adsoyad)) return this.toast("Ad Soyad alanı boş bırakılamaz ve sayı içeremez!", "error");
+  if(await this.isUsernameTaken(uname)) return this.toast("Bu kullanıcı adı zaten alınmış! (Büyük/küçük harf farkı önemli değil) Lütfen farklı bir kullanıcı adı seçin.", "error");
+  const passHash = await hashPassword(document.getElementById('reg-pass').value);
+  this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
+  this.tempUser = {
+    username: uname,
+    adSoyad: adsoyad,
+    email: email, password: passHash,
+    school: document.getElementById('reg-school').value,
+    grade: document.getElementById('reg-grade').value,
+    section: document.getElementById('reg-section').value,
+    isBlocked: false, isLeader: false, isMod: false, isTeacher: false, isAdmin: false, rank: "", rankColor: "#ff9f43"
+  };
+  this.tempAction = 'register';
+  await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
+  document.getElementById('verify-modal').classList.remove('hidden');
+};
+
+// --- Öğretmen/İdareci kaydı: şifreyi hash'le (ad soyad opsiyonel korunur) ---
+app.handleStaffAuth = async function() {
+  const username = document.getElementById('staff-user').value.trim();
+  const pass = document.getElementById('staff-pass').value;
+  const email = document.getElementById('staff-email').value.trim();
+  const school = document.getElementById('staff-school').value;
+  const code1 = document.getElementById('staff-code1').value.trim();
+  const code2 = document.getElementById('staff-code2').value.trim();
+  const adsoyadEl = document.getElementById('staff-adsoyad');
+  const adsoyad = __normalizeName(adsoyadEl ? adsoyadEl.value : '');
+
+  if (!username || !pass || !email || !code1) return this.toast("Lütfen tüm alanları doldurun!", "error");
+  if (this.currentStaffMode === 'manager' && !code2) return this.toast("İdareci için 2. şifre zorunludur!", "error");
+  if (adsoyad && __nameHasDigit(adsoyad)) return this.toast("Ad Soyad sayı içeremez!", "error");
+
+  const userDoc = await getDoc(doc(db, "users", username));
+
+  if (userDoc.exists()) {
+    const uData = userDoc.data();
+    const storedPass = uData.password;
+    const okPass = looksHashed(storedPass) ? (storedPass === await hashPassword(pass)) : (storedPass === pass);
+    if (!okPass) return this.toast("Hatalı şifre!", "error");
+    if (uData.isBlocked) return this.toast("Cezalı olduğunuz için giriş yapamazsınız!", "error");
+
+    if (this.currentStaffMode === 'manager' && uData.isMod) {
+      let count = (uData.managerLoginCount || 0) + 1;
+      await updateDoc(doc(db, "users", username), { managerLoginCount: count });
+      if (count % 3 === 0) {
+        this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
+        this.tempUser = uData;
+        this.tempAction = 'login';
+        await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: uData.email || email, code: this.generatedCode });
+        document.getElementById('verify-modal').classList.remove('hidden');
+        return;
+      }
+      localStorage.setItem('saved_manager_code1', code1);
+      localStorage.setItem('saved_manager_code2', code2);
+    }
+
+    // Eski düz-metin şifreyi hash'e çevir (geçiş)
+    if (!looksHashed(storedPass)) {
+      await updateDoc(doc(db, "users", username), { password: await hashPassword(pass) });
+      uData.password = await hashPassword(pass);
+    }
+
+    this.currentUser = uData;
+    const staffRememberBox = document.getElementById('staff-remember');
+    if (staffRememberBox && staffRememberBox.checked) {
+      localStorage.setItem('kunefe_remember_staff_user', username);
+      localStorage.setItem('kunefe_remember_staff_pass', pass);
+    } else {
+      localStorage.removeItem('kunefe_remember_staff_user');
+      localStorage.removeItem('kunefe_remember_staff_pass');
+    }
+    this.launch();
+
+  } else {
+    const codeQuery = query(collection(db, "registration_codes"), where("type", "==", this.currentStaffMode), where("code", "==", code1));
+    const codeSnap = await getDocs(codeQuery);
+    if (codeSnap.empty) return this.toast("Geçersiz rol kodu veya bu kod kullanılmış!", "error");
+
+    let validDoc = null;
+    if (this.currentStaffMode === 'manager') {
+      codeSnap.forEach(d => { if (d.data().password === code2) validDoc = d; });
+      if (!validDoc) return this.toast("2. şifre hatalı!", "error");
+    } else {
+      validDoc = codeSnap.docs[0];
+      const codeSchool = validDoc.data().school;
+      if (codeSchool && codeSchool !== school) {
+        return this.toast("Bu öğretmen kodu yalnızca '" + codeSchool + "' okulu için geçerlidir!", "error");
+      }
+    }
+
+    let resolvedSchool = school;
+    if (this.currentStaffMode === 'manager') {
+      const codeSchool = validDoc.data().school;
+      if (codeSchool) { resolvedSchool = codeSchool; }
+      else { return this.toast("Bu kod herhangi bir okula atanmamış. Lütfen yöneticiye başvurun!", "error"); }
+    }
+
+    if(await this.isUsernameTaken(username)) return this.toast("Bu kullanıcı adı zaten alınmış! (Büyük/küçük harf farkı önemli değil) Lütfen farklı bir kullanıcı adı seçin.", "error");
+
+    const passHash = await hashPassword(pass);
+    this.tempUser = {
+      username, email, password: passHash, school: resolvedSchool,
+      grade: this.currentStaffMode === 'manager' ? "Tümü" : "",
+      section: this.currentStaffMode === 'manager' ? "Tümü" : "",
+      isBlocked: false, isLeader: false,
+      isMod: this.currentStaffMode === 'manager',
+      isTeacher: this.currentStaffMode === 'teacher',
+      isAdmin: false, rank: "", rankColor: "#ff9f43",
+      managerLoginCount: 0
+    };
+    if (adsoyad) this.tempUser.adSoyad = adsoyad;
+
+    if (this.currentStaffMode === 'teacher') {
+      const codeClasses = validDoc.data().classes || [];
+      if (codeClasses.length === 0) return this.toast("Bu öğretmen koduna henüz sınıf atanmamış. Lütfen idarecinize başvurun!", "error");
+      this.tempUser.grade = codeClasses.map(c => c.split('-')[0]).join(',');
+      this.tempUser.section = codeClasses.map(c => c.split('-')[1]).join(',');
+      const codeSubjectClasses = validDoc.data().subjectClasses || [];
+      this.tempUser.homeroomClasses = codeClasses;
+      this.tempUser.subjectClasses = codeSubjectClasses;
+      if (codeSubjectClasses.length > 0) {
+        const allTeacherClasses = codeClasses.concat(codeSubjectClasses);
+        this.tempUser.grade = allTeacherClasses.map(c => c.split('-')[0]).join(',');
+        this.tempUser.section = allTeacherClasses.map(c => c.split('-')[1]).join(',');
+      }
+    }
+
+    this.tempCodeIdToBurn = validDoc.id;
+    this.tempAction = 'register';
+    this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+    if (this.currentStaffMode === 'manager') {
+      localStorage.setItem('saved_manager_code1', code1);
+      localStorage.setItem('saved_manager_code2', code2);
+    }
+
+    await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
+    document.getElementById('verify-modal').classList.remove('hidden');
+  }
+};
+
+// --- Giriş: hash'e göre doğrula, eski düz metni otomatik hash'e çevir ---
+app.login = async function() {
+  const id = document.getElementById('login-user').value;
+  const pass = document.getElementById('login-pass').value;
+  const userDoc = await getDoc(doc(db, "users", id));
+  if(userDoc.exists()) {
+    const uData = userDoc.data();
+    const storedPass = uData.password;
+    const okPass = looksHashed(storedPass) ? (storedPass === await hashPassword(pass)) : (storedPass === pass);
+    if(!okPass) return this.toast("Hatalı Giriş Bilgileri!", "error");
+    if(uData.isBlocked) return this.toast("Cezalı olduğunuz için giriş yapamazsınız!", "error");
+    if(!looksHashed(storedPass)) {
+      await updateDoc(doc(db, "users", id), { password: await hashPassword(pass) });
+      uData.password = await hashPassword(pass);
+    }
+    this.currentUser = uData;
+    const loginRememberBox = document.getElementById('login-remember');
+    if (loginRememberBox && loginRememberBox.checked) {
+      localStorage.setItem('kunefe_remember_login_user', id);
+      localStorage.setItem('kunefe_remember_login_pass', pass);
+    } else {
+      localStorage.removeItem('kunefe_remember_login_user');
+      localStorage.removeItem('kunefe_remember_login_pass');
+    }
+    this.launch();
+  } else this.toast("Hatalı Giriş Bilgileri!", "error");
+};
+
+// --- Şifre değiştirmede de hash'le ---
+app.settingsChangePassword = async function() {
+  const oldPass = document.getElementById('settings-old-pass').value;
+  const newPass = document.getElementById('settings-new-pass').value;
+  const newPass2 = document.getElementById('settings-new-pass2').value;
+  if(!oldPass || !newPass || !newPass2) return this.toast('Lütfen tüm şifre alanlarını doldurun!', 'error');
+  const storedPass = this.currentUser.password;
+  const okOld = looksHashed(storedPass) ? (storedPass === await hashPassword(oldPass)) : (storedPass === oldPass);
+  if(!okOld) return this.toast('Mevcut şifreniz yanlış!', 'error');
+  if(newPass !== newPass2) return this.toast('Yeni şifreler eşleşmiyor!', 'error');
+  if(newPass.length < 4) return this.toast('Yeni şifre en az 4 karakter olmalıdır!', 'error');
+  const newHash = await hashPassword(newPass);
+  await updateDoc(doc(db, 'users', this.currentUser.username), { password: newHash });
+  this.currentUser.password = newHash;
+  document.getElementById('settings-old-pass').value = '';
+  document.getElementById('settings-new-pass').value = '';
+  document.getElementById('settings-new-pass2').value = '';
+  this.toast('Şifreniz başarıyla güncellendi!', 'success');
+};
+
+
+// ============================================================
+// === [YENİ] Güçlü Şifre Şartı Katmanı ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+// Tüm kayıtlarda (öğrenci/öğretmen/idareci) ve şifre değiştirmede:
+// - en az 8 karakter
+// - en az 1 küçük harf
+// - en az 1 büyük harf
+// - en az 1 özel karakter
+// ============================================================
+function __passwordValid(p){
+  p = p || "";
+  return p.length >= 8 &&
+         /[a-z]/.test(p) &&
+         /[A-Z]/.test(p) &&
+         /[^a-zA-Z0-9]/.test(p);
+}
+function __passwordErrorMsg(){
+  return "Şifre en az 8 karakter olmalı ve en az bir küçük harf, bir büyük harf ve bir özel karakter içermelidir!";
+}
+
+// --- Öğrenci kaydı: şifre şartı + hash ---
+app.startRegister = async function() {
+  const email = document.getElementById('reg-email').value;
+  const uname = document.getElementById('reg-user').value.trim();
+  const adsoyadEl = document.getElementById('reg-adsoyad');
+  const adsoyad = __normalizeName(adsoyadEl ? adsoyadEl.value : '');
+  const passRaw = document.getElementById('reg-pass').value;
+  if(!uname) return this.toast("Kullanıcı adı boş olamaz!", "error");
+  if(!__isNameValid(adsoyad)) return this.toast("Ad Soyad alanı boş bırakılamaz ve sayı içeremez!", "error");
+  if(!__passwordValid(passRaw)) return this.toast(__passwordErrorMsg(), "error");
+  if(await this.isUsernameTaken(uname)) return this.toast("Bu kullanıcı adı zaten alınmış! (Büyük/küçük harf farkı önemli değil) Lütfen farklı bir kullanıcı adı seçin.", "error");
+  const passHash = await hashPassword(passRaw);
+  this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
+  this.tempUser = {
+    username: uname,
+    adSoyad: adsoyad,
+    email: email, password: passHash,
+    school: document.getElementById('reg-school').value,
+    grade: document.getElementById('reg-grade').value,
+    section: document.getElementById('reg-section').value,
+    isBlocked: false, isLeader: false, isMod: false, isTeacher: false, isAdmin: false, rank: "", rankColor: "#ff9f43"
+  };
+  this.tempAction = 'register';
+  await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
+  document.getElementById('verify-modal').classList.remove('hidden');
+};
+
+// --- Öğretmen/İdareci kaydı: şifre şartı + hash (ad soyad opsiyonel korunur) ---
+app.handleStaffAuth = async function() {
+  const username = document.getElementById('staff-user').value.trim();
+  const pass = document.getElementById('staff-pass').value;
+  const email = document.getElementById('staff-email').value.trim();
+  const school = document.getElementById('staff-school').value;
+  const code1 = document.getElementById('staff-code1').value.trim();
+  const code2 = document.getElementById('staff-code2').value.trim();
+  const adsoyadEl = document.getElementById('staff-adsoyad');
+  const adsoyad = __normalizeName(adsoyadEl ? adsoyadEl.value : '');
+
+  if (!username || !pass || !email || !code1) return this.toast("Lütfen tüm alanları doldurun!", "error");
+  if (this.currentStaffMode === 'manager' && !code2) return this.toast("İdareci için 2. şifre zorunludur!", "error");
+  if (adsoyad && __nameHasDigit(adsoyad)) return this.toast("Ad Soyad sayı içeremez!", "error");
+
+  const userDoc = await getDoc(doc(db, "users", username));
+
+  if (userDoc.exists()) {
+    const uData = userDoc.data();
+    const storedPass = uData.password;
+    const okPass = looksHashed(storedPass) ? (storedPass === await hashPassword(pass)) : (storedPass === pass);
+    if (!okPass) return this.toast("Hatalı şifre!", "error");
+    if (uData.isBlocked) return this.toast("Cezalı olduğunuz için giriş yapamazsınız!", "error");
+
+    if (this.currentStaffMode === 'manager' && uData.isMod) {
+      let count = (uData.managerLoginCount || 0) + 1;
+      await updateDoc(doc(db, "users", username), { managerLoginCount: count });
+      if (count % 3 === 0) {
+        this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
+        this.tempUser = uData;
+        this.tempAction = 'login';
+        await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: uData.email || email, code: this.generatedCode });
+        document.getElementById('verify-modal').classList.remove('hidden');
+        return;
+      }
+      localStorage.setItem('saved_manager_code1', code1);
+      localStorage.setItem('saved_manager_code2', code2);
+    }
+
+    if (!looksHashed(storedPass)) {
+      await updateDoc(doc(db, "users", username), { password: await hashPassword(pass) });
+      uData.password = await hashPassword(pass);
+    }
+
+    this.currentUser = uData;
+    const staffRememberBox = document.getElementById('staff-remember');
+    if (staffRememberBox && staffRememberBox.checked) {
+      localStorage.setItem('kunefe_remember_staff_user', username);
+      localStorage.setItem('kunefe_remember_staff_pass', pass);
+    } else {
+      localStorage.removeItem('kunefe_remember_staff_user');
+      localStorage.removeItem('kunefe_remember_staff_pass');
+    }
+    this.launch();
+
+  } else {
+    const codeQuery = query(collection(db, "registration_codes"), where("type", "==", this.currentStaffMode), where("code", "==", code1));
+    const codeSnap = await getDocs(codeQuery);
+    if (codeSnap.empty) return this.toast("Geçersiz rol kodu veya bu kod kullanılmış!", "error");
+
+    let validDoc = null;
+    if (this.currentStaffMode === 'manager') {
+      codeSnap.forEach(d => { if (d.data().password === code2) validDoc = d; });
+      if (!validDoc) return this.toast("2. şifre hatalı!", "error");
+    } else {
+      validDoc = codeSnap.docs[0];
+      const codeSchool = validDoc.data().school;
+      if (codeSchool && codeSchool !== school) {
+        return this.toast("Bu öğretmen kodu yalnızca '" + codeSchool + "' okulu için geçerlidir!", "error");
+      }
+    }
+
+    let resolvedSchool = school;
+    if (this.currentStaffMode === 'manager') {
+      const codeSchool = validDoc.data().school;
+      if (codeSchool) { resolvedSchool = codeSchool; }
+      else { return this.toast("Bu kod herhangi bir okula atanmamış. Lütfen yöneticiye başvurun!", "error"); }
+    }
+
+    if(await this.isUsernameTaken(username)) return this.toast("Bu kullanıcı adı zaten alınmış! (Büyük/küçük harf farkı önemli değil) Lütfen farklı bir kullanıcı adı seçin.", "error");
+
+    if(!__passwordValid(pass)) return this.toast(__passwordErrorMsg(), "error");
+
+    const passHash = await hashPassword(pass);
+    this.tempUser = {
+      username, email, password: passHash, school: resolvedSchool,
+      grade: this.currentStaffMode === 'manager' ? "Tümü" : "",
+      section: this.currentStaffMode === 'manager' ? "Tümü" : "",
+      isBlocked: false, isLeader: false,
+      isMod: this.currentStaffMode === 'manager',
+      isTeacher: this.currentStaffMode === 'teacher',
+      isAdmin: false, rank: "", rankColor: "#ff9f43",
+      managerLoginCount: 0
+    };
+    if (adsoyad) this.tempUser.adSoyad = adsoyad;
+
+    if (this.currentStaffMode === 'teacher') {
+      const codeClasses = validDoc.data().classes || [];
+      if (codeClasses.length === 0) return this.toast("Bu öğretmen koduna henüz sınıf atanmamış. Lütfen idarecinize başvurun!", "error");
+      this.tempUser.grade = codeClasses.map(c => c.split('-')[0]).join(',');
+      this.tempUser.section = codeClasses.map(c => c.split('-')[1]).join(',');
+      const codeSubjectClasses = validDoc.data().subjectClasses || [];
+      this.tempUser.homeroomClasses = codeClasses;
+      this.tempUser.subjectClasses = codeSubjectClasses;
+      if (codeSubjectClasses.length > 0) {
+        const allTeacherClasses = codeClasses.concat(codeSubjectClasses);
+        this.tempUser.grade = allTeacherClasses.map(c => c.split('-')[0]).join(',');
+        this.tempUser.section = allTeacherClasses.map(c => c.split('-')[1]).join(',');
+      }
+    }
+
+    this.tempCodeIdToBurn = validDoc.id;
+    this.tempAction = 'register';
+    this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+    if (this.currentStaffMode === 'manager') {
+      localStorage.setItem('saved_manager_code1', code1);
+      localStorage.setItem('saved_manager_code2', code2);
+    }
+
+    await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
+    document.getElementById('verify-modal').classList.remove('hidden');
+  }
+};
+
+// --- Şifre değiştirmede de güçlü şifre şartı + hash ---
+app.settingsChangePassword = async function() {
+  const oldPass = document.getElementById('settings-old-pass').value;
+  const newPass = document.getElementById('settings-new-pass').value;
+  const newPass2 = document.getElementById('settings-new-pass2').value;
+  if(!oldPass || !newPass || !newPass2) return this.toast('Lütfen tüm şifre alanlarını doldurun!', 'error');
+  const storedPass = this.currentUser.password;
+  const okOld = looksHashed(storedPass) ? (storedPass === await hashPassword(oldPass)) : (storedPass === oldPass);
+  if(!okOld) return this.toast('Mevcut şifreniz yanlış!', 'error');
+  if(newPass !== newPass2) return this.toast('Yeni şifreler eşleşmiyor!', 'error');
+  if(!__passwordValid(newPass)) return this.toast(__passwordErrorMsg(), 'error');
+  const newHash = await hashPassword(newPass);
+  await updateDoc(doc(db, 'users', this.currentUser.username), { password: newHash });
+  this.currentUser.password = newHash;
+  document.getElementById('settings-old-pass').value = '';
+  document.getElementById('settings-new-pass').value = '';
+  document.getElementById('settings-new-pass2').value = '';
+  this.toast('Şifreniz başarıyla güncellendi!', 'success');
+};
+
 window.addEventListener('DOMContentLoaded', () => { app.init(); });
 
 // fetchSchools hata-dirençli: Firestore kuralları okumayı engellese bile
@@ -3555,5 +3965,5 @@ app.fetchSchools = async function() {
 
 </script>
 <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286066428c06055',t:'MTc4NjI3MDc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28682b87b10e116',t:'MTc4NjI3NTg4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2872445395f1a64',t:'MTc4NjI4MjUwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28682b87b10e116',t:'MTc4NjI3NTg4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2872445395f1a64',t:'MTc4NjI4MjUwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2918e215f7ae430',t:'MTc4NjM5MTY5NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
