@@ -316,6 +316,7 @@ main { flex: 1; padding: 15px; overflow-y: auto; }
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/argon2-browser@1.18.0/dist/argon2-bundled.min.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, updateDoc, onSnapshot, orderBy, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -4077,6 +4078,369 @@ app.login = async function() {
   }
 };
 
+
+// ============================================================
+// === [YENİ] Argon2 Şifreleme Ayarı Katmanı ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+// Varsayılan KAPALI. Ayarlar > Tema altındaki açılır/kapanır bölümden
+// açılırsa, yalnızca o kullanıcının hesabı için şifre Argon2 ile
+// hash'lenir. Kapalıyken normal (SHA-256) hash kullanılır.
+// ============================================================
+
+// --- Kullanıcının Argon2 tercihi (localStorage, varsayılan kapalı) ---
+function __argon2PrefKey(){ return 'kunefe_argon2_' + (app.currentUser ? app.currentUser.username : ''); }
+function __argon2IsOn(){
+  try { return localStorage.getItem(__argon2PrefKey()) === '1'; } catch(e){ return false; }
+}
+function __argon2SetOn(on){
+  try {
+    if(on) localStorage.setItem(__argon2PrefKey(), '1');
+    else localStorage.removeItem(__argon2PrefKey());
+  } catch(e){}
+}
+
+// --- Argon2 hash / verify yardımcıları (argon2-browser) ---
+function __argon2Available(){
+  return typeof window.argon2 !== 'undefined' && window.argon2 && typeof window.argon2.hash === 'function';
+}
+async function __argon2HashPw(pass){
+  // argon2-browser API'si: argon2.hash({pass, salt, time, mem, hashLen, parallelism, type})
+  var salt = new Uint8Array(16);
+  crypto.getRandomValues(salt);
+  var res = await window.argon2.hash({
+    pass: pass,
+    salt: salt,
+    time: 3,
+    mem: 65536,       // 64MB
+    hashLen: 32,
+    parallelism: 1,
+    type: window.argon2.ArgonType.Argon2id
+  });
+  return res.encoded;   // "$argon2id$..." formatında döner
+}
+async function __argon2VerifyPw(pass, encoded){
+  try {
+    return await window.argon2.verify({ pass: pass, encoded: encoded });
+  } catch(e){ return false; }
+}
+function __isArgon2Hash(v){
+  return typeof v === 'string' && v.indexOf('$argon2') === 0;
+}
+
+// --- Login: kullanıcı Argon2 açık mı diye doğrulama ---
+// (login limiti korunarak override edilir)
+app.login = async function() {
+  const id = document.getElementById('login-user').value;
+  const pass = document.getElementById('login-pass').value;
+  const now = Date.now();
+  const st = __getAttempts(id);
+
+  if(st.lockUntil > now) {
+    return this.toast(__loginLockMsg(st.lockUntil - now), "error");
+  }
+
+  const userDoc = await getDoc(doc(db, "users", id));
+  if(userDoc.exists()) {
+    const uData = userDoc.data();
+    const storedPass = uData.password;
+    let okPass = false;
+    let argon2Used = false;
+
+    if(__isArgon2Hash(storedPass)) {
+      // Zaten Argon2 ile saklanmış
+      okPass = await __argon2VerifyPw(pass, storedPass);
+      argon2Used = true;
+    } else {
+      okPass = looksHashed(storedPass) ? (storedPass === await hashPassword(pass)) : (storedPass === pass);
+    }
+
+    if(!okPass) {
+      const newCount = st.count + 1;
+      const dur = __lockDurationFor(newCount);
+      __setAttempts(id, { count: newCount, lockUntil: (dur > 0 ? now + dur : 0) });
+      return this.toast("Hatalı Giriş Bilgileri!", "error");
+    }
+
+    __setAttempts(id, {count:0, lockUntil:0});
+
+    if(uData.isBlocked) return this.toast("Cezalı olduğunuz için giriş yapamazsınız!", "error");
+
+    // Argon2 açık ama hesap henüz SHA-256 ise, girişte Argon2'ye çevir
+    if(__argon2Available() && !argon2Used && __argon2IsOn() && !__isArgon2Hash(storedPass)) {
+      const enc = await __argon2HashPw(pass);
+      await updateDoc(doc(db, "users", id), { password: enc });
+      uData.password = enc;
+    } else if(!__argon2IsOn() && __isArgon2Hash(storedPass)) {
+      // Argon2 kapalıyken hesap Argon2 ise, normal SHA-256'ya çevir
+      const sh = await hashPassword(pass);
+      await updateDoc(doc(db, "users", id), { password: sh });
+      uData.password = sh;
+    }
+
+    this.currentUser = uData;
+    const loginRememberBox = document.getElementById('login-remember');
+    if (loginRememberBox && loginRememberBox.checked) {
+      localStorage.setItem('kunefe_remember_login_user', id);
+      localStorage.setItem('kunefe_remember_login_pass', pass);
+    } else {
+      localStorage.removeItem('kunefe_remember_login_user');
+      localStorage.removeItem('kunefe_remember_login_pass');
+    }
+    this.launch();
+  } else {
+    const newCount = st.count + 1;
+    const dur = __lockDurationFor(newCount);
+    __setAttempts(id, { count: newCount, lockUntil: (dur > 0 ? now + dur : 0) });
+    this.toast("Hatalı Giriş Bilgileri!", "error");
+  }
+};
+
+// --- Şifre değiştirme de Argon2 ayarına uysun ---
+app.settingsChangePassword = async function() {
+  const oldPass = document.getElementById('settings-old-pass').value;
+  const newPass = document.getElementById('settings-new-pass').value;
+  const newPass2 = document.getElementById('settings-new-pass2').value;
+  if(!oldPass || !newPass || !newPass2) return this.toast('Lütfen tüm şifre alanlarını doldurun!', 'error');
+  const storedPass = this.currentUser.password;
+  let okOld;
+  if(__isArgon2Hash(storedPass)) {
+    okOld = await __argon2VerifyPw(oldPass, storedPass);
+  } else {
+    okOld = looksHashed(storedPass) ? (storedPass === await hashPassword(oldPass)) : (storedPass === oldPass);
+  }
+  if(!okOld) return this.toast('Mevcut şifreniz yanlış!', 'error');
+  if(newPass !== newPass2) return this.toast('Yeni şifreler eşleşmiyor!', 'error');
+  if(!__passwordValid(newPass)) return this.toast(__passwordErrorMsg(), 'error');
+  let newStored;
+  if(__argon2Available() && __argon2IsOn()) {
+    newStored = await __argon2HashPw(newPass);
+  } else {
+    newStored = await hashPassword(newPass);
+  }
+  await updateDoc(doc(db, 'users', this.currentUser.username), { password: newStored });
+  this.currentUser.password = newStored;
+  document.getElementById('settings-old-pass').value = '';
+  document.getElementById('settings-new-pass').value = '';
+  document.getElementById('settings-new-pass2').value = '';
+  this.toast('Şifreniz başarıyla güncellendi!', 'success');
+};
+
+// --- Ayarlar: Tema altına Argon2 açılır/kapanır bölüm ekle ---
+var __origRenderSettingsArgon = app.renderSettings;
+app.renderSettings = function() {
+  // orijinal ayarları çiz
+  var out = __origRenderSettingsArgon.apply(this, arguments);
+  // Tema section'ından sonra, ÇIKIŞ öncesine Argon2 bölümünü ekle
+  try {
+    var main = document.getElementById('main-content');
+    if(!main) return out;
+    // mevcut bölüm zaten varsa ekleme
+    if(document.getElementById('argon2-settings-box')) return out;
+
+    var argonOn = __argon2IsOn();
+    var box = document.createElement('div');
+    box.id = 'argon2-settings-box';
+    box.className = 'settings-section';
+    box.innerHTML =
+      '<div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="app.toggleArgon2Section()">' +
+        '<h4 style="margin:0;"><i class="fas fa-shield-alt"></i> Argon2 Şifreleme</h4>' +
+        '<i class="fas fa-chevron-down" id="argon2-chevron"></i>' +
+      '</div>' +
+      '<div id="argon2-section-body" style="' + (argonOn ? 'display:block;' : 'display:none;') + ' margin-top:10px;">' +
+        '<p style="font-size:12px; color:#888; margin-bottom:10px;">Şifrenizi daha güçlü (Argon2) şifreleme ile saklamak isterseniz açın. Ayar yalnızca size özeldir ve varsayılan olarak kapalıdır.</p>' +
+        '<label class="remember-me-row" for="argon2-toggle" style="margin-bottom:0;"><input type="checkbox" id="argon2-toggle" ' + (argonOn ? 'checked' : '') + ' onchange="app.toggleArgon2()"> Argon2 şifrelemeyi kullan</label>' +
+      '</div>';
+    // ÇIKIŞ section'ından önce ekle
+    var secs = main.querySelectorAll('.settings-section');
+    var last = secs[secs.length - 1]; // Çıkış section'ı en sonda
+    if(last && last.parentNode) {
+      last.parentNode.insertBefore(box, last);
+    } else {
+      main.appendChild(box);
+    }
+  } catch(e) { console.error("Argon2 ayar ekleme hatası:", e); }
+  return out;
+};
+
+// Argon2 bölümünü aç/kapa
+app.toggleArgon2Section = function() {
+  var body = document.getElementById('argon2-section-body');
+  var ch = document.getElementById('argon2-chevron');
+  if(body) {
+    var open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : 'block';
+    if(ch) ch.className = open ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+  }
+};
+
+// Argon2 ayarını aç/kapat
+app.toggleArgon2 = function() {
+  var cb = document.getElementById('argon2-toggle');
+  if(!cb) return;
+  var on = cb.checked;
+  __argon2SetOn(on);
+  if(on) {
+    app.toast('Argon2 şifreleme AÇIK. Bir sonraki girişinizde şifreniz Argon2 ile şifrelenecek.', 'success');
+  } else {
+    app.toast('Argon2 şifreleme KAPALI. Bir sonraki girişinizde şifreniz normal hash ile saklanacak.', 'info');
+  }
+};
+
+
+// ============================================================
+// === [YENİ] Kayan Anahtar (Toggle Switch) — Argon2 Ayarı ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+// Checkbox yerine, animasyonlu kayan bir anahtar gösterilir:
+//  - Aktifse yeşil (yuvarlak sağda)
+//  - Kapalıysa kırmızı (yuvarlak solda)
+// ============================================================
+
+// Kayan anahtar için CSS ekle (dinamik, style etiketi oluştur)
+(function __injectSwitchCSS(){
+  if(document.getElementById('argon2-switch-css')) return;
+  var style = document.createElement('style');
+  style.id = 'argon2-switch-css';
+  style.textContent =
+    '.argon2-switch-wrap{ display:flex; align-items:center; gap:10px; margin-top:6px; }' +
+    '.argon2-switch{ position:relative; width:52px; height:28px; display:inline-block; cursor:pointer; flex:0 0 auto; }' +
+    '.argon2-switch input{ opacity:0; width:0; height:0; position:absolute; }' +
+    '.argon2-slider{ position:absolute; inset:0; border-radius:28px; transition:background .25s; }' +
+    '.argon2-slider::before{ content:""; position:absolute; height:22px; width:22px; left:3px; top:3px; border-radius:50%; background:#fff; transition:transform .25s; box-shadow:0 2px 4px rgba(0,0,0,.3); }' +
+    '.argon2-switch input:checked + .argon2-slider{ background:#27ae60; }' +           /* yeşil */
+    '.argon2-switch input:checked + .argon2-slider::before{ transform:translateX(24px); }' +
+    '.argon2-switch input:not(:checked) + .argon2-slider{ background:#d63031; }' +      /* kırmızı */
+    '.argon2-switch-label{ font-size:13px; font-weight:bold; }';
+  document.head.appendChild(style);
+})();
+
+// Ayarlar ekranını yeniden çiz (tema altına kayan anahtarlı Argon2 bölümü)
+var __prevRenderSettingsSwitch = app.renderSettings;
+app.renderSettings = function() {
+  var out = __prevRenderSettingsSwitch.apply(this, arguments);
+  try {
+    var main = document.getElementById('main-content');
+    if(!main) return out;
+    var existing = document.getElementById('argon2-switch-box');
+    if(existing) existing.remove();
+
+    var argonOn = __argon2IsOn();
+    var box = document.createElement('div');
+    box.id = 'argon2-switch-box';
+    box.className = 'settings-section';
+    box.innerHTML =
+      '<div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="app.toggleArgon2Section()">' +
+        '<h4 style="margin:0;"><i class="fas fa-shield-alt"></i> Argon2 Şifreleme</h4>' +
+        '<i class="fas fa-chevron-down" id="argon2-chevron"></i>' +
+      '</div>' +
+      '<div id="argon2-section-body" style="' + (argonOn ? 'display:block;' : 'display:none;') + ' margin-top:10px;">' +
+        '<p style="font-size:12px; color:#888; margin-bottom:10px;">Şifrenizi daha güçlü (Argon2) şifreleme ile saklamak isterseniz anahtarı açın. Ayar yalnızca size özeldir ve varsayılan olarak kapalıdır.</p>' +
+        '<div class="argon2-switch-wrap">' +
+          '<label class="argon2-switch" for="argon2-toggle">' +
+            '<input type="checkbox" id="argon2-toggle" ' + (argonOn ? 'checked' : '') + ' onchange="app.toggleArgon2()">' +
+            '<span class="argon2-slider"></span>' +
+          '</label>' +
+          '<span class="argon2-switch-label" id="argon2-switch-label" style="color:' + (argonOn ? '#27ae60' : '#d63031') + ';">' + (argonOn ? 'Açık' : 'Kapalı') + '</span>' +
+        '</div>' +
+      '</div>';
+    var secs = main.querySelectorAll('.settings-section');
+    var last = secs[secs.length - 1];
+    if(last && last.parentNode) { last.parentNode.insertBefore(box, last); }
+    else { main.appendChild(box); }
+  } catch(e) { console.error("Kayan anahtar ekleme hatası:", e); }
+  return out;
+};
+
+// Aç/kapa işlemi + etiket rengini güncelle
+app.toggleArgon2 = function() {
+  var cb = document.getElementById('argon2-toggle');
+  if(!cb) return;
+  var on = cb.checked;
+  __argon2SetOn(on);
+  var lbl = document.getElementById('argon2-switch-label');
+  if(lbl) {
+    lbl.textContent = on ? 'Açık' : 'Kapalı';
+    lbl.style.color = on ? '#27ae60' : '#d63031';
+  }
+  if(on) {
+    app.toast('Argon2 şifreleme AÇIK. Bir sonraki girişinizde şifreniz Argon2 ile şifrelenecek.', 'success');
+  } else {
+    app.toast('Argon2 şifreleme KAPALI. Bir sonraki girişinizde şifreniz normal hash ile saklanacak.', 'info');
+  }
+};
+
+
+// ============================================================
+// === [YENİ] Argon2 Doğrudan Görünüm (çekmece/checkbox yok) ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+//  - Satır: solda "Argon 2 Şifreleme Kullan" + sağda kayan anahtar.
+//  - Altında daha soluk/ince fontla açıklama notu.
+//  - Animasyonlu kayan anahtar: yeşil (açık) / kırmızı (kapalı).
+// ============================================================
+
+// CSS (kayan anahtar) yeniden tanımla/garantile
+(function __injectSwitchCSS2(){
+  if(document.getElementById('argon2-switch-css')) return;
+  var style = document.createElement('style');
+  style.id = 'argon2-switch-css';
+  style.textContent =
+    '.argon2-switch-wrap{ display:flex; align-items:center; justify-content:space-between; }' +
+    '.argon2-switch{ position:relative; width:52px; height:28px; display:inline-block; cursor:pointer; flex:0 0 auto; }' +
+    '.argon2-switch input{ opacity:0; width:0; height:0; position:absolute; }' +
+    '.argon2-slider{ position:absolute; inset:0; border-radius:28px; transition:background .25s; }' +
+    '.argon2-slider::before{ content:""; position:absolute; height:22px; width:22px; left:3px; top:3px; border-radius:50%; background:#fff; transition:transform .25s; box-shadow:0 2px 4px rgba(0,0,0,.3); }' +
+    '.argon2-switch input:checked + .argon2-slider{ background:#27ae60; }' +
+    '.argon2-switch input:checked + .argon2-slider::before{ transform:translateX(24px); }' +
+    '.argon2-switch input:not(:checked) + .argon2-slider{ background:#d63031; }' +
+    '.argon2-note{ font-size:12px; color:#aaa; font-weight:300; margin-top:8px; line-height:1.4; }';
+  document.head.appendChild(style);
+})();
+
+// Ayarlar ekranını doğrudan (düz) görünümle çiz
+var __prevRenderSettingsDirect = app.renderSettings;
+app.renderSettings = function() {
+  var out = __prevRenderSettingsDirect.apply(this, arguments);
+  try {
+    var main = document.getElementById('main-content');
+    if(!main) return out;
+    var oldBox = document.getElementById('argon2-switch-box');
+    if(oldBox) oldBox.remove();
+    var oldBox2 = document.getElementById('argon2-settings-box');
+    if(oldBox2) oldBox2.remove();
+
+    var argonOn = __argon2IsOn();
+    var box = document.createElement('div');
+    box.id = 'argon2-switch-box';
+    box.className = 'settings-section';
+    box.innerHTML =
+      '<div class="argon2-switch-wrap">' +
+        '<span style="font-size:14px; font-weight:600;">Argon 2 Şifreleme Kullan</span>' +
+        '<label class="argon2-switch" for="argon2-toggle">' +
+          '<input type="checkbox" id="argon2-toggle" ' + (argonOn ? 'checked' : '') + ' onchange="app.toggleArgon2()">' +
+          '<span class="argon2-slider"></span>' +
+        '</label>' +
+      '</div>' +
+      '<div class="argon2-note">Bu şifreleme mobilde biraz gecikmeye sebep olabilir. Size özeldir.</div>';
+    var secs = main.querySelectorAll('.settings-section');
+    var last = secs[secs.length - 1];
+    if(last && last.parentNode) { last.parentNode.insertBefore(box, last); }
+    else { main.appendChild(box); }
+  } catch(e) { console.error("Argon2 düz görünüm hatası:", e); }
+  return out;
+};
+
+// Aç/kapa (animasyonlu anahtar durumu değiştirir; ekstra etiket gerekmez)
+app.toggleArgon2 = function() {
+  var cb = document.getElementById('argon2-toggle');
+  if(!cb) return;
+  var on = cb.checked;
+  __argon2SetOn(on);
+  if(on) {
+    app.toast('Argon2 şifreleme AÇIK. Bir sonraki girişinizde şifreniz Argon2 ile şifrelenecek.', 'success');
+  } else {
+    app.toast('Argon2 şifreleme KAPALI. Bir sonraki girişinizde şifreniz normal hash ile saklanacak.', 'info');
+  }
+};
+
 window.addEventListener('DOMContentLoaded', () => { app.init(); });
 
 // fetchSchools hata-dirençli: Firestore kuralları okumayı engellese bile
@@ -4105,5 +4469,5 @@ app.fetchSchools = async function() {
 
 </script>
 <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286066428c06055',t:'MTc4NjI3MDc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28682b87b10e116',t:'MTc4NjI3NTg4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2872445395f1a64',t:'MTc4NjI4MjUwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a297c5fcbeb12b1b',t:'MTc4NjQ1Njg5OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28682b87b10e116',t:'MTc4NjI3NTg4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2872445395f1a64',t:'MTc4NjI4MjUwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a297c5fcbeb12b1b',t:'MTc4NjQ1Njg5OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a298adcdbd1cf4ed',t:'MTc4NjQ2NjM5Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
