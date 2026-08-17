@@ -317,6 +317,8 @@ main { flex: 1; padding: 15px; overflow-y: auto; }
 
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/argon2-browser@1.18.0/dist/argon2-bundled.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, updateDoc, onSnapshot, orderBy, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -4441,6 +4443,340 @@ app.toggleArgon2 = function() {
   }
 };
 
+
+// ============================================================
+// === [YENİ] QR ile Hızlı Giriş Sistemi ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+//
+// 1) Ayarlar > Argon2 altında "QR ile hızlı giriş" toggle'ı (varsayılan kapalı).
+// 2) Altında "Giriş QR Kodu" çekmecesi:
+//    - İlk kez: "QR Kod Oluştur" -> "QR Kodu Göster" -> QR görünür + indir.
+//    - QR içeriği: kullanıcı adı, şifre(hash/argon2), + öğretmen/idareci kodları.
+// 3) Giriş ekranına "QR ile Giriş Yap" butonu:
+//    - Kamera ile tara / Dosyalardan aç.
+//    - QR okunur, kullanıcı adı+şifre eşleşirse kullanıcı adı tekrar sorulur,
+//      doğruysa giriş yapılır.
+//    - QR hızlı giriş özelliği kapalıysa o hesapla QR giriş yapılamaz.
+// ============================================================
+
+// --- QR hızlı giriş tercihi (varsayılan kapalı) ---
+function __qrPrefKey(){ return 'kunefe_qr_' + (app.currentUser ? app.currentUser.username : ''); }
+function __qrIsOn(){
+  try { return localStorage.getItem(__qrPrefKey()) === '1'; } catch(e){ return false; }
+}
+function __qrSetOn(on){
+  try { if(on) localStorage.setItem(__qrPrefKey(),'1'); else localStorage.removeItem(__qrPrefKey()); } catch(e){}
+}
+
+// --- QR verisini oluştur ---
+async function __buildQRPayload(u){
+  // u = kullanıcı objesi
+  var payload = {
+    u: u.username,
+    p: u.password            // hash (SHA-256 veya Argon2)
+  };
+  // öğretmen kodları / idareci bilgileri
+  if(u.isTeacher){
+    try {
+      var q = query(collection(db,"registration_codes"), where("usedBy","==",u.username));
+      var snap = await getDocs(q);
+      var codes = [];
+      snap.forEach(d => { codes.push(d.data()); });
+      if(codes.length) payload.teacherCodes = codes.map(c=>c.code);
+    } catch(e){}
+  }
+  if(u.isMod || u.isAdmin){
+    try {
+      var q2 = query(collection(db,"registration_codes"), where("usedBy","==",u.username), where("type","==","manager"));
+      var snap2 = await getDocs(q2);
+      var mc = [];
+      snap2.forEach(d => { var dd=d.data(); mc.push({code:dd.code, pass:dd.password}); });
+      if(mc.length) payload.managerCodes = mc;
+    } catch(e){}
+  }
+  return JSON.stringify(payload);
+}
+
+// --- QR'ı göstermek için modal oluştur ---
+function __qrModal(html, id){
+  var old = document.getElementById(id);
+  if(old) old.remove();
+  var bg = document.createElement('div');
+  bg.id = id;
+  bg.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:3000;';
+  var card = document.createElement('div');
+  card.style.cssText = 'background:var(--card); padding:20px; border-radius:15px; width:92%; max-width:420px; max-height:90vh; overflow-y:auto; text-align:center;';
+  card.innerHTML = html;
+  bg.appendChild(card);
+  document.body.appendChild(bg);
+  return bg;
+}
+
+// --- Ayarlar: Argon2 altına QR toggle + çekmece ekle ---
+var __prevRenderSettingsQR = app.renderSettings;
+app.renderSettings = function() {
+  var out = __prevRenderSettingsQR.apply(this, arguments);
+  try {
+    var main = document.getElementById('main-content');
+    if(!main) return out;
+    var oldBox = document.getElementById('qr-settings-box');
+    if(oldBox) oldBox.remove();
+
+    var argonBox = document.getElementById('argon2-switch-box');
+    var qrOn = __qrIsOn();
+    var box = document.createElement('div');
+    box.id = 'qr-settings-box';
+    box.className = 'settings-section';
+    box.innerHTML =
+      '<div class="argon2-switch-wrap">' +
+        '<span style="font-size:14px; font-weight:600;">QR ile Hızlı Giriş</span>' +
+        '<label class="argon2-switch" for="qr-toggle">' +
+          '<input type="checkbox" id="qr-toggle" ' + (qrOn ? 'checked' : '') + ' onchange="app.toggleQR()">' +
+          '<span class="argon2-slider"></span>' +
+        '</label>' +
+      '</div>' +
+      '<div class="argon2-note">QR ile girişi aktif eder.</div>' +
+      '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; cursor:pointer;" onclick="app.toggleQRDrawer()">' +
+        '<span style="font-size:14px; font-weight:600;">Giriş QR Kodu</span>' +
+        '<i class="fas fa-chevron-down" id="qr-drawer-chevron"></i>' +
+      '</div>' +
+      '<div id="qr-drawer-body" style="display:none; margin-top:10px;">' +
+        '<div id="qr-generate-step">' +
+          '<button class="btn-main" style="margin-top:5px;" onclick="app.generateQRAction()">QR Kod Oluştur</button>' +
+        '</div>' +
+        '<div id="qr-show-step" style="display:none;">' +
+          '<button class="btn-success" style="margin-top:5px;" onclick="app.showQRAction()">QR Kodu Göster</button>' +
+        '</div>' +
+      '</div>';
+    // Argon2 box'tan sonra ekle
+    if(argonBox && argonBox.parentNode) {
+      argonBox.parentNode.insertBefore(box, argonBox.nextSibling);
+    } else {
+      var secs = main.querySelectorAll('.settings-section');
+      var last = secs[secs.length-1];
+      if(last && last.parentNode) last.parentNode.insertBefore(box, last);
+      else main.appendChild(box);
+    }
+  } catch(e) { console.error("QR ayar ekleme hatası:", e); }
+  return out;
+};
+
+app.toggleQR = function() {
+  var cb = document.getElementById('qr-toggle');
+  if(!cb) return;
+  var on = cb.checked;
+  __qrSetOn(on);
+  if(on) app.toast('QR ile hızlı giriş AÇIK.', 'success');
+  else app.toast('QR ile hızlı giriş KAPALI.', 'info');
+};
+app.toggleQRDrawer = function() {
+  var body = document.getElementById('qr-drawer-body');
+  var ch = document.getElementById('qr-drawer-chevron');
+  if(body) {
+    var open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : 'block';
+    if(ch) ch.className = open ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+  }
+};
+// QR oluşturma adımları
+app.qrGenerated = false;
+app.generateQRAction = function() {
+  // QR içeriğini hazırla ve sakla
+  var self = this;
+  __buildQRPayload(self.currentUser).then(function(payload){
+    self._qrPayload = payload;
+    self.qrGenerated = true;
+    document.getElementById('qr-generate-step').style.display = 'none';
+    document.getElementById('qr-show-step').style.display = 'block';
+    app.toast('QR kodu oluşturuldu. Şimdi gösterebilirsiniz.', 'success');
+  });
+};
+app.showQRAction = function() {
+  var payload = this._qrPayload;
+  if(!payload) return app.toast('Önce QR oluşturmalısınız.', 'error');
+  if(typeof QRCode === 'undefined') return app.toast('QR kütüphanesi yüklenemedi.', 'error');
+  var bg = __qrModal('', 'qr-display-modal');
+  bg.querySelector('div').innerHTML =
+    '<h3 style="margin-bottom:15px;">Giriş QR Kodunuz</h3>' +
+    '<canvas id="qr-canvas" style="margin:0 auto 10px auto;"></canvas>' +
+    '<p style="font-size:11px; color:#888; margin-bottom:15px;">Bu QR, giriş bilgilerinizi içerir. Güvenli şekilde saklayın.</p>' +
+    '<button class="btn-main" onclick="app.downloadQR()"><i class="fas fa-download"></i> İndir</button>' +
+    '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'qr-display-modal\').remove()">Kapat</button>';
+  QRCode.toCanvas(document.getElementById('qr-canvas'), payload, { width: 240, margin: 1 }, function(err){
+    if(err) console.error(err);
+  });
+};
+app.downloadQR = function() {
+  var c = document.getElementById('qr-canvas');
+  if(!c) return;
+  var a = document.createElement('a');
+  a.download = 'giris-qr.png';
+  a.href = c.toDataURL('image/png');
+  a.click();
+};
+
+// --- Giriş ekranına "QR ile Giriş Yap" butonu ekle ---
+var __prevToggleAuthQR = app.toggleAuth;
+app.toggleAuth = function(mode) {
+  var out = __prevToggleAuthQR.apply(this, arguments);
+  try {
+    if(mode === 'login' || mode === false) {
+      var loginFields = document.getElementById('login-fields');
+      if(loginFields) {
+        var existing = document.getElementById('qr-login-btn');
+        if(!existing) {
+          var btn = document.createElement('div');
+          btn.id = 'qr-login-btn';
+          btn.className = 'toggle-link';
+          btn.style.marginTop = '8px';
+          btn.style.textAlign = 'center';
+          btn.style.color = '#9b59b6';
+          btn.style.cursor = 'pointer';
+          btn.innerText = 'QR ile Giriş Yap';
+          btn.onclick = function(){ app.openQRLogin(); };
+          loginFields.appendChild(btn);
+        }
+      }
+    }
+  } catch(e) { console.error("QR login buton ekleme:", e); }
+  return out;
+};
+
+// --- QR ile giriş arayüzü ---
+app.openQRLogin = function() {
+  var bg = __qrModal(
+    '<h3 style="margin-bottom:15px;">QR ile Giriş</h3>' +
+    '<button class="btn-main" onclick="app.scanWithCamera()"><i class="fas fa-camera"></i> Kamera ile Tara</button>' +
+    '<button class="btn-success" style="margin-top:8px;" onclick="app.scanFromFile()"><i class="fas fa-image"></i> Dosyalardan Aç</button>' +
+    '<button class="btn-danger" style="background:#888; margin-top:8px;" onclick="document.getElementById(\'qr-login-modal\').remove()">İptal</button>',
+    'qr-login-modal'
+  );
+};
+
+app.scanWithCamera = function() {
+  var bg = __qrModal(
+    '<h3 style="margin-bottom:10px;">Kamera ile Tara</h3>' +
+    '<video id="qr-video" playsinline muted style="width:100%; max-height:60vh; border-radius:10px; background:#000;"></video>' +
+    '<p id="qr-scan-msg" style="font-size:12px; color:#888; margin-top:8px;">QR kodu kameraya gösterin...</p>' +
+    '<button class="btn-danger" style="background:#888; margin-top:8px;" onclick="app.stopQRScan(); document.getElementById(\'qr-cam-modal\').remove()">Kapat</button>',
+    'qr-cam-modal'
+  );
+  var video = document.getElementById('qr-video');
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(function(stream){
+        app._qrStream = stream;
+        video.srcObject = stream;
+        video.play();
+        app._qrScanTimer = setInterval(function(){ app.scanVideoFrame(); }, 300);
+      })
+      .catch(function(e){
+        document.getElementById('qr-scan-msg').textContent = 'Kamera erişimi alınamadı: ' + e.message;
+      });
+  } else {
+    document.getElementById('qr-scan-msg').textContent = 'Bu cihaz kamera desteklemiyor.';
+  }
+};
+app.scanVideoFrame = function() {
+  var video = document.getElementById('qr-video');
+  if(!video || !video.videoWidth) return;
+  var canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  if(typeof jsQR === 'undefined') return;
+  var code = jsQR(img.data, img.width, img.height);
+  if(code && code.data) {
+    app.stopQRScan();
+    app.processQRData(code.data);
+  }
+};
+app.stopQRScan = function() {
+  if(app._qrScanTimer) { clearInterval(app._qrScanTimer); app._qrScanTimer=null; }
+  if(app._qrStream) { app._qrStream.getTracks().forEach(function(t){ t.stop(); }); app._qrStream=null; }
+};
+app.scanFromFile = function() {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = function(e) {
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var img = new Image();
+      img.onload = function(){
+        var canvas = document.createElement('canvas');
+        canvas.width = img.width; canvas.height = img.height;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        var imgd = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        if(typeof jsQR === 'undefined') return;
+        var code = jsQR(imgd.data, imgd.width, imgd.height);
+        if(code && code.data) app.processQRData(code.data);
+        else app.toast('QR bulunamadı.', 'error');
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+};
+
+// --- QR verisini işleme / doğrulama ---
+app.processQRData = function(data) {
+  var payload;
+  try { payload = JSON.parse(data); }
+  catch(e){ return app.toast('Geçersiz QR kodu.', 'error'); }
+  var uname = payload.u, passHash = payload.p;
+  if(!uname || !passHash) return app.toast('QR içeriği eksik.', 'error');
+
+  var self = this;
+  getDoc(doc(db, "users", uname)).then(async function(ud){
+    if(!ud.exists()) return app.toast('Kullanıcı bulunamadı.', 'error');
+    var u = ud.data();
+    // QR hızlı giriş özelliği kapalıysa giriş yapılamaz
+    var qrOn = localStorage.getItem('kunefe_qr_' + uname) === '1';
+    if(!qrOn) return app.toast('Bu hesap için QR ile hızlı giriş kapalı. Lütfen normal giriş yapın.', 'error');
+    // şifre eşleşmesi
+    // QR içindeki hash ile Firestore'daki hash'i karşılaştır
+    var ok = (passHash === u.password);
+    if(!ok) return app.toast('QR bilgileri eşleşmedi.', 'error');
+
+    // Kullanıcı adını tekrar sor
+    var bg = __qrModal('', 'qr-confirm-modal');
+    bg.querySelector('div').innerHTML =
+      '<h3 style="margin-bottom:10px;">Kullanıcı Adını Doğrula</h3>' +
+      '<p style="font-size:12px; color:#888; margin-bottom:10px;">Güvenlik için kullanıcı adınızı girin.</p>' +
+      '<input type="text" id="qr-confirm-username" placeholder="Kullanıcı Adı" style="margin-bottom:10px;">' +
+      '<button class="btn-main" onclick="app.confirmQRLogin(\'' + uname + '\')">Giriş Yap</button>' +
+      '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'qr-confirm-modal\').remove()">İptal</button>';
+  });
+};
+app.confirmQRLogin = function(uname) {
+  var entered = document.getElementById('qr-confirm-username').value.trim();
+  if(entered !== uname) return app.toast('Kullanıcı adı eşleşmedi.', 'error');
+  var m = document.getElementById('qr-confirm-modal');
+  if(m) m.remove();
+  var m2 = document.getElementById('qr-login-modal');
+  if(m2) m2.remove();
+  var m3 = document.getElementById('qr-cam-modal');
+  if(m3) m3.remove();
+  // normal giriş gibi oturum aç
+  getDoc(doc(db, "users", uname)).then(function(ud){
+    if(!ud.exists()) return;
+    app.currentUser = ud.data();
+    var lr = document.getElementById('login-remember');
+    if(lr && lr.checked){
+      localStorage.setItem('kunefe_remember_login_user', uname);
+      localStorage.setItem('kunefe_remember_login_pass', ud.data().password);
+    }
+    app.launch();
+  });
+};
+
 window.addEventListener('DOMContentLoaded', () => { app.init(); });
 
 // fetchSchools hata-dirençli: Firestore kuralları okumayı engellese bile
@@ -4469,5 +4805,5 @@ app.fetchSchools = async function() {
 
 </script>
 <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286066428c06055',t:'MTc4NjI3MDc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28682b87b10e116',t:'MTc4NjI3NTg4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2872445395f1a64',t:'MTc4NjI4MjUwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a297c5fcbeb12b1b',t:'MTc4NjQ1Njg5OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a298adcdbd1cf4ed',t:'MTc4NjQ2NjM5Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28682b87b10e116',t:'MTc4NjI3NTg4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2872445395f1a64',t:'MTc4NjI4MjUwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a297c5fcbeb12b1b',t:'MTc4NjQ1Njg5OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2c7b0968af5e331',t:'MTc4Njk1OTMzOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
