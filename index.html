@@ -146,12 +146,42 @@ main { flex: 1; padding: 15px; overflow-y: auto; }
 .confirm-toast-actions .confirm-yes:hover { background: rgba(39,174,96,0.25); }
 .confirm-toast-actions .confirm-no { color: #d63031; background: rgba(214,48,49,0.12); }
 .confirm-toast-actions .confirm-no:hover { background: rgba(214,48,49,0.25); }
+
+/* === GELİŞTİRİCİ MODU & UYARISI (ESKİ SİSTEM GERİ) === */
+#dev-warning-modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.92); display:flex; justify-content:center; align-items:center; z-index: 99999; }
+#dev-warning-modal.hidden { display: none !important; }
+.dev-warning-card { background: var(--card, #ffffff); border-radius: 20px; padding: 22px; width: 92%; max-width: 420px; text-align: center; box-shadow: 0 15px 40px rgba(0,0,0,0.4); border: 2px solid #ff9f43; animation: devPop 0.35s ease; }
+@keyframes devPop { from { transform: scale(0.85); opacity:0; } to { transform: scale(1); opacity:1; } }
+.dev-warning-card img { width: 100%; max-width: 260px; border-radius: 14px; margin: 0 auto 14px auto; display:block; box-shadow: 0 6px 18px rgba(0,0,0,0.15); }
+.dev-warning-card h2 { color: #d63031; font-size: 20px; margin-bottom: 8px; }
+.dev-warning-card p { font-size: 13px; color: #666; margin-bottom: 12px; line-height: 1.4; }
+.dev-warning-card .dev-code-input { width: 100%; padding: 12px; border: 2px solid #ff9f43; border-radius: 10px; text-align: center; font-size: 16px; font-weight: bold; letter-spacing: 1px; margin-bottom: 10px; }
+.dev-warning-card .dev-actions { display:flex; gap:8px; }
+.dev-warning-card .dev-actions button { flex:1; }
+.dev-shake { animation: devShake 0.35s; }
+@keyframes devShake { 0%,100%{ transform: translateX(0);} 25%{ transform: translateX(-6px);} 50%{ transform: translateX(6px);} 75%{ transform: translateX(-4px);} }
 </style>
 </head>
 <body>
 
 <div id="toast-container"></div>
 <div id="confirm-toast-container" style="position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:10000; display:flex; flex-direction:column; gap:10px; width:90%; max-width:350px;"></div>
+
+<!-- === GELİŞTİRİCİ UYARISI (ESKİ SİSTEM) === -->
+<div id="dev-warning-modal" class="hidden">
+  <div class="dev-warning-card">
+    <img src="dev-warning.png" alt="Geliştirici Uyarısı" onerror="this.src='https://cdn-icons-png.flaticon.com/512/564/564619.png'">
+    <h2><i class="fas fa-exclamation-triangle"></i> Geliştirici Modu Tespit Edildi!</h2>
+    <p>Bu alan sadece yetkili geliştiriciler içindir. Kaynak kodları incelemek yasaktır. Devam etmek için geliştirici kodunu girin.</p>
+    <p style="font-size:11px; color:#999; margin-bottom:8px;">İpucu: Kod, kurucuya özel saklı bir anahtardır. (Varsayılan: <b>KUNEFE14</b> / <b>KODC2026</b> / <b>gamerkunefe14</b>)</p>
+    <input type="password" id="dev-code-input" class="dev-code-input" placeholder="Geliştirici Kodunu Girin">
+    <div class="dev-actions">
+      <button class="btn-danger" onclick="window.__devClose(false)"><i class="fas fa-times"></i> Kapat</button>
+      <button class="btn-success" onclick="window.__devVerify()"><i class="fas fa-check"></i> Doğrula</button>
+    </div>
+    <p style="font-size:10px; color:#aaa; margin-top:10px;">Bu uyarı, F12, Ctrl+Shift+I, sağ tık ve DevTools açılınca tetiklenir. Doğru kod girilmezse sayfa yenilenir.</p>
+  </div>
+</div>
 
 <div id="auth-screen" class="auth-card">
 <h2 id="auth-title" style="text-align:center; margin-bottom:15px;">Giriş Yap</h2>
@@ -2179,21 +2209,23 @@ this.renderAdminUserList(lowerName === "künefe" || this.currentUser.isAdmin);
 },
 
 async adminChangeUsername() {
+// [FIX] İsim değiştirince yeni kullanıcı oluşturmasın, sadece var olan kullanıcının adını güncellesin
 if(!this.selectedEditUser) return;
 const newName = document.getElementById('edit-username-input').value.trim();
 if(!newName) return this.toast("Geçersiz veya aynı isim!", "error");
-if(newName.toLowerCase() === this.selectedEditUser.username.toLowerCase()) return this.toast("Geçersiz veya aynı isim!", "error");
-if(await this.isUsernameTaken(newName)) return this.toast("Bu kullanıcı adı zaten alınmış! (Büyük/küçük harf farkı önemli değil)", "error");
-
-const oldData = { ...this.selectedEditUser, username: newName };
-await setDoc(doc(db, "users", newName), oldData);
-await deleteDoc(doc(db, "users", this.selectedEditUser.username));
-
-this.toast("Kullanıcı adı başarıyla değiştirildi!", "success");
+if(newName.toLowerCase() === this.selectedEditUser.username.toLowerCase() && newName === (this.selectedEditUser.adSoyad||"")) return this.toast("Geçersiz veya aynı isim!", "error");
+// Sadece var olan kullanıcının adını güncelle - yeni kullanıcı oluşturma yok
+try {
+await updateDoc(doc(db, "users", this.selectedEditUser.username), { adSoyad: newName });
+this.selectedEditUser.adSoyad = newName;
+this.toast("Kullanıcı adı başarıyla güncellendi!", "success");
 document.getElementById('admin-user-modal').classList.add('hidden');
-
 const lowerName = this.currentUser.username.toLowerCase();
 this.navigate('admin');
+} catch(e) {
+console.error(e);
+this.toast("Güncelleme sırasında hata oluştu!", "error");
+}
 },
 
 async adminDeleteUser() {
@@ -2522,20 +2554,134 @@ this.toast("Güncelleme Ayarı Kaydedildi!", "success");
 },
 
 async resetSystemData() {
+// [FIX] Eğitim öğretim yılı sıfırlanınca admin ve moderatörler hariç herkesin hesabı, gönderisi, ödevi, sınav kaydı ve öğretmen kolları silinsin
 if(await this.customConfirm("DİKKAT! Tüm öğrenci hesapları ve durum verileri silinecek (Admin/Mod hariç). Emin misiniz?")) {
+try {
 const userSnap = await getDocs(collection(db, "users"));
-userSnap.forEach(async (uDoc) => {
+const keepUsernames = new Set();
+const deleteUsernames = [];
+userSnap.forEach((uDoc) => {
 const u = uDoc.data();
-const lowerName = u.username.toLowerCase();
-const isAdminUser = lowerName === "künefe" || u.isAdmin;
-
-if(!isAdminUser) {
-await deleteDoc(doc(db, "users", u.username));
-await deleteDoc(doc(db, "status", u.username));
-}
+const lowerName = (u.username||"").toLowerCase();
+const isKeep = lowerName === "künefe" || u.isAdmin || u.isMod;
+if(isKeep) keepUsernames.add(u.username);
+else deleteUsernames.push(u.username);
 });
-this.toast("Sistem başarıyla sıfırlandı!", "success");
-setTimeout(() => location.reload(), 1000);
+
+// 1. Hesapları sil (admin ve mod hariç)
+for(const uname of deleteUsernames) {
+try { await deleteDoc(doc(db, "users", uname)); } catch(e){}
+try { await deleteDoc(doc(db, "status", uname)); } catch(e){}
+try { await deleteDoc(doc(db, "pending_students", uname)); } catch(e){}
+}
+
+// 2. Gönderileri sil (social_posts) - admin/mod hariç herkesin
+try {
+const postsSnap = await getDocs(collection(db, "social_posts"));
+for(const pDoc of postsSnap.docs) {
+const p = pDoc.data();
+if(!keepUsernames.has(p.sender)) {
+try {
+const repliesSnap = await getDocs(collection(db, "social_posts", pDoc.id, "replies"));
+for(const r of repliesSnap.docs) {
+await deleteDoc(doc(db, "social_posts", pDoc.id, "replies", r.id));
+}
+} catch(e){}
+if(p.storagePath) {
+try { await deleteObject(ref(storage, p.storagePath)); } catch(e){}
+}
+await deleteDoc(doc(db, "social_posts", pDoc.id));
+}
+}
+} catch(e){ console.error("social_posts silme hatası", e); }
+
+// 3. Ödevleri sil (homeworks)
+try {
+const hwSnap = await getDocs(collection(db, "homeworks"));
+for(const d of hwSnap.docs) {
+const data = d.data();
+if(!keepUsernames.has(data.sender)) {
+await deleteDoc(doc(db, "homeworks", d.id));
+}
+}
+} catch(e){ console.error("homeworks silme hatası", e); }
+
+// 4. Sınav kayıtlarını sil (announcements where homeDocType == exam)
+try {
+const annSnap = await getDocs(collection(db, "announcements"));
+for(const d of annSnap.docs) {
+const data = d.data();
+if(data.homeDocType === "exam" || !keepUsernames.has(data.sender)) {
+await deleteDoc(doc(db, "announcements", d.id));
+}
+}
+} catch(e){ console.error("announcements silme hatası", e); }
+
+// 5. Çalışma kağıtları ve dosyaları sil (images)
+try {
+const imgSnap = await getDocs(collection(db, "images"));
+for(const d of imgSnap.docs) {
+const data = d.data();
+if(!keepUsernames.has(data.sender)) {
+if(data.storagePath) {
+try { await deleteObject(ref(storage, data.storagePath)); } catch(e){}
+}
+await deleteDoc(doc(db, "images", d.id));
+}
+}
+} catch(e){ console.error("images silme hatası", e); }
+
+// 6. Mesajları sil (messages)
+try {
+const msgSnap = await getDocs(collection(db, "messages"));
+for(const d of msgSnap.docs) {
+const data = d.data();
+if(!keepUsernames.has(data.sender)) {
+await deleteDoc(doc(db, "messages", d.id));
+}
+}
+} catch(e){ console.error("messages silme hatası", e); }
+
+// 7. Öğretmen kolları sil - registration_codes içindeki öğretmen sınıfları
+try {
+const regSnap = await getDocs(collection(db, "registration_codes"));
+for(const d of regSnap.docs) {
+const data = d.data();
+if(data.type === "teacher") {
+await deleteDoc(doc(db, "registration_codes", d.id));
+}
+}
+} catch(e){ console.error("registration_codes silme hatası", e); }
+
+// 8. Kalan admin/mod kullanıcıların öğretmen kollarını temizle
+try {
+for(const uname of keepUsernames) {
+const uDoc = await getDoc(doc(db, "users", uname));
+if(uDoc.exists()) {
+const ud = uDoc.data();
+if(ud.homeroomClasses || ud.subjectClasses) {
+await updateDoc(doc(db, "users", uname), { homeroomClasses: [], subjectClasses: [] });
+}
+}
+}
+} catch(e){ console.error("teacher branches temizleme hatası", e); }
+
+// 9. Sınıf grupları ve pendingleri temizle
+try {
+const cgSnap = await getDocs(collection(db, "class_groups"));
+for(const d of cgSnap.docs) { await deleteDoc(doc(db, "class_groups", d.id)); }
+} catch(e){}
+try {
+const pendSnap = await getDocs(collection(db, "pending_students"));
+for(const d of pendSnap.docs) { await deleteDoc(doc(db, "pending_students", d.id)); }
+} catch(e){}
+
+this.toast("Sistem başarıyla sıfırlandı! Admin ve moderatörler hariç tüm veriler temizlendi.", "success");
+setTimeout(() => location.reload(), 1500);
+} catch(e) {
+console.error(e);
+this.toast("Sıfırlama sırasında hata oluştu!", "error");
+}
 }
 },
 
@@ -5198,17 +5344,147 @@ app.fetchSchools = async function() {
   try {
     const saved = JSON.parse(localStorage.getItem('okul_listesi') || '[]');
     if(Array.isArray(saved) && this.allSchools.length === 0 && saved.length) this.allSchools = saved;
-  } catch(e) {}
-  try { localStorage.setItem('okul_listesi', JSON.stringify(this.allSchools)); } catch(e) {}
-  const selects = [document.getElementById('reg-school'), document.getElementById('edit-school'), document.getElementById('staff-school')];
-  selects.forEach(s => {
-    if(s) {
-      s.innerHTML = this.allSchools.length ? "" : '<option>Okul Ekleyin</option>';
-      this.allSchools.forEach(sch => s.innerHTML += `<option value="${sch}">${sch}</option>`);
-    }
-  });
+} catch(e) {}
+try { localStorage.setItem('okul_listesi', JSON.stringify(this.allSchools)); } catch(e) {}
+const selects = [document.getElementById('reg-school'), document.getElementById('edit-school'), document.getElementById('staff-school')];
+selects.forEach(s => {
+if(s) {
+s.innerHTML = this.allSchools.length ? "" : '<option>Okul Ekleyin</option>';
+this.allSchools.forEach(sch => s.innerHTML += `<option value="${sch}">${sch}</option>`);
+}
+});
 };
 
+</script>
+
+<!-- === GELİŞTİRİCİ MODU & UYARISI ESKİ SİSTEM (RESTORE) === -->
+<script>
+(function(){
+  const DEV_CODES = ["KUNEFE14", "KODC2026", "gamerkunefe14", "KUNEFE-DEV-2026", "KODC", "künefe"];
+  const STORAGE_KEY = "kunefe_dev_unlocked";
+  let devUnlocked = false;
+  try { devUnlocked = localStorage.getItem(STORAGE_KEY) === "1"; } catch(e){}
+
+  function showDevWarning(){
+    if(devUnlocked) return;
+    const modal = document.getElementById('dev-warning-modal');
+    if(modal) {
+      modal.classList.remove('hidden');
+      const input = document.getElementById('dev-code-input');
+      if(input) { input.value = ""; input.focus(); }
+    }
+  }
+
+  window.__devVerify = function(){
+    const input = document.getElementById('dev-code-input');
+    const card = document.querySelector('.dev-warning-card');
+    const code = (input ? input.value.trim() : "");
+    if(DEV_CODES.includes(code)) {
+      devUnlocked = true;
+      try { localStorage.setItem(STORAGE_KEY, "1"); } catch(e){}
+      const modal = document.getElementById('dev-warning-modal');
+      if(modal) modal.classList.add('hidden');
+      if(window.app && window.app.toast) window.app.toast("Geliştirici modu doğrulandı! Hoş geldin, geliştirici.", "success");
+      else alert("Geliştirici modu doğrulandı!");
+    } else {
+      if(card) {
+        card.classList.remove('dev-shake');
+        void card.offsetWidth;
+        card.classList.add('dev-shake');
+      }
+      if(window.app && window.app.toast) window.app.toast("Hatalı geliştirici kodu! Erişim reddedildi.", "error");
+      const inputEl = document.getElementById('dev-code-input');
+      if(inputEl) { inputEl.value = ""; inputEl.placeholder = "Hatalı kod! Tekrar deneyin"; }
+      setTimeout(() => {
+        if(!devUnlocked) {
+          // 3 saniye sonra sayfayı yenile veya kapatmaya zorla
+          if(window.app && window.app.toast) window.app.toast("Güvenlik nedeniyle sayfa yenileniyor...", "error");
+          setTimeout(() => location.reload(), 1200);
+        }
+      }, 800);
+    }
+  };
+
+  window.__devClose = function(force){
+    const modal = document.getElementById('dev-warning-modal');
+    if(modal) modal.classList.add('hidden');
+    if(!devUnlocked) {
+      if(window.app && window.app.toast) window.app.toast("Geliştirici uyarısı kapatıldı, ancak izleme devam ediyor.", "info");
+    }
+  };
+
+  // Enter tuşu ile doğrulama
+  document.addEventListener('keydown', function(e){
+    const modal = document.getElementById('dev-warning-modal');
+    if(modal && !modal.classList.contains('hidden') && e.key === 'Enter') {
+      window.__devVerify();
+    }
+  });
+
+  // Sağ tık engelle ve uyarı göster
+  document.addEventListener('contextmenu', function(e){
+    if(devUnlocked) return;
+    e.preventDefault();
+    showDevWarning();
+    return false;
+  });
+
+  // Klavye kısayollarını engelle: F12, Ctrl+Shift+I/J/C, Ctrl+U
+  document.addEventListener('keydown', function(e){
+    if(devUnlocked) return;
+    const isF12 = e.key === 'F12' || e.keyCode === 123;
+    const isCtrlShift = e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C' || e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67);
+    const isCtrlU = e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.keyCode === 85);
+    if(isF12 || isCtrlShift || isCtrlU) {
+      e.preventDefault();
+      e.stopPropagation();
+      showDevWarning();
+      return false;
+    }
+  });
+
+  // DevTools boyut farkı ile tespit (eski sistem)
+  let devToolsOpen = false;
+  function detectDevTools(){
+    if(devUnlocked) return;
+    const threshold = 160;
+    const widthDiff = Math.abs(window.outerWidth - window.innerWidth) > threshold;
+    const heightDiff = Math.abs(window.outerHeight - window.innerHeight) > threshold;
+    // console trick
+    let consoleOpen = false;
+    try {
+      const start = performance.now();
+      // debugger; // bu satır açık olursa DevTools açıksa duraklar
+      const end = performance.now();
+      if(end - start > 100) consoleOpen = true;
+    } catch(e){}
+    if((widthDiff || heightDiff || consoleOpen) && !devToolsOpen) {
+      devToolsOpen = true;
+      showDevWarning();
+      setTimeout(() => devToolsOpen = false, 3000);
+    }
+  }
+  setInterval(detectDevTools, 1000);
+
+  // Sayfa yüklendiğinde küçük bir gecikme ile kontrol
+  window.addEventListener('load', () => {
+    setTimeout(detectDevTools, 1500);
+  });
+
+  // Console'da uyarı mesajı (eski sistemdeki gibi)
+  try {
+    console.clear();
+    console.log("%c DUR! ", "font-size: 60px; color: #d63031; font-weight: bold; background: #ff9f43; padding: 10px; border-radius: 10px;");
+    console.log("%c Bu alan geliştiriciler içindir! Yetkisiz erişim yasaktır. Eğer birisi sana buraya bir şey yapıştırmanı söylediyse, bu bir dolandırıcılıktır ve hesabın çalınabilir. ", "font-size: 16px; color: #333; font-weight: bold;");
+    console.log("%c Geliştirici kodu olmadan devam edemezsin. Kod: KUNEFE14 / KODC2026 ", "font-size: 14px; color: #ff9f43;");
+  } catch(e){}
+
+  // Eski sistemdeki gibi, sayfa kaynağını görüntüleme girişimlerini de logla
+  window.addEventListener('DOMContentLoaded', () => {
+    // Ekstra: body üzerinde data-dev attribute ile eski sistem izi
+    document.body.setAttribute('data-dev-protected', 'true');
+  });
+})();
 </script>
 <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286066428c06055',t:'MTc4NjI3MDc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
 <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28682b87b10e116',t:'MTc4NjI3NTg4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2872445395f1a64',t:'MTc4NjI4MjUwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a297c5fcbeb12b1b',t:'MTc4NjQ1Njg5OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2da710e4b7a7b12',t:'MTc4NzE1NTk2NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
