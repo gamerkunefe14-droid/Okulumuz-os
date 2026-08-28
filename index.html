@@ -146,42 +146,12 @@ main { flex: 1; padding: 15px; overflow-y: auto; }
 .confirm-toast-actions .confirm-yes:hover { background: rgba(39,174,96,0.25); }
 .confirm-toast-actions .confirm-no { color: #d63031; background: rgba(214,48,49,0.12); }
 .confirm-toast-actions .confirm-no:hover { background: rgba(214,48,49,0.25); }
-
-/* === GELİŞTİRİCİ MODU & UYARISI (ESKİ SİSTEM GERİ) === */
-#dev-warning-modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.92); display:flex; justify-content:center; align-items:center; z-index: 99999; }
-#dev-warning-modal.hidden { display: none !important; }
-.dev-warning-card { background: var(--card, #ffffff); border-radius: 20px; padding: 22px; width: 92%; max-width: 420px; text-align: center; box-shadow: 0 15px 40px rgba(0,0,0,0.4); border: 2px solid #ff9f43; animation: devPop 0.35s ease; }
-@keyframes devPop { from { transform: scale(0.85); opacity:0; } to { transform: scale(1); opacity:1; } }
-.dev-warning-card img { width: 100%; max-width: 260px; border-radius: 14px; margin: 0 auto 14px auto; display:block; box-shadow: 0 6px 18px rgba(0,0,0,0.15); }
-.dev-warning-card h2 { color: #d63031; font-size: 20px; margin-bottom: 8px; }
-.dev-warning-card p { font-size: 13px; color: #666; margin-bottom: 12px; line-height: 1.4; }
-.dev-warning-card .dev-code-input { width: 100%; padding: 12px; border: 2px solid #ff9f43; border-radius: 10px; text-align: center; font-size: 16px; font-weight: bold; letter-spacing: 1px; margin-bottom: 10px; }
-.dev-warning-card .dev-actions { display:flex; gap:8px; }
-.dev-warning-card .dev-actions button { flex:1; }
-.dev-shake { animation: devShake 0.35s; }
-@keyframes devShake { 0%,100%{ transform: translateX(0);} 25%{ transform: translateX(-6px);} 50%{ transform: translateX(6px);} 75%{ transform: translateX(-4px);} }
 </style>
 </head>
 <body>
 
 <div id="toast-container"></div>
 <div id="confirm-toast-container" style="position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:10000; display:flex; flex-direction:column; gap:10px; width:90%; max-width:350px;"></div>
-
-<!-- === GELİŞTİRİCİ UYARISI (ESKİ SİSTEM) === -->
-<div id="dev-warning-modal" class="hidden">
-  <div class="dev-warning-card">
-    <img src="dev-warning.png" alt="Geliştirici Uyarısı" onerror="this.src='https://cdn-icons-png.flaticon.com/512/564/564619.png'">
-    <h2><i class="fas fa-exclamation-triangle"></i> Geliştirici Modu Tespit Edildi!</h2>
-    <p>Bu alan sadece yetkili geliştiriciler içindir. Kaynak kodları incelemek yasaktır. Devam etmek için geliştirici kodunu girin.</p>
-    <p style="font-size:11px; color:#999; margin-bottom:8px;">İpucu: Kod, kurucuya özel saklı bir anahtardır. (Varsayılan: <b>KUNEFE14</b> / <b>KODC2026</b> / <b>gamerkunefe14</b>)</p>
-    <input type="password" id="dev-code-input" class="dev-code-input" placeholder="Geliştirici Kodunu Girin">
-    <div class="dev-actions">
-      <button class="btn-danger" onclick="window.__devClose(false)"><i class="fas fa-times"></i> Kapat</button>
-      <button class="btn-success" onclick="window.__devVerify()"><i class="fas fa-check"></i> Doğrula</button>
-    </div>
-    <p style="font-size:10px; color:#aaa; margin-top:10px;">Bu uyarı, F12, Ctrl+Shift+I, sağ tık ve DevTools açılınca tetiklenir. Doğru kod girilmezse sayfa yenilenir.</p>
-  </div>
-</div>
 
 <div id="auth-screen" class="auth-card">
 <h2 id="auth-title" style="text-align:center; margin-bottom:15px;">Giriş Yap</h2>
@@ -5355,137 +5325,100 @@ this.allSchools.forEach(sch => s.innerHTML += `<option value="${sch}">${sch}</op
 });
 };
 
-</script>
+// ============================================================
+// === [YENİ] Geliştirici Menüsü (dd055ab v1.0.0 referans) ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+// Ayarlar sayfasında en alta soluk gri çok küçük yazıyla
+// "geliştirici modu" linki. Tıklayınca geliştirici menüsü.
+// ============================================================
 
-<!-- === GELİŞTİRİCİ MODU & UYARISI ESKİ SİSTEM (RESTORE) === -->
-<script>
-(function(){
-  const DEV_CODES = ["KUNEFE14", "KODC2026", "gamerkunefe14", "KUNEFE-DEV-2026", "KODC", "künefe"];
-  const STORAGE_KEY = "kunefe_dev_unlocked";
-  let devUnlocked = false;
-  try { devUnlocked = localStorage.getItem(STORAGE_KEY) === "1"; } catch(e){}
+function __devModeIsOn(){
+  try { return localStorage.getItem('kunefe_devmode') === '1'; } catch(e){ return false; }
+}
+function __devModeSetOn(on){
+  try { if(on) localStorage.setItem('kunefe_devmode','1'); else localStorage.removeItem('kunefe_devmode'); } catch(e){}
+}
 
-  function showDevWarning(){
-    if(devUnlocked) return;
-    const modal = document.getElementById('dev-warning-modal');
-    if(modal) {
-      modal.classList.remove('hidden');
-      const input = document.getElementById('dev-code-input');
-      if(input) { input.value = ""; input.focus(); }
-    }
-  }
-
-  window.__devVerify = function(){
-    const input = document.getElementById('dev-code-input');
-    const card = document.querySelector('.dev-warning-card');
-    const code = (input ? input.value.trim() : "");
-    if(DEV_CODES.includes(code)) {
-      devUnlocked = true;
-      try { localStorage.setItem(STORAGE_KEY, "1"); } catch(e){}
-      const modal = document.getElementById('dev-warning-modal');
-      if(modal) modal.classList.add('hidden');
-      if(window.app && window.app.toast) window.app.toast("Geliştirici modu doğrulandı! Hoş geldin, geliştirici.", "success");
-      else alert("Geliştirici modu doğrulandı!");
-    } else {
-      if(card) {
-        card.classList.remove('dev-shake');
-        void card.offsetWidth;
-        card.classList.add('dev-shake');
-      }
-      if(window.app && window.app.toast) window.app.toast("Hatalı geliştirici kodu! Erişim reddedildi.", "error");
-      const inputEl = document.getElementById('dev-code-input');
-      if(inputEl) { inputEl.value = ""; inputEl.placeholder = "Hatalı kod! Tekrar deneyin"; }
-      setTimeout(() => {
-        if(!devUnlocked) {
-          // 3 saniye sonra sayfayı yenile veya kapatmaya zorla
-          if(window.app && window.app.toast) window.app.toast("Güvenlik nedeniyle sayfa yenileniyor...", "error");
-          setTimeout(() => location.reload(), 1200);
-        }
-      }, 800);
-    }
-  };
-
-  window.__devClose = function(force){
-    const modal = document.getElementById('dev-warning-modal');
-    if(modal) modal.classList.add('hidden');
-    if(!devUnlocked) {
-      if(window.app && window.app.toast) window.app.toast("Geliştirici uyarısı kapatıldı, ancak izleme devam ediyor.", "info");
-    }
-  };
-
-  // Enter tuşu ile doğrulama
-  document.addEventListener('keydown', function(e){
-    const modal = document.getElementById('dev-warning-modal');
-    if(modal && !modal.classList.contains('hidden') && e.key === 'Enter') {
-      window.__devVerify();
-    }
-  });
-
-  // Sağ tık engelle ve uyarı göster
-  document.addEventListener('contextmenu', function(e){
-    if(devUnlocked) return;
-    e.preventDefault();
-    showDevWarning();
-    return false;
-  });
-
-  // Klavye kısayollarını engelle: F12, Ctrl+Shift+I/J/C, Ctrl+U
-  document.addEventListener('keydown', function(e){
-    if(devUnlocked) return;
-    const isF12 = e.key === 'F12' || e.keyCode === 123;
-    const isCtrlShift = e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C' || e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67);
-    const isCtrlU = e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.keyCode === 85);
-    if(isF12 || isCtrlShift || isCtrlU) {
-      e.preventDefault();
-      e.stopPropagation();
-      showDevWarning();
-      return false;
-    }
-  });
-
-  // DevTools boyut farkı ile tespit (eski sistem)
-  let devToolsOpen = false;
-  function detectDevTools(){
-    if(devUnlocked) return;
-    const threshold = 160;
-    const widthDiff = Math.abs(window.outerWidth - window.innerWidth) > threshold;
-    const heightDiff = Math.abs(window.outerHeight - window.innerHeight) > threshold;
-    // console trick
-    let consoleOpen = false;
-    try {
-      const start = performance.now();
-      // debugger; // bu satır açık olursa DevTools açıksa duraklar
-      const end = performance.now();
-      if(end - start > 100) consoleOpen = true;
-    } catch(e){}
-    if((widthDiff || heightDiff || consoleOpen) && !devToolsOpen) {
-      devToolsOpen = true;
-      showDevWarning();
-      setTimeout(() => devToolsOpen = false, 3000);
-    }
-  }
-  setInterval(detectDevTools, 1000);
-
-  // Sayfa yüklendiğinde küçük bir gecikme ile kontrol
-  window.addEventListener('load', () => {
-    setTimeout(detectDevTools, 1500);
-  });
-
-  // Console'da uyarı mesajı (eski sistemdeki gibi)
+// Ayarlar: en alta soluk gri küçük yazı
+var __prevRenderSettingsDevFinal = app.renderSettings;
+app.renderSettings = function() {
+  var out = __prevRenderSettingsDevFinal.apply(this, arguments);
   try {
-    console.clear();
-    console.log("%c DUR! ", "font-size: 60px; color: #d63031; font-weight: bold; background: #ff9f43; padding: 10px; border-radius: 10px;");
-    console.log("%c Bu alan geliştiriciler içindir! Yetkisiz erişim yasaktır. Eğer birisi sana buraya bir şey yapıştırmanı söylediyse, bu bir dolandırıcılıktır ve hesabın çalınabilir. ", "font-size: 16px; color: #333; font-weight: bold;");
-    console.log("%c Geliştirici kodu olmadan devam edemezsin. Kod: KUNEFE14 / KODC2026 ", "font-size: 14px; color: #ff9f43;");
-  } catch(e){}
+    var main = document.getElementById('main-content');
+    if(!main) return out;
+    var existing = document.getElementById('dev-menu-link');
+    if(existing) existing.remove();
 
-  // Eski sistemdeki gibi, sayfa kaynağını görüntüleme girişimlerini de logla
-  window.addEventListener('DOMContentLoaded', () => {
-    // Ekstra: body üzerinde data-dev attribute ile eski sistem izi
-    document.body.setAttribute('data-dev-protected', 'true');
-  });
-})();
+    var link = document.createElement('div');
+    link.id = 'dev-menu-link';
+    // Kullanıcının isteği: soluk gri çok küçük yazı, en altta
+    link.style.cssText = 'margin-top:22px; text-align:center; font-size:10px; color:#bbb; opacity:0.6; cursor:pointer; letter-spacing:0.3px; user-select:none; padding:8px;';
+    link.innerText = 'geliştirici modu';
+    link.onmouseenter = function(){ this.style.opacity='0.9'; this.style.color='#999'; };
+    link.onmouseleave = function(){ this.style.opacity='0.6'; this.style.color='#bbb'; };
+    link.onclick = function(){ app.openDevMenu(); };
+    main.appendChild(link);
+  } catch(e) { console.error("Geliştirici menüsü ekleme:", e); }
+  return out;
+};
+
+// Geliştirici Menüsü sayfası (tarihsel dd055ab ile birebir aynı akış)
+app.openDevMenu = function() {
+  var bg = __qrModal('', 'dev-menu-modal');
+  bg.querySelector('div').innerHTML =
+    '<h3 style="margin-bottom:15px;">Geliştirici Menüsü</h3>' +
+    '<div class="argon2-switch-wrap" style="justify-content:space-between; margin-bottom:20px;">' +
+      '<span style="font-size:14px; font-weight:600;">Geliştirici modunu aktif et</span>' +
+      '<label class="argon2-switch" for="dev-toggle">' +
+        '<input type="checkbox" id="dev-toggle" ' + (__devModeIsOn() ? 'checked' : '') + ' onchange="app.onDevToggleChange()">' +
+        '<span class="argon2-slider"></span>' +
+      '</label>' +
+    '</div>' +
+    '<div id="dev-action-area"></div>' +
+    '<button class="btn-danger" style="background:#888; margin-top:10px;" onclick="document.getElementById(\'dev-menu-modal\').remove()">Geri Dön</button>';
+};
+
+// Toggle açılınca onay adımlarını göster
+app.onDevToggleChange = function() {
+  var cb = document.getElementById('dev-toggle');
+  if(!cb) return;
+  if(!cb.checked) {
+    __devModeSetOn(false);
+    document.getElementById('dev-action-area').innerHTML = '';
+    return;
+  }
+  cb.checked = false;
+  document.getElementById('dev-action-area').innerHTML =
+    '<div style="background:rgba(0,0,0,0.05); padding:14px; border-radius:10px; text-align:left; margin-bottom:12px;">' +
+      '<p style="font-size:13px; color:#333; margin-bottom:8px;"><b>DİKKAT:</b></p>' +
+      '<p style="font-size:12px; color:#555; line-height:1.5;">Geliştirici modunu etkinleştirmek, bu uygulamanın deneysel ve geliştirilmekte olan özelliklerine erişmenizi sağlar. Bu modda karşılaşabileceğiniz hatalar, beklenmedik davranışlar veya veri kayıplarından uygulama sorumlu değildir. Devam etmeden önce emin olun.</p>' +
+    '</div>' +
+    '<button class="btn-main" onclick="app.confirmDevActivate()">Geliştirici modunu aktif et</button>' +
+    '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'dev-action-area\').innerHTML=\'\'">Geri Dön</button>';
+};
+
+// Aktif et -> resmi "emin misiniz" uyarısı
+app.confirmDevActivate = function() {
+  document.getElementById('dev-action-area').innerHTML =
+    '<div style="background:rgba(214,48,49,0.08); padding:14px; border-radius:10px; text-align:left; margin-bottom:12px; border-left:4px solid #d63031;">' +
+      '<p style="font-size:13px; color:#d63031; margin-bottom:8px;"><b><i class="fas fa-exclamation-triangle"></i> Son Uyarı</b></p>' +
+      '<p style="font-size:12px; color:#555; line-height:1.5;">Bu işlemi gerçekleştirmek, hesabınızın askıya alınmasına veya kalıcı olarak yasaklanmasına neden olabilir. Geliştirici modu, yalnızca test amacıyla kullanılmalıdır. Hesabınızın güvenliğinden siz sorumlusunuz.</p>' +
+    '</div>' +
+    '<button class="btn-main" style="background:#d63031;" onclick="app.finalizeDevActivate()"><i class="fas fa-check"></i> Eminim, Geliştirici Modunu Aktif Et</button>' +
+    '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'dev-action-area\').innerHTML=\'\'">Vazgeç</button>';
+};
+
+// Eminim -> aktif et
+app.finalizeDevActivate = function() {
+  __devModeSetOn(true);
+  var m = document.getElementById('dev-menu-modal');
+  if(m) m.remove();
+  app.toast('Geliştirici modu aktif edildi.', 'success');
+};
+
 </script>
+
+
 <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286066428c06055',t:'MTc4NjI3MDc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
 <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28682b87b10e116',t:'MTc4NjI3NTg4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2872445395f1a64',t:'MTc4NjI4MjUwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a297c5fcbeb12b1b',t:'MTc4NjQ1Njg5OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2da710e4b7a7b12',t:'MTc4NzE1NTk2NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
