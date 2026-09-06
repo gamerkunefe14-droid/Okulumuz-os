@@ -6020,6 +6020,442 @@ app._drawFeed = function() {
   feed.innerHTML = html;
 };
 
+
+// ============================================================
+// === [YENİ] Geliştirici Hesap Durumu (Admin Panelinde) ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+// Admin, kullanıcı düzenleme ekranında bir test-developer/developer'a
+// tıklayınca "Geliştiricinin Hesap Durumu" bölümü görünür ve şu
+// işlemleri sunar (py paneldeki gibi):
+//   - Kişiyi Developer yap
+//   - Hesabı sil
+//   - test-developer rolünden çıkar
+//   - Bir daha developer olmasını engelle
+//   - IP adresini (uygulama + web) engelle
+// ============================================================
+
+var __devStatusBtnAdded = false;
+
+// ===== GÜVENLİ YAKLAŞIM =====
+// openAdminUserModal'i override etmek yerine, modal açıldığında DOM'dan
+// tespit edip butonu ekleyen bir yardımcı. Ama basitçe: admin kullanıcı
+// listesindeki tıklama admin'de openAdminUserModal çağırır. Biz onu override
+// edip içinde eski mantığı çalıştıramayız (obje literal). Bu yüzden:
+// renderAdminUserList içindeki item.onclick'i değiştirmek yerine,
+// openAdminUserModal'i tamamen yeniden tanımlayıp içindeki tüm orijinal
+// görevleri kopyalamak gerekir. Bunu yapmak yerine, buton eklemesini
+// basit bir "interval/poll" veya modal açılış sonrası hook ile yapacağız.
+
+// En temiz: modal gösterildikten sonra çalışan bir dinleyici ekleyelim.
+app._devStatusEnsure = function() {
+  const modal = document.getElementById('admin-user-modal');
+  if(!modal || modal.classList.contains('hidden')) return;
+  const u = app.selectedEditUser;
+  if(!u) return;
+  const rank = ((u.rank||'').toLowerCase());
+  const isDev = rank.indexOf('developer') !== -1;
+  const tools = document.getElementById('admin-only-tools');
+  if(tools) {
+    let btn = document.getElementById('dev-status-btn');
+    if(!btn) {
+      btn = document.createElement('button');
+      btn.id = 'dev-status-btn';
+      btn.className = 'btn-main';
+      btn.style.background = '#ffd700';
+      btn.style.color = '#111';
+      btn.style.marginTop = '8px';
+      btn.innerText = 'Geliştiricinin Hesap Durumu';
+      btn.onclick = function(){ app.openDevStatusModal(u); };
+      tools.appendChild(btn);
+    }
+    btn.classList.toggle('hidden', !isDev);
+  }
+};
+
+// Periyodik kontrol (modal açılınca butonu yerleştir)
+if(!window.__devPollSet){
+  window.__devPollSet = true;
+  setInterval(() => { try{ app._devStatusEnsure(); }catch(e){} }, 600);
+}
+
+// ---- Geliştirici Hesap Durumu GUI (küçük ikinci modal) ----
+app.openDevStatusModal = function(u) {
+  const uname = u.username;
+  const bg = __qrModal('', 'dev-status-modal');
+  bg.querySelector('div').innerHTML =
+    '<h3 style="margin-bottom:10px;"><i class="fas fa-shield-alt"></i> Geliştirici Hesap Durumu</h3>' +
+    '<p style="font-size:13px; color:#666; margin-bottom:12px;">Kullanıcı: <b>'+uname+'</b> ('+(u.rank||'-')+')</p>' +
+    '<button class="btn-main" style="background:#ffd700; color:#111; margin-top:5px;" onclick="app.devMakeDeveloper(\''+uname+'\')">⭐ Kişiyi Developer Yap</button>' +
+    '<button class="btn-danger" style="margin-top:5px;" onclick="app.devDeleteUser(\''+uname+'\')">🗑️ Hesabı Sil</button>' +
+    '<button class="btn-teacher" style="margin-top:5px;" onclick="app.devRemoveTestDev(\''+uname+'\')">↩️ test-developer Rolünden Çıkar</button>' +
+    '<button class="btn-danger" style="margin-top:5px; background:#c0392b;" onclick="app.devBanPermanently(\''+uname+'\')">🚫 Bir Daha Developer Olmasını Engelle</button>' +
+    '<button class="btn-danger" style="margin-top:5px;" onclick="app.devBlockIP(\''+uname+'\')">🛡️ IP Adresini Engelle</button>' +
+    '<button class="btn-danger" style="background:#888; margin-top:8px;" onclick="document.getElementById(\'dev-status-modal\').remove()">Kapat</button>';
+};
+
+// İşlemler
+app.devMakeDeveloper = async function(uname) {
+  if(!(await this.customConfirm(uname + ' kişisi Developer yapılsın mı?'))) return;
+  try { await updateDoc(doc(db,"users",uname), { rank:"Developer", rankColor:"#ffd700", devBanned:false }); } catch(e){}
+  const m=document.getElementById('dev-status-modal'); if(m)m.remove();
+  this.toast(uname + ' artık Developer.', 'success');
+};
+app.devDeleteUser = async function(uname) {
+  if(!(await this.customConfirm(uname + ' hesabı tamamen silinsin mi?'))) return;
+  try { await deleteDoc(doc(db,"users",uname)); } catch(e){}
+  try { await deleteDoc(doc(db,"status",uname)); } catch(e){}
+  const m=document.getElementById('dev-status-modal'); if(m)m.remove();
+  document.getElementById('admin-user-modal').classList.add('hidden');
+  this.renderAdminPanel();
+  this.toast('Hesap silindi.', 'success');
+};
+app.devRemoveTestDev = async function(uname) {
+  if(!(await this.customConfirm(uname + ' test-developer rolünden çıkarılsın mı?'))) return;
+  try { await updateDoc(doc(db,"users",uname), { rank:"", rankColor:"#ff9f43" }); } catch(e){}
+  const m=document.getElementById('dev-status-modal'); if(m)m.remove();
+  this.toast(uname + ' test-developer rolünden çıkarıldı.', 'success');
+};
+app.devBanPermanently = async function(uname) {
+  if(!(await this.customConfirm(uname + ' bir daha developer olması engellensin mi? (devBanned)'))) return;
+  try { await updateDoc(doc(db,"users",uname), { devBanned:true, rank:"", rankColor:"#ff9f43" }); } catch(e){}
+  const m=document.getElementById('dev-status-modal'); if(m)m.remove();
+  this.toast(uname + ' developer olmaktan kalıcı engellendi.', 'success');
+};
+app.devBlockIP = async function(uname) {
+  if(!(await this.customConfirm(uname + ' için IP adresi (uygulama + web) engellensin mi?'))) return;
+  try { await updateDoc(doc(db,"users",uname), { ipBlocked:true, isBlocked:true }); } catch(e){}
+  const m=document.getElementById('dev-status-modal'); if(m)m.remove();
+  this.toast(uname + ' IP engellendi (uygulama + web).', 'success');
+};
+
+
+// ============================================================
+// === [YENİ] Developer Duyurusu Sistemi ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+// Altın unvanlı "Developer" kullanıcılar, Geliştirici Menüsü'nden
+// okul/kademe/şube/sınıf hedefli duyuru yayınlar. Bu duyurular:
+//   - Hem menüdeki Duyurular sekmesine hem Ana Sayfa (feed) akışına düşer.
+//   - Üstünde altın yıldız + mavi "DEVELOPER DUYURUSU" etiketi taşır.
+//   - "Duyuru sabitlensin" seçilirse en üstte kalır.
+// ============================================================
+
+function __isRealDeveloper() {
+  var u = app.currentUser;
+  if(!u) return false;
+  var r = (u.rank || '').toLowerCase();
+  return r === 'developer' && (u.rankColor || '').toLowerCase() === '#ffd700';
+}
+
+// ---- openDevMenu override: Developer'a duyuru butonu ekle ----
+var __origOpenDevMenu = app.openDevMenu;
+app.openDevMenu = function() {
+  var out = __origOpenDevMenu.apply(this, arguments);
+  try {
+    var area = document.getElementById('dev-action-area');
+    if(area && __isRealDeveloper()) {
+      var devBtn = document.createElement('button');
+      devBtn.id = 'dev-announce-btn';
+      devBtn.style.cssText = 'margin-top:12px; background:#ffd700; color:#111; width:100%; padding:12px; border:none; border-radius:10px; font-weight:bold; cursor:pointer;';
+      devBtn.innerHTML = '<i class="fas fa-star"></i> Developer Duyurusu Yayınla';
+      devBtn.onclick = function(){ app.openDevAnnounceModal(); };
+      // toggle'dan sonra, action-area'nın üstüne koy
+      var toggleWrap = area.previousElementSibling;
+      area.parentNode.insertBefore(devBtn, area);
+    }
+  } catch(e){ console.error(e); }
+  return out;
+};
+
+// ---- Developer Duyuru formu (okul/kademe/sube/sinif hedefli) ----
+app.openDevAnnounceModal = function() {
+  var bg = __qrModal('', 'dev-announce-modal');
+  var sch = (app.allSchools || []).map(function(s){ return '<option value="'+s+'">'+s+'</option>'; }).join('');
+  var kademeler = '';
+  for(var i=1;i<=12;i++) kademeler += '<option value="'+i+'">'+i+'. Sınıf</option>';
+  bg.querySelector('div').innerHTML =
+    '<h3 style="margin-bottom:12px; color:#ffd700;"><i class="fas fa-star"></i> Developer Duyurusu</h3>' +
+    '<label style="font-size:12px; font-weight:bold;">Hedef Okul:</label>' +
+    '<select id="devann-school" onchange="app.devAnnSchoolChange()">'+sch+'</select>' +
+    '<label style="font-size:12px; font-weight:bold; margin-top:8px; display:block;">Yayın Kapsamı:</label>' +
+    '<select id="devann-mode" onchange="app.devAnnModeChange()">' +
+      '<option value="school">Tüm Okul</option>' +
+      '<option value="grade">Belirli Sınıf Kademesi</option>' +
+      '<option value="section">Belirli Şubeler</option>' +
+      '<option value="class">Belirli Sınıflar</option>' +
+    '</select>' +
+    '<div id="devann-class-area">' +
+      '<label style="font-size:12px; font-weight:bold; margin-top:8px; display:block;">Sınıf Kademesi:</label>' +
+      '<select id="devann-grade">'+kademeler+'</select>' +
+      '<label style="font-size:12px; font-weight:bold; margin-top:8px; display:block;">Şube:</label>' +
+      '<select id="devann-section" onchange="app.devAnnAddClass()">' + app.__sectionsHtml() + '</select>' +
+      '<button type="button" style="width:auto; margin-top:5px;" class="btn-main" onclick="app.devAnnAddClass()"><i class="fas fa-plus"></i> Ekle</button>' +
+      '<div id="devann-added" style="margin-top:8px;"></div>' +
+    '</div>' +
+    '<textarea id="devann-text" placeholder="Duyuru metnini yazın..." style="width:100%; height:90px; padding:10px; margin-top:10px; border-radius:10px; border:1.5px solid #eee; outline:none; font-family:inherit; resize:none; background:var(--card); color:var(--text);"></textarea>' +
+    '<label class="remember-me-row" for="devann-pin" style="margin-top:8px;"><input type="checkbox" id="devann-pin"> Duyuru sabitlensin (en üstte kalsın)</label>' +
+    '<button class="btn-main" style="background:#ffd700; color:#111;" onclick="app.devPublishAnnounce()">Yayınla</button>' +
+    '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'dev-announce-modal\').remove()">İptal</button>';
+  app.devAnnMode = 'school';
+  app.devAnnSelected = [];
+  app.devAnnSchoolChange();
+};
+
+// sections html yardımcısı
+app.__sectionsHtml = function() {
+  var out = '';
+  "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split("").forEach(function(ch){ out += '<option value="'+ch+'">'+ch+'</option>'; });
+  return out;
+};
+
+app.devAnnSchoolChange = function() {
+  var s = document.getElementById('devann-school');
+  if(s) app.currentDevAnnSchool = s.value;
+};
+
+app.devAnnModeChange = function() {
+  var m = document.getElementById('devann-mode');
+  if(!m) return;
+  app.devAnnMode = m.value;
+  var area = document.getElementById('devann-class-area');
+  if(area) {
+    var single = (m.value === 'grade'); // grade'de tek kademe
+    var multi = (m.value === 'section' || m.value === 'class');
+    // Basit: hepsini göster, seçimlerle yönet
+    area.style.display = (m.value === 'school') ? 'none' : 'block';
+    // mode'a göre grade/section görünürlüğü
+  }
+};
+
+app.devAnnAddClass = function() {
+  var gradeEl = document.getElementById('devann-grade');
+  var secEl = document.getElementById('devann-section');
+  if(!gradeEl) return;
+  if(app.devAnnMode === 'grade') {
+    var g = gradeEl.value;
+    app.devAnnSelected = [];
+    app.devAnnSelected.push(g + '-Tümü');
+  } else {
+    var g2 = gradeEl.value, s2 = secEl.value;
+    var cs = g2 + '-' + s2;
+    if(app.devAnnSelected.indexOf(cs) === -1) app.devAnnSelected.push(cs);
+  }
+  app.devAnnRenderAdded();
+};
+
+app.devAnnRenderAdded = function() {
+  var cont = document.getElementById('devann-added');
+  if(!cont) return;
+  cont.innerHTML = '';
+  (app.devAnnSelected || []).forEach(function(c){
+    var parts = c.split('-');
+    cont.innerHTML += '<div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.05); padding:6px; border-radius:5px; margin-bottom:4px; font-size:12px;">' +
+      '<span>'+parts[0]+'. Sınıf' + (parts[1]==='Tümü' ? ' (tüm şubeler)' : ' - '+parts[1]+' Şubesi') + '</span>' +
+      '</div>';
+  });
+};
+
+// ---- Yayınla ----
+app.devPublishAnnounce = async function() {
+  var text = document.getElementById('devann-text').value.trim();
+  if(!text) return this.toast('Duyuru metni boş olamaz!', 'error');
+  var school = app.currentDevAnnSchool || (this.currentUser ? this.currentUser.school : '');
+  var mode = app.devAnnMode || 'school';
+  var pinned = document.getElementById('devann-pin') ? document.getElementById('devann-pin').checked : false;
+  var base = {
+    text: text,
+    school: school,
+    isDeveloper: true,
+    pinned: pinned ? true : false,
+    sender: this.currentUser.username,
+    homeDocType: 'general',
+    createdAt: serverTimestamp()
+  };
+  try {
+    if(mode === 'school') {
+      base.targetType = 'school-all'; base.grade=''; base.section='';
+      await addDoc(collection(db,"announcements"), base);
+    } else if(mode === 'grade') {
+      var gs = app.devAnnSelected || [];
+      if(!gs.length) return this.toast('Kademe seçin!', 'error');
+      gs.forEach(function(c){
+        var g = c.split('-')[0];
+        var d = Object.assign({}, base, {targetType:'class', grade:g, section:''});
+        addDoc(collection(db,"announcements"), d);
+      });
+    } else {
+      var sel = app.devAnnSelected || [];
+      if(!sel.length) return this.toast('Sınıf/şube seçin!', 'error');
+      sel.forEach(function(c){
+        var parts = c.split('-');
+        var d = Object.assign({}, base, {targetType:'class', grade:parts[0], section:parts[1]});
+        addDoc(collection(db,"announcements"), d);
+      });
+    }
+    this.toast('Developer duyurusu yayınlandı!', 'success');
+    var m = document.getElementById('dev-announce-modal'); if(m) m.remove();
+  } catch(e) {
+    this.toast('Yayınlama hatası: '+e.message, 'error');
+  }
+};
+
+// ---- Gösterim yardımcısı: developer duyuru kartı ----
+app.__devAnnCard = function(data) {
+  var pin = data.pinned ? '<span style="font-size:11px; background:#ffd700; color:#111; padding:2px 6px; border-radius:4px; margin-left:6px;">📌 Sabit</span>' : '';
+  return '<div class="homework-card" style="border-left-color: #ffd700; background:linear-gradient(180deg, rgba(255,215,0,0.08), var(--card));">' +
+    '<div style="display:flex; align-items:center; gap:6px;">' +
+      '<i class="fas fa-star" style="color:#ffd700;"></i>' +
+      '<span style="color:#2980b9; font-weight:bold; font-size:12px;">DEVELOPER DUYURUSU</span>' +
+      pin + '</div>' +
+    '<p style="margin-top:6px; font-size:15px;">'+data.text+'</p>' +
+    '<div style="font-size:11px; color:#888; margin-top:5px;">👤 '+data.sender+'</div>' +
+  '</div>';
+};
+
+
+// ============================================================
+// === [YENİ] Developer Duyurusu GÖSTERİMİ ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+// renderFeed ve menüdeki duyurular, developer duyurularını altın
+// yıldız + mavi "DEVELOPER DUYURUSU" etiketiyle gösterir. Sabitlenen
+// duyurular en üstte kalır.
+// ============================================================
+
+function __annMatch(data) {
+  var cu = app.currentUser;
+  if(!cu) return false;
+  if(data.targetType === "all-schools") return true;
+  if(data.targetType === "school-all" && data.school === cu.school) return true;
+  if(data.school === cu.school && String(data.grade) === String(cu.grade) && String(data.section) === String(cu.section)) return true;
+  // grade bazlı (section boş) eşleşme
+  if(data.targetType === "class" && data.school === cu.school && data.section === "" && String(data.grade) === String(cu.grade)) return true;
+  return false;
+}
+function __sortAnn(a, b) {
+  // pinned önce
+  if(a.pinned && !b.pinned) return -1;
+  if(!a.pinned && b.pinned) return 1;
+  // sonra createdAt desc
+  return 0;
+}
+
+// ---- Ana Sayfa (feed) render v3 ----
+app.renderFeed = function() {
+  const main = document.getElementById('main-content');
+  if(!main) return;
+  app.feedItems = [];
+  main.innerHTML = `
+    <h3 style="margin-bottom:15px;"><i class="fas fa-home"></i> Ana Sayfa</h3>
+    <div id="feed-container"><p style="font-size:13px; color:#888;">Yükleniyor...</p></div>`;
+
+  // Duyurular (developer + normal)
+  try {
+    if(this.homeAnnounUnsub){ this.homeAnnounUnsub(); this.homeAnnounUnsub=null; }
+    this.homeAnnounUnsub = onSnapshot(collection(db, "announcements"), (snap) => {
+      const duyuru = [];
+      snap.forEach(d => {
+        const data = d.data();
+        if(data.homeDocType !== "exam" && __annMatch(data)) {
+          duyuru.push({ type:'duyuru', isDev: !!data.isDeveloper, pinned: !!data.pinned, text: data.text || '', sender: data.sender||'', ts:(data.createdAt||{}).toMillis?data.createdAt.toMillis():0 });
+        }
+      });
+      duyuru.sort(function(a,b){ if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1; return b.ts-a.ts; });
+      app.feedItems = app.feedItems.filter(i=>i.type!=='duyuru');
+      duyuru.forEach(i=>app.feedItems.push(i));
+      app._drawFeedV3();
+    });
+  } catch(e){}
+
+  // Ödevler
+  try {
+    if(this.homeHomeworksUnsub){ this.homeHomeworksUnsub(); this.homeHomeworksUnsub=null; }
+    this.homeHomeworksUnsub = onSnapshot(collection(db, "homeworks"), (snap) => {
+      const odev = [];
+      snap.forEach(docSnap => {
+        const h = docSnap.data();
+        if(this.checkAccess(h)) {
+          const dl = new Date(h.deadline).getTime();
+          if(Date.now() < dl) odev.push({ type:'odev', title:h.title||'', subject:h.subject||'', book:h.book||'', pages:h.pages||'', deadline:h.deadline||'', ts:dl });
+        }
+      });
+      odev.sort(function(a,b){ return b.ts-a.ts; });
+      app.feedItems = app.feedItems.filter(i=>i.type!=='odev');
+      odev.forEach(i=>app.feedItems.push(i));
+      app._drawFeedV3();
+    });
+  } catch(e){}
+};
+
+app._drawFeedV3 = function() {
+  const feed = document.getElementById('feed-container');
+  if(!feed) return;
+  const esc = function(t){ try{ const d=document.createElement('div'); d.textContent=(t==null?'':String(t)); return d.innerHTML; }catch(e){ return ''; } };
+  const items = (app.feedItems||[]).slice(0, 15);
+  if(!items.length){ feed.innerHTML="<p style='font-size:13px; color:#999;'>Şu an güncel içerik yok.</p>"; return; }
+  let html='';
+  items.forEach(c=>{
+    if(c.type==='duyuru'){
+      if(c.isDev){
+        const pin=c.pinned?'<span style="font-size:11px; background:#ffd700; color:#111; padding:2px 6px; border-radius:4px; margin-left:6px;">📌 Sabit</span>':'';
+        html += `<div style="background:linear-gradient(180deg, rgba(255,215,0,0.1), var(--card)); border-left:6px solid #ffd700; border-radius:14px; padding:15px; margin-bottom:12px; box-shadow:0 3px 10px rgba(0,0,0,0.06);">
+          <div style="display:flex; align-items:center; gap:6px;"><i class="fas fa-star" style="color:#ffd700;"></i><span style="color:#2980b9; font-weight:bold; font-size:12px;">DEVELOPER DUYURUSU</span>${pin}</div>
+          <div style="font-size:16px; font-weight:600; margin-top:6px; color:var(--text);">${esc(c.text)}</div>
+          <div style="font-size:11px; color:#888; margin-top:5px;">👤 ${esc(c.sender)}</div>
+        </div>`;
+      } else {
+        html += `<div style="background:var(--card); border-left:6px solid #3498db; border-radius:14px; padding:15px; margin-bottom:12px; box-shadow:0 3px 10px rgba(0,0,0,0.06);">
+          <div style="font-size:11px; color:#3498db; font-weight:bold; text-transform:uppercase; letter-spacing:.5px;"><i class="fas fa-bullhorn"></i> Duyuru</div>
+          <div style="font-size:16px; font-weight:600; margin-top:6px; color:var(--text);">${esc(c.text)}</div>
+        </div>`;
+      }
+    } else {
+      const dl = c.deadline ? String(c.deadline).replace('T',' ') : '';
+      html += `<div style="background:var(--card); border-left:6px solid #ff9f43; border-radius:14px; padding:15px; margin-bottom:12px; box-shadow:0 3px 10px rgba(0,0,0,0.06);">
+        <div style="font-size:11px; color:#ff9f43; font-weight:bold; text-transform:uppercase; letter-spacing:.5px;"><i class="fas fa-book"></i> Yeni Ödev</div>
+        <div style="font-size:16px; font-weight:600; margin-top:6px; color:var(--text);">${esc(c.title)}</div>
+        <div style="font-size:13px; color:#888; margin-top:4px;">${esc(c.subject)?('Ders: '+esc(c.subject)+' | '):''}${esc(c.book)?('Kitap: '+esc(c.book)):''}${esc(c.pages)?(' Sayfalar: '+esc(c.pages)):''}</div>
+        ${dl?`<div style="font-size:12px; color:#e67e22; margin-top:6px;">Bitiş: ${esc(dl)}</div>`:''}
+      </div>`;
+    }
+  });
+  feed.innerHTML = html;
+};
+
+// ---- Menüdeki "Duyurular" sekmesini override: developer duyurularını da göster ----
+var __origSetHomeTab = app.setHomeTab;
+app.setHomeTab = function(tab) {
+  // Announcements sekmesini özel ele al
+  if(tab === 'announcements') {
+    app.activeHomeTab = tab;
+    const container = document.getElementById('home-tab-content');
+    if(!container) return;
+    container.innerHTML = '<div id="announcement-list"></div>';
+    if(this.homeAnnounUnsub){ this.homeAnnounUnsub(); this.homeAnnounUnsub=null; }
+    this.homeAnnounUnsub = onSnapshot(collection(db, "announcements"), (snap) => {
+      const cont = document.getElementById('announcement-list');
+      if(!cont) return;
+      cont.innerHTML = '';
+      const arr = [];
+      snap.forEach(d => {
+        const data = d.data();
+        if(data.homeDocType !== "exam" && __annMatch(data)) {
+          arr.push({ isDev: !!data.isDeveloper, pinned: !!data.pinned, text: data.text||'', sender: data.sender||'', ts:(data.createdAt||{}).toMillis?data.createdAt.toMillis():0 });
+        }
+      });
+      arr.sort(function(a,b){ if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1; return b.ts-a.ts; });
+      arr.forEach(data => {
+        if(data.isDev) {
+          cont.innerHTML += app.__devAnnCard({ text: data.text, pinned: data.pinned, sender: data.sender });
+        } else {
+          cont.innerHTML += `<div class="homework-card" style="border-left-color: #3498db;"><h4><i class="fas fa-bullhorn"></i> Duyuru</h4><p style="margin-top:5px; font-size:15px;">${data.text}</p></div>`;
+        }
+      });
+      if(!cont.innerHTML) cont.innerHTML = "<p style='font-size:13px; color:#999;'>Şu an duyuru bulunmuyor.</p>";
+    });
+    return;
+  }
+  return __origSetHomeTab.apply(this, arguments);
+};
+
 window.addEventListener('DOMContentLoaded', () => { app.init(); });
 
 // fetchSchools hata-dirençli: Firestore kuralları okumayı engellese bile
@@ -6048,5 +6484,5 @@ app.fetchSchools = async function() {
 
 </script>
 <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286066428c06055',t:'MTc4NjI3MDc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28682b87b10e116',t:'MTc4NjI3NTg4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2872445395f1a64',t:'MTc4NjI4MjUwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a297c5fcbeb12b1b',t:'MTc4NjQ1Njg5OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a36f8238d9cc161a',t:'MTc4ODcxOTA0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28682b87b10e116',t:'MTc4NjI3NTg4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2872445395f1a64',t:'MTc4NjI4MjUwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a297c5fcbeb12b1b',t:'MTc4NjQ1Njg5OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a36fb33c5c8d65f9',t:'MTc4ODcyMTA1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
