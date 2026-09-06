@@ -5668,6 +5668,358 @@ app.adminChangeUsername = async function() {
   this.navigate('admin');
 };
 
+
+// ============================================================
+// === [YENİ] Hesap silme + isim değiştirme düzeltmesi v3 ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+// 1) Hesap silme: users + status + users_lookup + ilişkili verileri
+//    temizler, kullanıcı listesini yeniler.
+// 2) İsim değiştirme: yeni isim oluşturup eskiyi silerken users_lookup
+//    eşlemesini günceller ve kullanıcı listesini yeniler (iki hesap
+//    görünmesin).
+// ============================================================
+
+// ---- Hesap silme ----
+app.adminDeleteUser = async function() {
+  if(!this.selectedEditUser) return;
+  const uname = this.selectedEditUser.username;
+  if(await this.customConfirm(`${uname} isimli hesabı tamamen silmek istediğinize emin misiniz?`)) {
+    try {
+      await deleteDoc(doc(db, "users", uname));
+      await deleteDoc(doc(db, "status", uname)).catch(()=>{});
+      // users_lookup eşlemesini temizle
+      try {
+        const luSnap = await getDocs(collection(db, "users_lookup"));
+        luSnap.forEach(async (d) => {
+          if(d.data().username === uname) await deleteDoc(doc(db, "users_lookup", d.id));
+        });
+      } catch(e){}
+      this.toast("Hesap sistemden silindi.", "success");
+      document.getElementById('admin-user-modal').classList.add('hidden');
+      this.renderAdminPanel();
+    } catch(e) {
+      console.error("Silme hatası:", e);
+      this.toast("Silme başarısız: " + (e.message||""), "error");
+    }
+  }
+};
+
+// ---- İsim değiştirme (iki hesap görünmesin) ----
+app.adminChangeUsername = async function() {
+  if(!this.selectedEditUser) return;
+  const newName = document.getElementById('edit-username-input').value.trim();
+  if(!newName) return this.toast("Geçersiz veya aynı isim!", "error");
+  if(newName.toLowerCase() === this.selectedEditUser.username.toLowerCase()) return this.toast("Geçersiz veya aynı isim!", "error");
+
+  // Kendi eski adı HARİÇ diğer kullanıcılarda var mı
+  const snap = await getDocs(collection(db, "users"));
+  let taken = false;
+  const nlower = newName.toLowerCase();
+  snap.forEach(d => {
+    if(d.id !== this.selectedEditUser.username && d.id.toLowerCase() === nlower) taken = true;
+  });
+  if(taken) return this.toast("Bu kullanıcı adı zaten alınmış!", "error");
+
+  const oldUsername = this.selectedEditUser.username;
+
+  try {
+    // Yeni isimle kopyasını oluştur
+    const oldData = { ...this.selectedEditUser, username: newName };
+    await setDoc(doc(db, "users", newName), oldData);
+    // Eski ismi sil
+    await deleteDoc(doc(db, "users", oldUsername));
+
+    // status taşı
+    try {
+      const statusData = await getDoc(doc(db, "status", oldUsername));
+      if(statusData.exists()) {
+        await setDoc(doc(db, "status", newName), statusData.data());
+        await deleteDoc(doc(db, "status", oldUsername));
+      }
+    } catch(e){}
+
+    // users_lookup güncelle
+    try {
+      const luSnap = await getDocs(collection(db, "users_lookup"));
+      luSnap.forEach(async (d) => {
+        if(d.data().username === oldUsername) {
+          await updateDoc(doc(db, "users_lookup", d.id), { username: newName });
+        }
+      });
+    } catch(e){}
+
+    // selectedEditUser'ı güncelle ve listeyi yenile
+    this.selectedEditUser.username = newName;
+    this.toast("Kullanıcı adı başarıyla değiştirildi!", "success");
+    document.getElementById('admin-user-modal').classList.add('hidden');
+    this.renderAdminPanel();
+  } catch(e) {
+    console.error("İsim değiştirme hatası:", e);
+    this.toast("İsim değiştirme başarısız: " + (e.message||""), "error");
+  }
+};
+
+
+// ============================================================
+// === [YENİ] Ana Sayfa (Feed) + Menü Düzeni ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+// - Alt bara en başa yeni "Ana Sayfa" (feed) sekmesi eklenir.
+// - Eski "Ana Sayfa" sekmesi "Menü" (3 çizgi ikon) olur.
+// - Uygulama açılınca feed ekranında başlar.
+// - Feed: en son duyuru ve ödevler büyük kartlar halinde.
+// ============================================================
+
+// ---- Feed (büyük akış) render ----
+app.renderFeed = function() {
+  const main = document.getElementById('main-content');
+  if(!main) return;
+  main.innerHTML = `
+    <h3 style="margin-bottom:15px;"><i class="fas fa-home"></i> Ana Sayfa</h3>
+    <div id="feed-container">
+      <p style="font-size:13px; color:#888;">Duyurular ve yeni ödevler yükleniyor...</p>
+    </div>`;
+  const feed = document.getElementById('feed-container');
+
+  // Duyurular (en sonlar büyük)
+  try {
+    if(this.homeAnnounUnsub) { this.homeAnnounUnsub(); this.homeAnnounUnsub=null; }
+    this.homeAnnounUnsub = onSnapshot(collection(db, "announcements"), (snap) => {
+      const list = [];
+      snap.forEach(d => {
+        const data = d.data();
+        if(this.checkAccess(data) && data.homeDocType !== "exam") {
+          list.push({ type: 'duyuru', text: data.text, t: data.createdAt });
+        }
+      });
+      this._renderFeedCards(list);
+    });
+  } catch(e) {}
+
+  // Ödevler (en sonlar büyük)
+  try {
+    if(this.homeHomeworksUnsub) { this.homeHomeworksUnsub(); this.homeHomeworksUnsub=null; }
+    this.homeHomeworksUnsub = onSnapshot(collection(db, "homeworks"), (snap) => {
+      const list = [];
+      snap.forEach(docSnap => {
+        const h = docSnap.data();
+        if(this.checkAccess(h)) {
+          const deadline = new Date(h.deadline).getTime();
+          if(Date.now() < deadline) {
+            list.push({ type: 'odev', title: h.title, subject: h.subject, book: h.book, pages: h.pages, deadline: h.deadline, t: h.createdAt });
+          }
+        }
+      });
+      this._renderFeedCards(list);
+    });
+  } catch(e) {}
+};
+
+// ---- Feed kartlarını birleştirip çiz ----
+app._feedCache = {};
+app._renderFeedCards = function(items) {
+  const feed = document.getElementById('feed-container');
+  if(!feed) return;
+  const ftype = items[0] ? items[0].type : null;
+  // Anahtar: tip bazlı birleştir
+  if(!this._feedCache[ftype]) this._feedCache[ftype] = [];
+  // mevcutları güncelle (basit: her seferinde birleştirip yeniden çiz)
+  const all = [];
+  const seen = new Set();
+  // duyuru + ödev cache'leri birleşsin istiyoruz ama iki ayrı listener var.
+  // Basit ve güvenli: iki tip kartları ayrı bölümlerde göster.
+  all.push(...items);
+  if(!feed.dataset[ftype+'set']) {
+    feed.dataset[ftype+'set']='1';
+    this._feedCache[ftype] = items;
+  } else {
+    // merge new
+    const existing = this._feedCache[ftype] || [];
+    const merged = existing.slice();
+    items.forEach(n => {
+      const key = n.type==='duyuru'?n.text:(n.title||'');
+      if(!existing.some(e => (e.type==='duyuru'?e.text:(e.title||''))===key)) merged.push(n);
+    });
+    this._feedCache[ftype] = merged;
+  }
+  this._paintFeed(feed);
+};
+
+app._paintFeed = function(feed) {
+  const duyuru = this._feedCache['duyuru'] || [];
+  const odev = this._feedCache['odev'] || [];
+  let html = '';
+  if(duyuru.length || odev.length) {
+    // En sonlar üstte (createdAt desc yaklaşık)
+    const cards = [];
+    duyuru.forEach(d => cards.push({type:'d', text:d.text}));
+    odev.forEach(o => cards.push({type:'o', title:o.title, subject:o.subject, book:o.book, pages:o.pages, deadline:o.deadline}));
+    cards.slice(0, 8).forEach(c => {
+      if(c.type==='d') {
+        html += `<div class="feed-card feed-ann" style="background:var(--card); border-left:6px solid #3498db; border-radius:14px; padding:16px; margin-bottom:12px; box-shadow:0 3px 10px rgba(0,0,0,0.06);">
+            <div style="font-size:11px; color:#3498db; font-weight:bold; text-transform:uppercase; letter-spacing:.5px;"><i class="fas fa-bullhorn"></i> Duyuru</div>
+            <div style="font-size:16px; font-weight:600; margin-top:6px; color:var(--text);">${c.text}</div>
+        </div>`;
+      } else {
+        const dl = c.deadline ? c.deadline.replace('T',' ') : '';
+        html += `<div class="feed-card feed-hw" style="background:var(--card); border-left:6px solid #ff9f43; border-radius:14px; padding:16px; margin-bottom:12px; box-shadow:0 3px 10px rgba(0,0,0,0.06);">
+            <div style="font-size:11px; color:#ff9f43; font-weight:bold; text-transform:uppercase; letter-spacing:.5px;"><i class="fas fa-book"></i> Yeni Ödev</div>
+            <div style="font-size:16px; font-weight:600; margin-top:6px; color:var(--text);">${c.title}</div>
+            <div style="font-size:13px; color:#888; margin-top:4px;">${c.subject?('Ders: '+c.subject+' | '):''}${c.book?('Kitap: '+c.book):''}${c.pages?(' Sayfalar: '+c.pages):''}</div>
+            ${dl?`<div style="font-size:12px; color:#e67e22; margin-top:6px;">Bitiş: ${dl}</div>`:''}
+        </div>`;
+      }
+    });
+  } else {
+    html = "<p style='font-size:13px; color:#999;'>Şu an güncel duyuru veya ödev bulunmuyor.</p>";
+  }
+  feed.innerHTML = html;
+};
+
+// ---- navigate override: feed destekle ----
+var __origNavigateFeed = app.navigate;
+app.navigate = async function(page, el) {
+  // feed için alt bar öğesi aktif yap + render
+  if(page === 'feed') {
+    if(el) {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      el.classList.add('active');
+    }
+    document.getElementById('social-add-btn').classList.add('hidden');
+    if(this.socialUnsub) { this.socialUnsub(); this.socialUnsub=null; }
+    if(this.homeAnnounUnsub) { this.homeAnnounUnsub(); this.homeAnnounUnsub=null; }
+    if(this.homeHomeworksUnsub) { this.homeHomeworksUnsub(); this.homeHomeworksUnsub=null; }
+    this._feedCache = {};
+    this.renderFeed();
+    return;
+  }
+  return __origNavigateFeed.apply(this, arguments);
+};
+
+// ---- Alt bar düzenle + feed ile başla ----
+window.addEventListener('DOMContentLoaded', function() {
+  try {
+    const nav = document.querySelector('.bottom-nav');
+    if(nav) {
+      const homeItem = nav.querySelector('.nav-item'); // mevcut ilk (Ana Sayfa->Menü olacak)
+      // Mevcut ilk öğeyi "Menü" yap (3 çizgi)
+      if(homeItem) {
+        const icon = homeItem.querySelector('i');
+        if(icon) icon.className = 'fas fa-bars';
+        const span = homeItem.querySelector('span');
+        if(span) span.textContent = 'Menü';
+        homeItem.setAttribute('onclick', "app.navigate('home', this)");
+      }
+      // Yeni "Ana Sayfa" öğesi en başa
+      const newItem = document.createElement('div');
+      newItem.className = 'nav-item active';
+      newItem.innerHTML = '<i class="fas fa-home"></i><span>Ana Sayfa</span>';
+      newItem.onclick = function(){ app.navigate('feed', this); };
+      nav.insertBefore(newItem, nav.firstChild);
+    }
+  } catch(e){ console.error("Alt bar düzeni hatası:", e); }
+});
+
+// app.launch'ı sarmalayıp ilk sayfayı feed yap (UID bağlama korunur)
+var __origLaunchFeed = app.launch;
+app.launch = function() {
+  const r = __origLaunchFeed.apply(this, arguments);
+  // __origLaunch zaten navigate('home') çağırıyor. Feed'i DOM kurulunca göster.
+  try {
+    setTimeout(() => {
+      const homeItem = document.querySelector('.bottom-nav .nav-item');
+      if(homeItem) { app.navigate('feed', homeItem); }
+    }, 60);
+  } catch(e){}
+  return r;
+};
+
+
+// === [YENİ] renderFeed v2 - tek kaynak, temiz ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+app.feedItems = [];
+app.feedSeq = 0;
+
+app.renderFeed = function() {
+  const main = document.getElementById('main-content');
+  if(!main) return;
+  app.feedItems = [];
+  main.innerHTML = `
+    <h3 style="margin-bottom:15px;"><i class="fas fa-home"></i> Ana Sayfa</h3>
+    <div id="feed-container">
+      <p style="font-size:13px; color:#888;">Duyurular ve yeni ödevler yükleniyor...</p>
+    </div>`;
+
+  const tryEscape = (t)=>{ try{ const d=document.createElement('div'); d.textContent=(t==null?'':String(t)); return d.innerHTML; }catch(e){ return ''; } };
+  app._feedEsc = tryEscape;
+
+  // Duyurular
+  try {
+    if(this.homeAnnounUnsub) { this.homeAnnounUnsub(); this.homeAnnounUnsub=null; }
+    this.homeAnnounUnsub = onSnapshot(collection(db, "announcements"), (snap) => {
+      const list = [];
+      snap.forEach(d => {
+        const data = d.data();
+        if(this.checkAccess(data) && data.homeDocType !== "exam") {
+          list.push({ type: 'duyuru', text: data.text || '' });
+        }
+      });
+      // mevcut duyuruları değiştir
+      app.feedItems = app.feedItems.filter(i => i.type !== 'duyuru');
+      list.forEach(i => app.feedItems.push(i));
+      app._drawFeed();
+    });
+  } catch(e) {}
+
+  // Ödevler
+  try {
+    if(this.homeHomeworksUnsub) { this.homeHomeworksUnsub(); this.homeHomeworksUnsub=null; }
+    this.homeHomeworksUnsub = onSnapshot(collection(db, "homeworks"), (snap) => {
+      const list = [];
+      snap.forEach(docSnap => {
+        const h = docSnap.data();
+        if(this.checkAccess(h)) {
+          const dl = new Date(h.deadline).getTime();
+          if(Date.now() < dl) {
+            list.push({ type: 'odev', title: h.title||'', subject: h.subject||'', book: h.book||'', pages: h.pages||'', deadline: h.deadline||'' });
+          }
+        }
+      });
+      app.feedItems = app.feedItems.filter(i => i.type !== 'odev');
+      list.forEach(i => app.feedItems.push(i));
+      app._drawFeed();
+    });
+  } catch(e) {}
+};
+
+app._drawFeed = function() {
+  const feed = document.getElementById('feed-container');
+  if(!feed) return;
+  const esc = (t)=>{ try{ const d=document.createElement('div'); d.textContent=(t==null?'':String(t)); return d.innerHTML; }catch(e){ return ''; } };
+  const items = app.feedItems || [];
+  if(!items.length) {
+    feed.innerHTML = "<p style='font-size:13px; color:#999;'>Şu an güncel duyuru veya ödev bulunmuyor.</p>";
+    return;
+  }
+  let html = '';
+  items.slice(0, 10).forEach(c => {
+    if(c.type === 'duyuru') {
+      html += `<div style="background:var(--card); border-left:6px solid #3498db; border-radius:14px; padding:16px; margin-bottom:12px; box-shadow:0 3px 10px rgba(0,0,0,0.06);">
+        <div style="font-size:11px; color:#3498db; font-weight:bold; text-transform:uppercase; letter-spacing:.5px;"><i class="fas fa-bullhorn"></i> Duyuru</div>
+        <div style="font-size:17px; font-weight:600; margin-top:6px; color:var(--text);">${esc(c.text)}</div>
+      </div>`;
+    } else {
+      const dl = c.deadline ? String(c.deadline).replace('T',' ') : '';
+      html += `<div style="background:var(--card); border-left:6px solid #ff9f43; border-radius:14px; padding:16px; margin-bottom:12px; box-shadow:0 3px 10px rgba(0,0,0,0.06);">
+        <div style="font-size:11px; color:#ff9f43; font-weight:bold; text-transform:uppercase; letter-spacing:.5px;"><i class="fas fa-book"></i> Yeni Ödev</div>
+        <div style="font-size:17px; font-weight:600; margin-top:6px; color:var(--text);">${esc(c.title)}</div>
+        <div style="font-size:13px; color:#888; margin-top:4px;">${esc(c.subject)?('Ders: '+esc(c.subject)+' | '):''}${esc(c.book)?('Kitap: '+esc(c.book)):''}${esc(c.pages)?(' Sayfalar: '+esc(c.pages)):''}</div>
+        ${dl?`<div style="font-size:12px; color:#e67e22; margin-top:6px;">Bitiş: ${esc(dl)}</div>`:''}
+      </div>`;
+    }
+  });
+  feed.innerHTML = html;
+};
+
 window.addEventListener('DOMContentLoaded', () => { app.init(); });
 
 // fetchSchools hata-dirençli: Firestore kuralları okumayı engellese bile
@@ -5696,5 +6048,5 @@ app.fetchSchools = async function() {
 
 </script>
 <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286066428c06055',t:'MTc4NjI3MDc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28682b87b10e116',t:'MTc4NjI3NTg4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2872445395f1a64',t:'MTc4NjI4MjUwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a297c5fcbeb12b1b',t:'MTc4NjQ1Njg5OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3255b949abcd7fc',t:'MTc4Nzk0MTUxNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28682b87b10e116',t:'MTc4NjI3NTg4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2872445395f1a64',t:'MTc4NjI4MjUwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a297c5fcbeb12b1b',t:'MTc4NjQ1Njg5OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a36f8238d9cc161a',t:'MTc4ODcxOTA0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
