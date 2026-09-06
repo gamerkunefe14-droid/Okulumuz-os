@@ -6456,6 +6456,376 @@ app.setHomeTab = function(tab) {
   return __origSetHomeTab.apply(this, arguments);
 };
 
+
+// ============================================================
+// === [YENİ] Developer Duyurusu: "Tüm Kişiler" seçeneği ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+// Yayın kapsamına "Tüm Kişiler (Tüm Okullar)" eklenir; herkese açık
+// duyuru (targetType: all-schools) yayınlanır.
+// ============================================================
+
+app.openDevAnnounceModal = function() {
+  var bg = __qrModal('', 'dev-announce-modal');
+  var sch = (app.allSchools || []).map(function(s){ return '<option value="'+s+'">'+s+'</option>'; }).join('');
+  var kademeler = '';
+  for(var i=1;i<=12;i++) kademeler += '<option value="'+i+'">'+i+'. Sınıf</option>';
+  bg.querySelector('div').innerHTML =
+    '<h3 style="margin-bottom:12px; color:#ffd700;"><i class="fas fa-star"></i> Developer Duyurusu</h3>' +
+    '<label style="font-size:12px; font-weight:bold;">Hedef Okul:</label>' +
+    '<select id="devann-school" onchange="app.devAnnSchoolChange()">'+sch+'</select>' +
+    '<label style="font-size:12px; font-weight:bold; margin-top:8px; display:block;">Yayın Kapsamı:</label>' +
+    '<select id="devann-mode" onchange="app.devAnnModeChange()">' +
+      '<option value="all">Tüm Kişiler (Tüm Okullar)</option>' +
+      '<option value="school">Tüm Okul</option>' +
+      '<option value="grade">Belirli Sınıf Kademesi</option>' +
+      '<option value="section">Belirli Şubeler</option>' +
+      '<option value="class">Belirli Sınıflar</option>' +
+    '</select>' +
+    '<div id="devann-class-area">' +
+      '<label style="font-size:12px; font-weight:bold; margin-top:8px; display:block;">Sınıf Kademesi:</label>' +
+      '<select id="devann-grade">'+kademeler+'</select>' +
+      '<label style="font-size:12px; font-weight:bold; margin-top:8px; display:block;">Şube:</label>' +
+      '<select id="devann-section" onchange="app.devAnnAddClass()">' + app.__sectionsHtml() + '</select>' +
+      '<button type="button" style="width:auto; margin-top:5px;" class="btn-main" onclick="app.devAnnAddClass()"><i class="fas fa-plus"></i> Ekle</button>' +
+      '<div id="devann-added" style="margin-top:8px;"></div>' +
+    '</div>' +
+    '<textarea id="devann-text" placeholder="Duyuru metnini yazın..." style="width:100%; height:90px; padding:10px; margin-top:10px; border-radius:10px; border:1.5px solid #eee; outline:none; font-family:inherit; resize:none; background:var(--card); color:var(--text);"></textarea>' +
+    '<label class="remember-me-row" for="devann-pin" style="margin-top:8px;"><input type="checkbox" id="devann-pin"> Duyuru sabitlensin (en üstte kalsın)</label>' +
+    '<button class="btn-main" style="background:#ffd700; color:#111;" onclick="app.devPublishAnnounce()">Yayınla</button>' +
+    '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'dev-announce-modal\').remove()">İptal</button>';
+  app.devAnnMode = 'all';
+  app.devAnnSelected = [];
+  app.devAnnSchoolChange();
+  // all modunda okul/sınıf alanlarını gizle
+  app.devAnnModeChange();
+};
+
+// Kapsam değişince okul + sınıf alanı görünürlüğünü ayarla
+app.devAnnModeChange = function() {
+  var m = document.getElementById('devann-mode');
+  if(!m) return;
+  app.devAnnMode = m.value;
+  // Hedef okul seçicisi
+  var schoolSel = document.getElementById('devann-school');
+  var schoolLabel = schoolSel ? schoolSel.previousElementSibling : null;
+  var classArea = document.getElementById('devann-class-area');
+  var hideAll = (m.value === 'all');
+  // Tüm kişilerde okul ve sınıf gizlenir
+  if(schoolSel) schoolSel.style.display = hideAll ? 'none' : 'block';
+  if(schoolLabel && schoolLabel.tagName === 'LABEL') schoolLabel.style.display = hideAll ? 'none' : 'block';
+  // not: label bir önceki element; güvenli kontrol
+  if(classArea) classArea.style.display = (m.value === 'all' || m.value === 'school') ? 'none' : 'block';
+  if(m.value === 'all') app.devAnnSelected = [];
+  if(m.value === 'school') app.devAnnSelected = [];
+};
+
+// Yayınla: "all" modu destekle
+app.devPublishAnnounce = async function() {
+  var text = document.getElementById('devann-text').value.trim();
+  if(!text) return this.toast('Duyuru metni boş olamaz!', 'error');
+  var mode = app.devAnnMode || 'all';
+  var pinned = document.getElementById('devann-pin') ? document.getElementById('devann-pin').checked : false;
+  var school = app.currentDevAnnSchool || (this.currentUser ? this.currentUser.school : '');
+  var base = {
+    text: text,
+    isDeveloper: true,
+    pinned: pinned ? true : false,
+    sender: this.currentUser.username,
+    homeDocType: 'general',
+    createdAt: serverTimestamp()
+  };
+  try {
+    if(mode === 'all') {
+      base.targetType = 'all-schools';
+      base.school = school;
+      base.grade = ''; base.section = '';
+      await addDoc(collection(db,"announcements"), base);
+    } else if(mode === 'school') {
+      base.school = school;
+      base.targetType = 'school-all'; base.grade=''; base.section='';
+      await addDoc(collection(db,"announcements"), base);
+    } else if(mode === 'grade') {
+      base.school = school;
+      var gs = app.devAnnSelected || [];
+      if(!gs.length) return this.toast('Kademe seçin!', 'error');
+      gs.forEach(function(c){
+        var g = c.split('-')[0];
+        var d = Object.assign({}, base, {targetType:'class', grade:g, section:''});
+        addDoc(collection(db,"announcements"), d);
+      });
+    } else {
+      base.school = school;
+      var sel = app.devAnnSelected || [];
+      if(!sel.length) return this.toast('Sınıf/şube seçin!', 'error');
+      sel.forEach(function(c){
+        var parts = c.split('-');
+        var d = Object.assign({}, base, {targetType:'class', grade:parts[0], section:parts[1]});
+        addDoc(collection(db,"announcements"), d);
+      });
+    }
+    this.toast('Developer duyurusu yayınlandı!', 'success');
+    var m = document.getElementById('dev-announce-modal'); if(m) m.remove();
+  } catch(e) {
+    this.toast('Yayınlama hatası: '+e.message, 'error');
+  }
+};
+
+
+// ============================================================
+// === [YENİ] Developer Duyurusu Silme Sistemi ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+// - Developer duyurularının sağ üst köşesinde silme (✕) tuşu olur.
+// - Yalnızca duyurunun SAHİBİ (sender) silebilir.
+// - Admin/mod/öğretmen developer duyurularını silemez (hem UI'da
+//   silme tuşu görünmez hem rules tarafı engeller).
+// ============================================================
+
+// Silme işlemi (sadece sahibi)
+app.deleteDeveloperAnnounce = async function(docId) {
+  if(!docId) return;
+  try {
+    const snap = await getDoc(doc(db, "announcements", docId));
+    if(!snap.exists()) return this.toast("Duyuru bulunamadı.", "error");
+    const d = snap.data();
+    if(d.sender !== this.currentUser.username) {
+      return this.toast("Sadece kendi duyurunuzu silebilirsiniz.", "error");
+    }
+    if(await this.customConfirm("Bu duyuruyu silmek istediğinize emin misiniz?")) {
+      await deleteDoc(doc(db, "announcements", docId));
+      this.toast("Duyuru silindi.", "success");
+    }
+  } catch(e) { this.toast("Silme hatası: "+(e.message||""), "error"); }
+};
+
+// renderFeed override: duyuru id'sini taşı (son tanım kazanır)
+app.renderFeed = function() {
+  const main = document.getElementById('main-content');
+  if(!main) return;
+  app.feedItems = [];
+  main.innerHTML = `
+    <h3 style="margin-bottom:15px;"><i class="fas fa-home"></i> Ana Sayfa</h3>
+    <div id="feed-container"><p style="font-size:13px; color:#888;">Yükleniyor...</p></div>`;
+  try {
+    if(this.homeAnnounUnsub){ this.homeAnnounUnsub(); this.homeAnnounUnsub=null; }
+    this.homeAnnounUnsub = onSnapshot(collection(db, "announcements"), (snap) => {
+      const duyuru = [];
+      snap.forEach(d => {
+        const data = d.data();
+        if(data.homeDocType !== "exam" && __annMatch(data)) {
+          duyuru.push({ id: d.id, type:'duyuru', isDev: !!data.isDeveloper, pinned: !!data.pinned, text: data.text || '', sender: data.sender||'', ts:(data.createdAt||{}).toMillis?data.createdAt.toMillis():0 });
+        }
+      });
+      duyuru.sort(function(a,b){ if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1; return b.ts-a.ts; });
+      app.feedItems = app.feedItems.filter(i=>i.type!=='duyuru');
+      duyuru.forEach(i=>app.feedItems.push(i));
+      app._drawFeedV4();
+    });
+  } catch(e){}
+  try {
+    if(this.homeHomeworksUnsub){ this.homeHomeworksUnsub(); this.homeHomeworksUnsub=null; }
+    this.homeHomeworksUnsub = onSnapshot(collection(db, "homeworks"), (snap) => {
+      const odev = [];
+      snap.forEach(docSnap => {
+        const h = docSnap.data();
+        if(this.checkAccess(h)) {
+          const dl = new Date(h.deadline).getTime();
+          if(Date.now() < dl) odev.push({ type:'odev', title:h.title||'', subject:h.subject||'', book:h.book||'', pages:h.pages||'', deadline:h.deadline||'', ts:dl });
+        }
+      });
+      odev.sort(function(a,b){ return b.ts-a.ts; });
+      app.feedItems = app.feedItems.filter(i=>i.type!=='odev');
+      odev.forEach(i=>app.feedItems.push(i));
+      app._drawFeedV4();
+    });
+  } catch(e){}
+};
+
+app._drawFeedV4 = function() {
+  const feed = document.getElementById('feed-container');
+  if(!feed) return;
+  const esc = function(t){ try{ const d=document.createElement('div'); d.textContent=(t==null?'':String(t)); return d.innerHTML; }catch(e){ return ''; } };
+  const items = (app.feedItems||[]).slice(0, 15);
+  if(!items.length){ feed.innerHTML="<p style='font-size:13px; color:#999;'>Şu an güncel içerik yok.</p>"; return; }
+  let html='';
+  const me = app.currentUser ? app.currentUser.username : '';
+  items.forEach(c=>{
+    if(c.type==='duyuru'){
+      // Silme tuşu: yalnızca developer duyurusu ve sahibiyse
+      let del = '';
+      if(c.isDev && c.sender === me) {
+        del = '<i class="fas fa-times" style="position:absolute; top:8px; right:8px; color:#d63031; cursor:pointer; font-size:14px; z-index:5;" onclick="event.stopPropagation(); app.deleteDeveloperAnnounce(\''+c.id+'\')"></i>';
+      }
+      if(c.isDev){
+        const pin=c.pinned?'<span style="font-size:11px; background:#ffd700; color:#111; padding:2px 6px; border-radius:4px; margin-left:6px;">📌 Sabit</span>':'';
+        html += `<div style="position:relative; background:linear-gradient(180deg, rgba(255,215,0,0.1), var(--card)); border-left:6px solid #ffd700; border-radius:14px; padding:15px; margin-bottom:12px; box-shadow:0 3px 10px rgba(0,0,0,0.06);">${del}
+          <div style="display:flex; align-items:center; gap:6px;"><i class="fas fa-star" style="color:#ffd700;"></i><span style="color:#2980b9; font-weight:bold; font-size:12px;">DEVELOPER DUYURUSU</span>${pin}</div>
+          <div style="font-size:16px; font-weight:600; margin-top:6px; color:var(--text);">${esc(c.text)}</div>
+          <div style="font-size:11px; color:#888; margin-top:5px;">👤 ${esc(c.sender)}</div>
+        </div>`;
+      } else {
+        html += `<div style="background:var(--card); border-left:6px solid #3498db; border-radius:14px; padding:15px; margin-bottom:12px; box-shadow:0 3px 10px rgba(0,0,0,0.06);">
+          <div style="font-size:11px; color:#3498db; font-weight:bold; text-transform:uppercase; letter-spacing:.5px;"><i class="fas fa-bullhorn"></i> Duyuru</div>
+          <div style="font-size:16px; font-weight:600; margin-top:6px; color:var(--text);">${esc(c.text)}</div>
+        </div>`;
+      }
+    } else {
+      const dl = c.deadline ? String(c.deadline).replace('T',' ') : '';
+      html += `<div style="background:var(--card); border-left:6px solid #ff9f43; border-radius:14px; padding:15px; margin-bottom:12px; box-shadow:0 3px 10px rgba(0,0,0,0.06);">
+        <div style="font-size:11px; color:#ff9f43; font-weight:bold; text-transform:uppercase; letter-spacing:.5px;"><i class="fas fa-book"></i> Yeni Ödev</div>
+        <div style="font-size:16px; font-weight:600; margin-top:6px; color:var(--text);">${esc(c.title)}</div>
+        <div style="font-size:13px; color:#888; margin-top:4px;">${esc(c.subject)?('Ders: '+esc(c.subject)+' | '):''}${esc(c.book)?('Kitap: '+esc(c.book)):''}${esc(c.pages)?(' Sayfalar: '+esc(c.pages)):''}</div>
+        ${dl?`<div style="font-size:12px; color:#e67e22; margin-top:6px;">Bitiş: ${esc(dl)}</div>`:''}
+      </div>`;
+    }
+  });
+  feed.innerHTML = html;
+};
+
+// __devAnnCard: sağ üst silme tuşu eklenmiş sürüm (menü duyuru sekmesi için)
+app.__devAnnCard = function(data) {
+  const me = app.currentUser ? app.currentUser.username : '';
+  let del = '';
+  if(data.sender === me) {
+    del = '<i class="fas fa-times" style="position:absolute; top:8px; right:8px; color:#d63031; cursor:pointer; font-size:14px; z-index:5;" onclick="event.stopPropagation(); app.deleteDeveloperAnnounce(\''+data.id+'\')"></i>';
+  }
+  const pin = data.pinned ? '<span style="font-size:11px; background:#ffd700; color:#111; padding:2px 6px; border-radius:4px; margin-left:6px;">📌 Sabit</span>' : '';
+  return '<div class="homework-card" style="position:relative; border-left-color: #ffd700; background:linear-gradient(180deg, rgba(255,215,0,0.08), var(--card));">' + del +
+    '<div style="display:flex; align-items:center; gap:6px;">' +
+      '<i class="fas fa-star" style="color:#ffd700;"></i>' +
+      '<span style="color:#2980b9; font-weight:bold; font-size:12px;">DEVELOPER DUYURUSU</span>' +
+      pin + '</div>' +
+    '<p style="margin-top:6px; font-size:15px;">'+data.text+'</p>' +
+    '<div style="font-size:11px; color:#888; margin-top:5px;">👤 '+data.sender+'</div>' +
+  '</div>';
+};
+
+
+// === [YENİ] Menü Duyuru sekmesi: developer duyuru id + silme ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+app.setHomeTab = function(tab) {
+  if(tab === 'announcements') {
+    app.activeHomeTab = tab;
+    const container = document.getElementById('home-tab-content');
+    if(!container) return;
+    container.innerHTML = '<div id="announcement-list"></div>';
+    if(this.homeAnnounUnsub){ this.homeAnnounUnsub(); this.homeAnnounUnsub=null; }
+    this.homeAnnounUnsub = onSnapshot(collection(db, "announcements"), (snap) => {
+      const cont = document.getElementById('announcement-list');
+      if(!cont) return;
+      cont.innerHTML = '';
+      const arr = [];
+      snap.forEach(d => {
+        const data = d.data();
+        if(data.homeDocType !== "exam" && __annMatch(data)) {
+          arr.push({ id: d.id, isDev: !!data.isDeveloper, pinned: !!data.pinned, text: data.text||'', sender: data.sender||'', ts:(data.createdAt||{}).toMillis?data.createdAt.toMillis():0 });
+        }
+      });
+      arr.sort(function(a,b){ if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1; return b.ts-a.ts; });
+      arr.forEach(data => {
+        if(data.isDev) {
+          cont.innerHTML += app.__devAnnCard({ id: data.id, text: data.text, pinned: data.pinned, sender: data.sender });
+        } else {
+          cont.innerHTML += `<div class="homework-card" style="border-left-color: #3498db;"><h4><i class="fas fa-bullhorn"></i> Duyuru</h4><p style="margin-top:5px; font-size:15px;">${data.text}</p></div>`;
+        }
+      });
+      if(!cont.innerHTML) cont.innerHTML = "<p style='font-size:13px; color:#999;'>Şu an duyuru bulunmuyor.</p>";
+    });
+    return;
+  }
+  // diğer sekmeler için orijinal davranış (renderHome içindeki setHomeTab)
+  // Orijinal setHomeTab'i taklit et
+  if(tab === 'homeworks') { app.renderHomeTab('homeworks'); return; }
+  if(tab === 'worksheets') { app.renderHomeTab('worksheets'); return; }
+  if(tab === 'exams') { app.renderHomeTab('exams'); return; }
+  // fallback: yüklü önceki override zincirine gitmek yerine renderHome içindeki
+  // tanımı çağır — basitçe üst sekmeleri kur
+  return app._origHomeTabNav ? app._origHomeTabNav(tab) : undefined;
+};
+
+
+// === [YENİ] Menü sekmeleri düzeltmesi (homeworks/worksheets/exams) ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+var __origSetHomeTabFinal = app.setHomeTab;  // önceki override (id'li announcements)
+app.setHomeTab = function(tab) {
+  // announcements'ı özel ele alan önceki override'ı koru, diğer sekmeleri orijinal yolla çalıştır
+  if(tab === 'announcements') {
+    return __origSetHomeTabFinal.call(this, tab);
+  }
+  // homeworks/worksheets/exams -> orijinal renderHome setHomeTab mantığı
+  // En üst seviyedeki orijinal setHomeTab metodunu bulup çağır
+  if(typeof app.__renderHomeOrgSetTab === 'function') {
+    return app.__renderHomeOrgSetTab.call(this, tab);
+  }
+  // basitçe renderHome içindeki mantığı kullan - orijinal objede setHomeTab yok override'lar var.
+  // En güvenli: renderHome() 'i yeniden çağırıp aktif sekmeyi ayarla.
+  app.activeHomeTab = tab;
+  if(tab==='homeworks'||tab==='worksheets'||tab==='exams') {
+    // Bu sekmeler renderHome içindeki yerleşik render'ları kullanır.
+    // Orijinal setHomeTab'i çağır: ama hepsi override; zincirin en dibindeki orijinal objeye ulaşmak için
+    // obje literal'de tanımlı method. Onu renderHome tam içinden tekrar üretemeyiz.
+    // Çözüm: üstteki renderHome menü butonları bu setHomeTab'i çağırıyor; bizim de ele alalım.
+    app.renderMenuSection(tab);
+    return;
+  }
+};
+
+// Menü bölümlerini (ödev/çalışma/sınav) render etmek için genel yardımcı
+app.renderMenuSection = function(tab) {
+  const container = document.getElementById('home-tab-content');
+  if(!container) return;
+  // homeworks, worksheets, exams için orijinal mantık (renderHome'dan kopya değil, yeniden oluştur)
+  // Duyuru dışı sekmelerde orijinal renderHome'un davranışını çağırmak için, en temiz:
+  // Aktif sekme butonlarını güncelle ve içerik alanını temizle, ardından içerik için onSnapshot
+  // yerine orijinal fonksiyonları çağıramıyoruz. Bunun yerine, orijinal setHomeTab override'ı
+  // zaten var (384980) ve homeworks/worksheets/exams'i ele alıyor olabilir. Onu çağıralım.
+  // En güvenli geri dönüş: sayfayı yeniden home render edip setHomeTab'i orijinal zincire bırak
+  // Bunu yapmak zor; bu yüzden bu sekmeler için renderHome içindeki gerçek orijinal mantığı
+  // çağırmak adına doğrudan obje metotuna ulaşmak için orijinal setHomeTab'i saklayalım.
+  if(window.__renderHomeSetTab) { window.__renderHomeSetTab(tab); return; }
+  container.innerHTML = "<p style='font-size:13px; color:#888;'>Lütfen Ana Sayfa menüsünden seçin.</p>";
+};
+
+
+// === [YENİ] setHomeTab TEMİZ final ===
+// (Mevcut hiçbir satır silinmedi/değiştirilmedi; yalnızca eklendi.)
+// __origSetHomeTab gerçek orijinal metod (ilk developer-gösterim override'ının
+// yakaladığı). announcements'ı id'li developer render ile, diğer sekmeleri
+// orijinal mantıkla çalıştırır.
+app.setHomeTab = function(tab) {
+  if(tab === 'announcements') {
+    app.activeHomeTab = tab;
+    const container = document.getElementById('home-tab-content');
+    if(!container) return;
+    container.innerHTML = '<div id="announcement-list"></div>';
+    if(this.homeAnnounUnsub){ this.homeAnnounUnsub(); this.homeAnnounUnsub=null; }
+    this.homeAnnounUnsub = onSnapshot(collection(db, "announcements"), (snap) => {
+      const cont = document.getElementById('announcement-list');
+      if(!cont) return;
+      cont.innerHTML = '';
+      const arr = [];
+      snap.forEach(d => {
+        const data = d.data();
+        if(data.homeDocType !== "exam" && __annMatch(data)) {
+          arr.push({ id: d.id, isDev: !!data.isDeveloper, pinned: !!data.pinned, text: data.text||'', sender: data.sender||'', ts:(data.createdAt||{}).toMillis?data.createdAt.toMillis():0 });
+        }
+      });
+      arr.sort(function(a,b){ if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1; return b.ts-a.ts; });
+      arr.forEach(data => {
+        if(data.isDev) {
+          cont.innerHTML += app.__devAnnCard({ id: data.id, text: data.text, pinned: data.pinned, sender: data.sender });
+        } else {
+          cont.innerHTML += `<div class="homework-card" style="border-left-color: #3498db;"><h4><i class="fas fa-bullhorn"></i> Duyuru</h4><p style="margin-top:5px; font-size:15px;">${data.text}</p></div>`;
+        }
+      });
+      if(!cont.innerHTML) cont.innerHTML = "<p style='font-size:13px; color:#999;'>Şu an duyuru bulunmuyor.</p>";
+    });
+    return;
+  }
+  // Diğer sekmeler: gerçek orijinal mantığa git
+  if(typeof __origSetHomeTab === 'function') return __origSetHomeTab.call(this, tab);
+  return app._menuFallback ? app._menuFallback(tab) : undefined;
+};
+
 window.addEventListener('DOMContentLoaded', () => { app.init(); });
 
 // fetchSchools hata-dirençli: Firestore kuralları okumayı engellese bile
@@ -6484,5 +6854,5 @@ app.fetchSchools = async function() {
 
 </script>
 <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286066428c06055',t:'MTc4NjI3MDc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28682b87b10e116',t:'MTc4NjI3NTg4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2872445395f1a64',t:'MTc4NjI4MjUwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a297c5fcbeb12b1b',t:'MTc4NjQ1Njg5OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a36fb33c5c8d65f9',t:'MTc4ODcyMTA1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a286197ff8a45840',t:'MTc4NjI3MTU3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28638b9bf1246a6',t:'MTc4NjI3Mjg1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a28682b87b10e116',t:'MTc4NjI3NTg4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2872445395f1a64',t:'MTc4NjI4MjUwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a297c5fcbeb12b1b',t:'MTc4NjQ1Njg5OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a36fcd4d1a51f954',t:'MTc4ODcyMjEyMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
