@@ -7002,3 +7002,48 @@ html,body{max-width:100%;overflow-x:hidden}
 })();
 </script>
 <!-- PAROLAYI GÖSTER BUTONLARI SONU -->
+
+<!-- ŞİFRE İKONUNU KUTU İÇİNE ALMA + ARAYÜZ EMOJİLERİNİ TEMİZLEME — yalnızca ekleme -->
+<style>
+.os-password-wrap{position:relative;width:100%;margin-bottom:10px}
+.os-password-wrap>input{width:100%;margin-bottom:0!important;padding-right:46px!important}
+.os-password-wrap>.os-password-toggle{
+ position:absolute!important;right:5px;top:50%;transform:translateY(-50%);
+ width:38px!important;height:38px!important;margin:0!important;padding:0!important;
+ display:grid!important;place-items:center!important;border:0!important;border-radius:9px!important;
+ background:transparent!important;color:#77808f!important;z-index:2
+}
+.os-password-wrap>.os-password-toggle:hover,.os-password-wrap>.os-password-toggle:focus{color:#ff9f43!important;background:rgba(255,159,67,.1)!important}
+.os-password-wrap>.os-password-toggle i{font-size:16px!important}
+.os-password-wrap>.os-password-toggle span{display:none!important}
+</style>
+<script>
+(function(){
+ function placeEye(inputId){
+  var input=document.getElementById(inputId),button=document.querySelector('[data-password-for="'+inputId+'"]');
+  if(!input||!button||input.parentElement.classList.contains('os-password-wrap'))return;
+  var wrap=document.createElement('div');wrap.className='os-password-wrap';
+  input.parentNode.insertBefore(wrap,input);wrap.appendChild(input);wrap.appendChild(button);
+  button.title=input.type==='password'?'Parolayı göster':'Parolayı gizle';
+  button.addEventListener('click',function(){button.title=input.type==='password'?'Parolayı gizle':'Parolayı göster'});
+ }
+ var uiEmoji=/[🚀🌍🏫👥📢🔑👤📚👨‍🏫💼🎨🗑️🚫🛡️📌]/gu;
+ function cleanNode(root){
+  if(!root)return;
+  if(root.nodeType===3){
+   if(root.parentElement&&!root.parentElement.closest('script,style,textarea,[contenteditable="true"]'))root.nodeValue=root.nodeValue.replace(uiEmoji,'').replace(/  +/g,' ');
+   return;
+  }
+  if(root.nodeType!==1&&root.nodeType!==9&&root.nodeType!==11)return;
+  var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),n,list=[];while(n=w.nextNode())list.push(n);list.forEach(function(x){cleanNode(x)});
+ }
+ function install(){placeEye('login-pass');placeEye('reg-pass');cleanNode(document.body)}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
+ var observer=new MutationObserver(function(changes){
+  placeEye('login-pass');placeEye('reg-pass');
+  changes.forEach(function(c){c.addedNodes.forEach(cleanNode)});
+ });
+ observer.observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
+<!-- ŞİFRE İKONU + EMOJİ TEMİZLEME SONU -->
