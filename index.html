@@ -7273,3 +7273,27 @@ const __authorityDb=getFirestore();
 }
 </style>
 <!-- HİZALAMA DÜZELTMELERİ SONU -->
+
+<!-- BİLDİRİM AYARLARI, OKUNMAMIŞ ROZETİ VE ANDROID BAĞLANTISI — yalnızca ekleme -->
+<style>
+.os-notification-switch{display:flex;align-items:center;justify-content:space-between;gap:15px;background:var(--card);padding:14px;border-radius:14px;margin:10px 0}.os-notification-switch small{display:block;color:#888;margin-top:3px}.os-msg-badge{position:absolute;top:-7px;right:calc(50% - 18px);width:17px;height:17px;border-radius:50%;display:grid;place-items:center;background:#e63946;color:#fff;font:bold 12px Arial;border:2px solid var(--nav);animation:osBadgePulse 1.8s infinite}.bottom-nav .nav-item{position:relative}@keyframes osBadgePulse{50%{transform:scale(1.12)}}
+</style>
+<script type="module">
+import{getAuth}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import{getFirestore,collection,query,where,onSnapshot}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+const __notifyAuth=getAuth(),__notifyDb=getFirestore();
+(function(){
+ const enabled=()=>localStorage.getItem('os_notifications_enabled')!=='false';
+ function navBadge(show){let nav=[...document.querySelectorAll('.bottom-nav .nav-item')].find(x=>x.textContent.includes('Mesajlar'));if(!nav)return;let b=nav.querySelector('.os-msg-badge');if(show&&!b){b=document.createElement('span');b.className='os-msg-badge';b.textContent='!';nav.appendChild(b)}else if(!show&&b)b.remove()}
+ function last(channel){return +(localStorage.getItem('os_read_'+channel)||0)}
+ function setRead(channel,time){localStorage.setItem('os_read_'+channel,String(time||Date.now()));refreshBadge()}
+ let newest={system:0,school:0},unsubs=[];
+ function refreshBadge(){navBadge(newest.system>last('system')||newest.school>last('school'))}
+ async function bridgeSession(){try{let u=__notifyAuth.currentUser;if(!u||!window.app?.currentUser)return;await u.getIdToken();if(window.AndroidBridge?.configureNotifications)AndroidBridge.configureNotifications(app.currentUser.username,u.refreshToken,enabled())}catch(e){console.error(e)}}
+ function listen(){if(!window.app?.currentUser)return;unsubs.forEach(x=>x());unsubs=[];let uname=app.currentUser.username;['system','school'].forEach(ch=>{let col=ch==='system'?'system_messages':'school_messages',q=query(collection(__notifyDb,col),where('recipients','array-contains',uname));let first=true;unsubs.push(onSnapshot(q,s=>{let max=0,latestText='';s.forEach(d=>{let x=d.data(),t=x.createdAt?.toMillis?.()||0;if(t>max){max=t;latestText=x.text||''}});newest[ch]=max;refreshBadge();if(!first&&enabled()&&max>last(ch)&&latestText&&window.AndroidBridge?.showNotification)AndroidBridge.showNotification(ch==='system'?'Sistem':app.currentUser.school,latestText);first=false},console.error))});bridgeSession()}
+ function addSetting(){let main=document.getElementById('main-content');if(!main||!main.textContent.includes('Ayarlar')||document.getElementById('os-notification-setting'))return;let row=document.createElement('div');row.id='os-notification-setting';row.className='os-notification-switch';row.innerHTML='<div><b><i class="fas fa-bell" style="color:#ff9f43;margin-right:7px"></i>Bildirimler açık olsun</b><small>Sistem ve okul yönetimi mesajlarını telefonda bildirir.</small></div><label class="argon2-switch"><input id="os-notification-toggle" type="checkbox"><span class="argon2-slider"></span></label>';let cb=row.querySelector('input');cb.checked=enabled();cb.onchange=()=>{localStorage.setItem('os_notifications_enabled',cb.checked?'true':'false');bridgeSession();if(cb.checked&&Notification.permission==='default')Notification.requestPermission().catch(()=>{})};main.insertBefore(row,main.children[1]||null)}
+ function install(){if(!window.app?.currentUser)return false;if(!app.__notifyInstalled){app.__notifyInstalled=true;let oldOpen=app.openReadOnlyChannel;app.openReadOnlyChannel=function(type){let r=oldOpen.apply(this,arguments);setRead(type,newest[type]||Date.now());return r}}listen();addSetting();return true}
+ let n=0,t=setInterval(()=>{addSetting();if(install()||++n>600)clearInterval(t)},100);new MutationObserver(addSetting).observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
+<!-- BİLDİRİM SİSTEMİ SONU -->
