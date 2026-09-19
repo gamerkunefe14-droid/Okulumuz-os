@@ -7620,3 +7620,46 @@ const __counVerifyDb=getFirestore();
 })();
 </script>
 <!-- REHBER ÖĞRETMEN E-POSTA DÜZELTMESİ SONU -->
+
+
+<!-- REHBER ÖĞRETMEN FIREBASE BAĞLANTI DOĞRULAMASI — kesin düzeltme -->
+<script type="module">
+import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,sendEmailVerification,reload}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import{getFirestore,collection,getDocs,query,where,doc,getDoc,setDoc,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+const __cvAuth=getAuth(),__cvDb=getFirestore(),__cvAction={url:'https://okulumuz-os.vercel.app/?emailVerified=1',handleCodeInApp:false};
+__cvAuth.languageCode='tr';
+(function(){
+ const $=x=>document.getElementById(x),sha=async s=>{let b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(s)));return btoa(String.fromCharCode(...new Uint8Array(b)))};
+ async function authUser(email,pass){try{return(await signInWithEmailAndPassword(__cvAuth,email,pass)).user}catch(e){if(e.code==='auth/invalid-credential'||e.code==='auth/user-not-found')return(await createUserWithEmailAndPassword(__cvAuth,email,pass)).user;throw e}}
+ function install(){if(!window.app||!app.registerCounselor||app.__counselorFirebaseFinal)return false;app.__counselorFirebaseFinal=true;
+  app.registerCounselor=async function(){
+   let btn=document.querySelector('#os-counselor-form .btn-main'),name=$('coun-reg-name')?.value.trim(),email=$('coun-reg-email')?.value.trim(),username=$('coun-reg-user')?.value.trim(),pass=$('coun-reg-pass')?.value||'',code=$('coun-reg-code')?.value.trim().toUpperCase();
+   if(!name||!email||!username||!pass||!code)return this.toast('Bütün alanları doldurun.','error');if(/\d/.test(name))return this.toast('Ad Soyad sayı içeremez.','error');if(!(pass.length>=8&&/[a-z]/.test(pass)&&/[A-Z]/.test(pass)&&/[^a-zA-Z0-9]/.test(pass)))return this.toast('Şifre en az 8 karakter; büyük, küçük ve özel karakter içermeli.','error');
+   if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Kontrol ediliyor...'}
+   try{let users=await getDocs(collection(__cvDb,'users')),taken=false;users.forEach(d=>{if(d.id.toLocaleLowerCase('tr-TR')===username.toLocaleLowerCase('tr-TR'))taken=true});if(taken)throw Error('Bu kullanıcı adı kullanılıyor.');let codes=await getDocs(query(collection(__cvDb,'registration_codes'),where('type','==','counselor'),where('code','==',code)));if(codes.empty)throw Error('Rehber öğretmen kodu geçersiz veya kullanılmış.');let cd=codes.docs[0],claim=doc(__cvDb,'counselor_code_claims',cd.id);if((await getDoc(claim)).exists())throw Error('Bu rehber öğretmen kodu daha önce kullanılmış.');let user=await authUser(email,pass);if(!user.emailVerified)await sendEmailVerification(user,__cvAction);this._counselorFirebasePending={name,email,username,pass,code,codeDoc:cd.id,school:cd.data().school||'',uid:user.uid};this.showCounselorVerify();this.toast('Doğrulama bağlantısı e-posta adresinize gönderildi.','success')}catch(e){console.error(e);let msg=e.code==='auth/operation-not-allowed'?'Firebase Authentication içinde Email/Password girişini etkinleştirin.':e.code==='auth/invalid-email'?'Geçerli bir e-posta adresi girin.':e.code==='auth/email-already-in-use'?'Bu e-posta başka bir Firebase hesabında kullanılıyor. Aynı parolayı kullanın veya farklı e-posta deneyin.':e.code==='auth/too-many-requests'?'Çok fazla deneme yapıldı. Bir süre bekleyip tekrar deneyin.':(e.message||'Kayıt başlatılamadı.');window.__counselorVisibleError?.(msg);this.toast(msg,'error');if(btn){btn.disabled=false;btn.textContent='Rehber Öğretmen Kaydı Oluştur'}}
+  };
+  app.showCounselorVerify=function(){let f=$('os-counselor-form'),p=this._counselorFirebasePending;if(!f||!p)return;f.innerHTML='<div style="text-align:center"><i class="fas fa-envelope-open-text" style="font-size:45px;color:#8e44ad"></i><h3>E-postanızı doğrulayın</h3><p>Bağlantı şu adrese gönderildi:</p><b style="color:#3498db;word-break:break-all"></b><p style="font-size:12px;color:#888">E-postadaki bağlantıya basın. Ardından buraya dönüp aşağıdaki düğmeyi kullanın. Spam/Gereksiz klasörünü de kontrol edin.</p><button class="btn-main" onclick="app.finishCounselorFirebaseRegister()">Doğrulamayı Kontrol Et</button><button class="btn-main" style="background:#77808f" onclick="app.resendCounselorFirebaseMail()">Bağlantıyı Yeniden Gönder</button></div>';f.querySelector('b').textContent=p.email};
+  app.resendCounselorFirebaseMail=async function(){try{let p=this._counselorFirebasePending,u=await authUser(p.email,p.pass);await sendEmailVerification(u,__cvAction);this.toast('Doğrulama bağlantısı yeniden gönderildi.','success')}catch(e){let msg='Bağlantı yeniden gönderilemedi: '+e.message;window.__counselorVisibleError?.(msg);this.toast(msg,'error')}};
+  app.finishCounselorFirebaseRegister=async function(){let p=this._counselorFirebasePending;if(!p)return;try{let u=await authUser(p.email,p.pass);await reload(u);if(!u.emailVerified)return this.toast('E-posta henüz doğrulanmamış. Bağlantıya bastıktan sonra tekrar deneyin.','error');await setDoc(doc(__cvDb,'users',p.username),{username:p.username,adSoyad:p.name,email:p.email,password:await sha(p.pass),school:p.school,grade:'Tümü',section:'Tümü',isBlocked:false,isLeader:false,isTeacher:false,isMod:false,isAdmin:false,isCounselor:true,rank:'',rankColor:'#ff9f43',counselorCodeHash:await sha(p.code),emailVerified:true,authUid:u.uid,createdAt:serverTimestamp()});await setDoc(doc(__cvDb,'counselor_code_claims',p.codeDoc),{codeId:p.codeDoc,usedBy:p.username,school:p.school,createdAt:serverTimestamp()});await setDoc(doc(__cvDb,'users_lookup',u.uid),{username:p.username,updatedAt:serverTimestamp()},{merge:true});this._counselorFirebasePending=null;this.toast('Rehber öğretmen hesabı oluşturuldu. Giriş yapabilirsiniz.','success');this.counselorAuthForm('login')}catch(e){console.error(e);this.toast('Kayıt tamamlanamadı: '+e.message,'error')}};
+  return true}
+ if(!install()){let n=0,t=setInterval(()=>{if(install()||++n>500)clearInterval(t)},40)}
+})();
+</script>
+<!-- REHBER ÖĞRETMEN FIREBASE DOĞRULAMASI SONU -->
+
+<!-- REHBER ÖĞRETMEN DOĞRULAMA DURUM/HATA EKRANI İYİLEŞTİRMESİ -->
+<style>
+.os-coun-mail-status{margin:10px 0;padding:11px;border-radius:10px;font-size:12px;line-height:1.45}.os-coun-mail-status.info{background:#eef5ff;color:#315f9b}.os-coun-mail-status.success{background:#e8f8f1;color:#087d55}.os-coun-mail-status.error{background:#ffecef;color:#a92232}.os-coun-resend-note{font-size:11px;color:#888;margin:8px 0}
+</style>
+<script>
+(function(){
+ function install(){if(!window.app||!app.showCounselorVerify||app.__counselorStatusImproved)return false;app.__counselorStatusImproved=true;
+  var oldShow=app.showCounselorVerify;
+  app.showCounselorVerify=function(){oldShow.apply(this,arguments);var f=document.getElementById('os-counselor-form');if(!f)return;var status=document.createElement('div');status.id='os-coun-mail-status';status.className='os-coun-mail-status success';status.innerHTML='<i class="fas fa-check-circle" style="margin-right:6px"></i><b>E-posta gönderildi.</b><br>Gelen kutunuzdaki doğrulama bağlantısına basın.';var h=f.querySelector('h3');if(h)h.insertAdjacentElement('afterend',status);var resend=[...f.querySelectorAll('button')].find(x=>x.textContent.includes('Yeniden'));if(resend){var note=document.createElement('div');note.className='os-coun-resend-note';note.textContent='E-posta görünmüyorsa Spam, Gereksiz veya Tanıtımlar klasörünü kontrol edin. Ardından gerekirse bağlantıyı yeniden gönderin.';resend.insertAdjacentElement('beforebegin',note)}};
+  window.__counselorVisibleError=function(message){var f=document.getElementById('os-counselor-form');if(!f)return;var s=document.getElementById('os-coun-mail-status');if(!s){s=document.createElement('div');s.id='os-coun-mail-status';f.prepend(s)}s.className='os-coun-mail-status error';s.innerHTML='<i class="fas fa-exclamation-circle" style="margin-right:6px"></i><b>İşlem başarısız.</b><br>';s.append(document.createTextNode(message||'Bilinmeyen bir hata oluştu.'))};
+  return true
+ }
+ if(!install()){var n=0,t=setInterval(function(){if(install()||++n>500)clearInterval(t)},40)}
+})();
+</script>
+<!-- DOĞRULAMA DURUM EKRANI SONU -->
