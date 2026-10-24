@@ -307,7 +307,7 @@ main { flex: 1; padding: 15px; overflow-y: auto; }
 </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/argon2-browser@1.18.0/dist/argon2-bundled.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -329,7 +329,7 @@ appId: "1:144133286740:web:5ce1ad633fed06233376c1"
 const fApp = initializeApp(firebaseConfig);
 const db = getFirestore(fApp);
 const storage = getStorage(fApp);
-emailjs.init("bgyhgWde8icqWQ5gB");
+
 window.app = {
 currentUser: null,
 allSchools: [],
@@ -593,7 +593,7 @@ section: document.getElementById('reg-section').value,
 isBlocked: false, isLeader: false, isMod: false, isTeacher: false, isAdmin: false, rank: "", rankColor: "#ff9f43"
 };
 this.tempAction = 'register';
-await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
+await app.__sendFirebaseVerification("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
 document.getElementById('verify-modal').classList.remove('hidden');
 },
 
@@ -623,7 +623,7 @@ if (count % 3 === 0) {
 this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
 this.tempUser = uData; 
 this.tempAction = 'login';
-await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: uData.email || email, code: this.generatedCode });
+await app.__sendFirebaseVerification("service_9rbygdk", "template_ygxjrhm", { to_email: uData.email || email, code: this.generatedCode });
 document.getElementById('verify-modal').classList.remove('hidden');
 return;
 }
@@ -708,7 +708,7 @@ localStorage.setItem('saved_manager_code1', code1);
 localStorage.setItem('saved_manager_code2', code2);
 }
 
-await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
+await app.__sendFirebaseVerification("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
 document.getElementById('verify-modal').classList.remove('hidden');
 }
 },
@@ -3214,7 +3214,7 @@ app.startRegister = async function() {
     isBlocked: false, isLeader: false, isMod: false, isTeacher: false, isAdmin: false, rank: "", rankColor: "#ff9f43"
   };
   this.tempAction = 'register';
-  await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
+  await app.__sendFirebaseVerification("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
   document.getElementById('verify-modal').classList.remove('hidden');
 };
 
@@ -3246,7 +3246,7 @@ app.handleStaffAuth = async function() {
         this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
         this.tempUser = uData;
         this.tempAction = 'login';
-        await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: uData.email || email, code: this.generatedCode });
+        await app.__sendFirebaseVerification("service_9rbygdk", "template_ygxjrhm", { to_email: uData.email || email, code: this.generatedCode });
         document.getElementById('verify-modal').classList.remove('hidden');
         return;
       }
@@ -3327,7 +3327,7 @@ app.handleStaffAuth = async function() {
       localStorage.setItem('saved_manager_code2', code2);
     }
 
-    await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
+    await app.__sendFirebaseVerification("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
     document.getElementById('verify-modal').classList.remove('hidden');
   }
 };
@@ -3468,7 +3468,7 @@ app.startRegister = async function() {
     isBlocked: false, isLeader: false, isMod: false, isTeacher: false, isAdmin: false, rank: "", rankColor: "#ff9f43"
   };
   this.tempAction = 'register';
-  await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
+  await app.__sendFirebaseVerification("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
   document.getElementById('verify-modal').classList.remove('hidden');
 };
 
@@ -3502,7 +3502,7 @@ app.handleStaffAuth = async function() {
         this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
         this.tempUser = uData;
         this.tempAction = 'login';
-        await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: uData.email || email, code: this.generatedCode });
+        await app.__sendFirebaseVerification("service_9rbygdk", "template_ygxjrhm", { to_email: uData.email || email, code: this.generatedCode });
         document.getElementById('verify-modal').classList.remove('hidden');
         return;
       }
@@ -3589,7 +3589,7 @@ app.handleStaffAuth = async function() {
       localStorage.setItem('saved_manager_code2', code2);
     }
 
-    await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
+    await app.__sendFirebaseVerification("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
     document.getElementById('verify-modal').classList.remove('hidden');
   }
 };
@@ -3674,7 +3674,7 @@ app.startRegister = async function() {
     isBlocked: false, isLeader: false, isMod: false, isTeacher: false, isAdmin: false, rank: "", rankColor: "#ff9f43"
   };
   this.tempAction = 'register';
-  await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
+  await app.__sendFirebaseVerification("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
   document.getElementById('verify-modal').classList.remove('hidden');
 };
 
@@ -3708,7 +3708,7 @@ app.handleStaffAuth = async function() {
         this.generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
         this.tempUser = uData;
         this.tempAction = 'login';
-        await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: uData.email || email, code: this.generatedCode });
+        await app.__sendFirebaseVerification("service_9rbygdk", "template_ygxjrhm", { to_email: uData.email || email, code: this.generatedCode });
         document.getElementById('verify-modal').classList.remove('hidden');
         return;
       }
@@ -3797,7 +3797,7 @@ app.handleStaffAuth = async function() {
       localStorage.setItem('saved_manager_code2', code2);
     }
 
-    await emailjs.send("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
+    await app.__sendFirebaseVerification("service_9rbygdk", "template_ygxjrhm", { to_email: email, code: this.generatedCode });
     document.getElementById('verify-modal').classList.remove('hidden');
   }
 };
@@ -6422,7 +6422,7 @@ app.fetchSchools = async function() {
 
 </script>
 
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3da01bc9e49ea94',t:'MTc4OTgzNTc2MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a476ea8bee6a720d',t:'MTc5MTQ4MTA3NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4774c4b3c476e07',t:'MTc5MTQ4NTA3OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4f7e2de2ddf28da',t:'MTc5MjgzMzQyMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3da01bc9e49ea94',t:'MTc4OTgzNTc2MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a476ea8bee6a720d',t:'MTc5MTQ4MTA3NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4774c4b3c476e07',t:'MTc5MTQ4NTA3OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4f806797b56de2d',t:'MTc5MjgzNDg4MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
 
 
@@ -6885,7 +6885,7 @@ const __parDb=getFirestore(),__parAuth=getAuth();
  function authScreen(mode='login'){let old=$('os-parent-auth');if(old)old.remove();let x=document.createElement('div');x.id='os-parent-auth';x.className='os-parent-auth';x.innerHTML='<div class="os-parent-box"><h2><i class="fas fa-user-friends" style="color:#6c5ce7"></i> Veli Girişi</h2><div class="os-parent-tabs"><button onclick="app.parentAuthForm(\'login\')">Giriş</button><button onclick="app.parentAuthForm(\'register\')">Kayıt</button></div><div id="os-parent-form"></div><button class="btn-danger" style="background:#888" onclick="document.getElementById(\'os-parent-auth\').remove()">Geri dön</button></div>';document.body.appendChild(x);app.parentAuthForm(mode)}
  function install(){if(!window.app||app.__parentInstalled)return false;app.__parentInstalled=true;
   app.openParentAuth=()=>authScreen('login');app.parentAuthForm=function(mode){let f=$('os-parent-form');if(mode==='register')f.innerHTML='<input id="par-student-email" type="email" placeholder="Öğrenci mail adresi"><input id="par-email" type="email" placeholder="Veli mail adresi"><input id="par-student-user" placeholder="Öğrenci kullanıcı adı"><input id="par-student-pass" type="password" placeholder="Öğrenci hesap şifresi"><input id="par-user" placeholder="Veli için kullanıcı adı"><input id="par-name" placeholder="Veli adı, soyadı"><input id="par-pass" type="password" placeholder="Velinin belirleyeceği şifre"><button class="btn-main" onclick="app.startParentRegister()">Doğrulama kodlarını gönder</button>';else f.innerHTML='<input id="par-login-student" placeholder="Öğrenci kullanıcı adı"><input id="par-login-student-pass" type="password" placeholder="Öğrenci şifresi"><input id="par-login-user" placeholder="Veli kullanıcı adı"><input id="par-login-pass" type="password" placeholder="Veli şifresi"><input id="par-security" inputmode="numeric" maxlength="4" placeholder="Öğrencinin 4 haneli güvenlik kodu (isteğe bağlı)"><small style="display:block;color:#888;margin:-5px 0 10px">Güvenlik kodu sonraki güncellemede aktif olacaktır.</small><button class="btn-main" onclick="app.parentLogin()">Veli olarak giriş yap</button>'};
-  app.startParentRegister=async function(){let su=$('par-student-user').value.trim(),se=$('par-student-email').value.trim(),sp=$('par-student-pass').value,pu=$('par-user').value.trim(),pe=$('par-email').value.trim(),pn=$('par-name').value.trim(),pp=$('par-pass').value;if(!su||!se||!sp||!pu||!pe||!pn||!pp)return this.toast('Bütün alanları doldurun.','error');try{let s=await getDoc(doc(__parDb,'users',su));if(!s.exists()||String(s.data().email||'').toLowerCase()!==se.toLowerCase()||!await okPass(s.data().password,sp))return this.toast('Öğrenci bilgileri doğrulanamadı.','error');if((await getDoc(doc(__parDb,'parents',pu))).exists())return this.toast('Bu veli kullanıcı adı kullanılıyor.','error');let sc=String(Math.floor(1000+Math.random()*9000)),pc=String(Math.floor(1000+Math.random()*9000));await emailjs.send('service_9rbygdk','template_ygxjrhm',{to_email:se,code:sc});await emailjs.send('service_9rbygdk','template_ygxjrhm',{to_email:pe,code:pc});this._parentPending={su,se,pu,pe,pn,pp,sc,pc,student:s.data()};let f=$('os-parent-form');f.innerHTML='<p><b>Öğrenci e-postasına gönderilen kod</b></p><input id="par-student-code" maxlength="4" inputmode="numeric" placeholder="Öğrenci doğrulama kodu"><p><b>Veli e-postasına gönderilen kod</b></p><input id="par-parent-code" maxlength="4" inputmode="numeric" placeholder="Veli doğrulama kodu"><button class="btn-main" onclick="app.finishParentRegister()">İki adresi doğrula</button>';this.toast('İki e-posta adresine de doğrulama kodu gönderildi.','success')}catch(e){console.error(e);this.toast('Doğrulama başlatılamadı: '+e.message,'error')}};
+  app.startParentRegister=async function(){let su=$('par-student-user').value.trim(),se=$('par-student-email').value.trim(),sp=$('par-student-pass').value,pu=$('par-user').value.trim(),pe=$('par-email').value.trim(),pn=$('par-name').value.trim(),pp=$('par-pass').value;if(!su||!se||!sp||!pu||!pe||!pn||!pp)return this.toast('Bütün alanları doldurun.','error');try{let s=await getDoc(doc(__parDb,'users',su));if(!s.exists()||String(s.data().email||'').toLowerCase()!==se.toLowerCase()||!await okPass(s.data().password,sp))return this.toast('Öğrenci bilgileri doğrulanamadı.','error');if((await getDoc(doc(__parDb,'parents',pu))).exists())return this.toast('Bu veli kullanıcı adı kullanılıyor.','error');let sc=String(Math.floor(1000+Math.random()*9000)),pc=String(Math.floor(1000+Math.random()*9000));await app.__sendFirebaseVerification('service_9rbygdk','template_ygxjrhm',{to_email:se,code:sc});await app.__sendFirebaseVerification('service_9rbygdk','template_ygxjrhm',{to_email:pe,code:pc});this._parentPending={su,se,pu,pe,pn,pp,sc,pc,student:s.data()};let f=$('os-parent-form');f.innerHTML='<p><b>Öğrenci e-postasına gönderilen kod</b></p><input id="par-student-code" maxlength="4" inputmode="numeric" placeholder="Öğrenci doğrulama kodu"><p><b>Veli e-postasına gönderilen kod</b></p><input id="par-parent-code" maxlength="4" inputmode="numeric" placeholder="Veli doğrulama kodu"><button class="btn-main" onclick="app.finishParentRegister()">İki adresi doğrula</button>';this.toast('İki e-posta adresine de doğrulama kodu gönderildi.','success')}catch(e){console.error(e);this.toast('Doğrulama başlatılamadı: '+e.message,'error')}};
   app.finishParentRegister=async function(){let p=this._parentPending;if(!p)return;if($('par-student-code').value!==p.sc||$('par-parent-code').value!==p.pc)return this.toast('Doğrulama kodlarından biri hatalı.','error');await setDoc(doc(__parDb,'parents',p.pu),{username:p.pu,adSoyad:p.pn,email:p.pe,password:await hash(p.pp),studentUsername:p.su,studentEmail:p.se,school:p.student.school||'',grade:p.student.grade||'',section:p.student.section||'',studentVerified:true,parentVerified:true,createdAt:serverTimestamp()});this.toast('Veli hesabı oluşturuldu.','success');this.parentAuthForm('login')};
   app.parentLogin=async function(){let su=$('par-login-student').value.trim(),sp=$('par-login-student-pass').value,pu=$('par-login-user').value.trim(),pp=$('par-login-pass').value;try{let s=await getDoc(doc(__parDb,'users',su)),p=await getDoc(doc(__parDb,'parents',pu));if(!s.exists()||!p.exists()||p.data().studentUsername!==su||!await okPass(s.data().password,sp)||!await okPass(p.data().password,pp))return this.toast('Veli veya öğrenci giriş bilgileri hatalı.','error');this.parent={...p.data(),username:pu,student:{...s.data(),username:su}};await setDoc(doc(__parDb,'parents_lookup',__parAuth.currentUser.uid),{parentUsername:pu,studentUsername:su,updatedAt:serverTimestamp()},{merge:true});$('os-parent-auth').remove();this.openParentPanel()}catch(e){console.error(e);this.toast('Veli girişi yapılamadı: '+e.message,'error')}};
   app.openParentPanel=function(){let x=document.createElement('div');x.id='os-parent-app';x.className='os-parent-app';x.innerHTML='<div class="os-parent-head"><b>'+esc(this.parent.adSoyad)+'</b><button style="border:0;background:transparent;color:#fff" onclick="document.getElementById(\'os-parent-app\').remove()"><i class="fas fa-sign-out-alt"></i></button></div><main id="os-parent-main" class="os-parent-main"></main><nav class="os-parent-nav"><button onclick="app.parentPage(\'attendance\')"><i class="fas fa-clipboard-check"></i>Devamlılık</button><button onclick="app.parentPage(\'homework\')"><i class="fas fa-book"></i>Ödevler</button><button onclick="app.parentPage(\'exams\')"><i class="fas fa-file-alt"></i>Sınavlar</button><button onclick="app.parentPage(\'schedule\')"><i class="fas fa-calendar-alt"></i>Program</button></nav>';document.body.appendChild(x);this.parentPage('attendance')};
@@ -7041,7 +7041,7 @@ const __counVerifyDb=getFirestore();
     const cd=codes.docs[0];
     this.tempUser={username,adSoyad:name,email,password:await sha(pass),school:cd.data().school||'',grade:'Tümü',section:'Tümü',isBlocked:false,isLeader:false,isTeacher:false,isMod:false,isAdmin:false,isCounselor:true,rank:'',rankColor:'#ff9f43',counselorCodeHash:await sha(code),emailVerified:false};
     this.tempCodeIdToBurn=cd.id;this.tempAction='register';this.generatedCode=String(Math.floor(1000+Math.random()*9000));
-    await emailjs.send('service_9rbygdk','template_ygxjrhm',{to_email:email,code:this.generatedCode});
+    await app.__sendFirebaseVerification('service_9rbygdk','template_ygxjrhm',{to_email:email,code:this.generatedCode});
     const auth=document.getElementById('os-counselor-auth');if(auth)auth.style.display='none';
     document.getElementById('verify-modal').classList.remove('hidden');
     this.toast('Doğrulama kodu e-posta adresinize gönderildi.','success');
@@ -7527,6 +7527,36 @@ const __adminSearchDb=getFirestore();
   app.clearAdminUserFilters=function(){['os-user-name-search','os-username-search','os-grade-search','os-section-search','os-school-search'].forEach(id=>{let x=document.getElementById(id);if(x)x.value=''});this.filterAdminUsers()};
   app.renderAdminUserList=async function(isAdmin){let cont=document.getElementById('adm-user-list-container');if(!cont)return;cont.innerHTML='<p style="font-size:12px;color:#888">Kullanıcılar yükleniyor...</p>';try{let s=isAdmin?await getDocs(collection(__adminSearchDb,'users')):await getDocs(query(collection(__adminSearchDb,'users'),where('school','==',this.currentUser.school))),a=[];s.forEach(d=>a.push({username:d.id,...d.data()}));a.sort((x,y)=>String(x.adSoyad||x.username).localeCompare(String(y.adSoyad||y.username),'tr'));this._adminSearchUsers=a;this.ensureAdminUserFilters(isAdmin);let dl=document.getElementById('os-school-search-list');if(dl)dl.innerHTML=[...new Set(a.map(x=>x.school).filter(Boolean))].sort((x,y)=>x.localeCompare(y,'tr')).map(x=>'<option value="'+esc(x)+'">').join('');this.filterAdminUsers()}catch(e){cont.innerHTML='<p style="font-size:12px;color:#d63031">Kullanıcılar alınamadı: '+esc(e.message)+'</p>'}};
   return true}
+ if(!install()){let n=0,t=setInterval(()=>{if(install()||++n>500)clearInterval(t)},40)}
+})();
+</script>
+<style>
+.os-email-verify-box{text-align:center}.os-email-verify-box i{font-size:43px;color:#ff9f43;margin:7px}.os-email-verify-address{font-weight:800;color:#3498db;word-break:break-all}.os-email-domain-row{display:flex;gap:7px;margin:7px 0;padding:8px;border-radius:9px;background:rgba(127,140,141,.08);align-items:center}.os-email-domain-row span{flex:1;font-size:12px}.os-email-domain-row button{width:auto!important;margin:0!important;padding:6px 9px!important}
+</style>
+<script type="module">
+import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,sendEmailVerification,reload,deleteUser}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import{getFirestore,collection,getDocs,doc,setDoc,deleteDoc,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+const __verifyAuth=getAuth(),__verifyDb=getFirestore(),__verifyAction={url:'https://okulumuz-os.vercel.app/?emailVerified=1',handleCodeInApp:false};__verifyAuth.languageCode='tr';
+(function(){
+ const builtIn=new Set(('10minutemail.com,10minute-mail.com,mailinator.com,guerrillamail.com,guerrillamail.net,guerrillamail.org,tempmail.com,temp-mail.org,temp-mail.io,yopmail.com,yopmail.fr,yopmail.net,throwawaymail.com,trashmail.com,trashmail.net,maildrop.cc,getnada.com,dispostable.com,fakeinbox.com,sharklasers.com,grr.la,spam4.me,mohmal.com,emailondeck.com,mintemail.com,mytemp.email,tempr.email,discard.email,mailnesia.com,mailcatch.com,spamgourmet.com,33mail.com,mailnull.com,burnermail.io,inboxkitten.com,dropmail.me,anonbox.net,spambox.us').split(','));
+ const creds={},domain=e=>String(e||'').trim().toLowerCase().split('@').pop(),sha=async s=>{let b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(s)));return btoa(String.fromCharCode(...new Uint8Array(b)))};
+ async function blocked(email){let d=domain(email);if(!d||!String(email).includes('@'))return true;if(builtIn.has(d))return true;try{return(await getDocs(collection(__verifyDb,'blocked_email_domains'))).docs.some(x=>x.id===d||String(x.data().domain||'').toLowerCase()===d)}catch(e){return builtIn.has(d)}}
+ function passwordFor(email){let e=String(email).toLowerCase(),student=document.getElementById('par-student-email')?.value?.trim().toLowerCase(),parent=document.getElementById('par-email')?.value?.trim().toLowerCase();if(e===student)return document.getElementById('par-student-pass')?.value||'';if(e===parent)return document.getElementById('par-pass')?.value||'';return document.getElementById('reg-pass')?.value||document.getElementById('staff-pass')?.value||document.getElementById('coun-reg-pass')?.value||''}
+ async function userFor(email,pass){try{return(await signInWithEmailAndPassword(__verifyAuth,email,pass)).user}catch(e){if(e.code==='auth/invalid-credential'||e.code==='auth/user-not-found')return(await createUserWithEmailAndPassword(__verifyAuth,email,pass)).user;throw e}}
+ function verifyUI(){let modal=document.getElementById('verify-modal');if(!modal||modal.classList.contains('hidden'))return;let card=modal.querySelector('.modal');if(!card||card.dataset.firebaseVerify==='1')return;card.dataset.firebaseVerify='1';let email=app._firebaseVerifyEmail||'';card.innerHTML='<div class="os-email-verify-box"><i class="fas fa-envelope-open-text"></i><h3>E-posta Doğrulaması</h3><p>Doğrulama bağlantısı e-posta adresinize gönderildi:</p><div class="os-email-verify-address"></div><p style="font-size:12px;color:#888">E-postadaki bağlantıya basın. Ardından bu ekrana dönerek kontrol edin. E-posta görünmüyorsa Spam, Gereksiz ve Tanıtımlar klasörlerine bakın.</p><button class="btn-main" onclick="app.verifyAndFinish()">Doğrulamayı Kontrol Et</button><button class="btn-main" style="background:#77808f" onclick="app.resendFirebaseVerification()">Bağlantıyı Yeniden Gönder</button><button class="btn-danger" onclick="app.cancelFirebaseVerification()">Kaydı İptal Et</button><input id="verify-code" type="hidden"></div>';card.querySelector('.os-email-verify-address').textContent=email}
+ async function replacementSend(service,template,params){let email=String(params?.to_email||'').trim(),pass=passwordFor(email);if(await blocked(email))throw Error('Geçici veya izin verilmeyen e-posta servisleri kullanılamaz.');if(!pass)throw Error('Doğrulama için hesap şifresi bulunamadı.');let u=await userFor(email,pass);creds[email.toLowerCase()]={email,pass};app._firebaseVerifyEmail=email;app._firebaseVerifyPass=pass;if(!u.emailVerified)await sendEmailVerification(u,__verifyAction);setTimeout(verifyUI,0);return{status:200,text:'verification-link-sent'}}
+ function install(){if(!window.app||app.__firebaseRegistrationVerification)return false;app.__firebaseRegistrationVerification=true;app.__sendFirebaseVerification=replacementSend;
+  app.resendFirebaseVerification=async function(){try{let e=this._firebaseVerifyEmail,p=this._firebaseVerifyPass;if(await blocked(e))throw Error('Bu e-posta alan adı engellendi.');let u=await userFor(e,p);await sendEmailVerification(u,__verifyAction);this.toast('Doğrulama bağlantısı yeniden gönderildi.','success')}catch(e){this.toast('Bağlantı gönderilemedi: '+e.message,'error')}};
+  app.cancelFirebaseVerification=async function(){try{let u=__verifyAuth.currentUser;if(u&&!u.emailVerified)await deleteUser(u)}catch(e){}this.tempUser=null;this.tempAction=null;document.getElementById('verify-modal')?.classList.add('hidden');this.toast('Kayıt iptal edildi.','info')};
+  let oldVerify=app.verifyAndFinish;app.verifyAndFinish=async function(){let email=this._firebaseVerifyEmail,pass=this._firebaseVerifyPass;if(email&&pass){try{let u=await userFor(email,pass);await reload(u);if(!u.emailVerified)return this.toast('E-posta henüz doğrulanmadı. Bağlantıya bastıktan sonra tekrar deneyin.','error');let input=document.getElementById('verify-code');if(input)input.value=this.generatedCode;if(this.tempUser){this.tempUser.emailVerified=true;this.tempUser.authUid=u.uid}}catch(e){return this.toast('Doğrulama kontrol edilemedi: '+e.message,'error')}}return oldVerify.apply(this,arguments)};
+  function parentUI(){let f=document.getElementById('os-parent-form');if(!f||!document.getElementById('par-student-code')||f.dataset.firebaseVerify)return;f.dataset.firebaseVerify='1';f.innerHTML='<div class="os-email-verify-box"><i class="fas fa-envelope-open-text"></i><h3>İki E-postayı Doğrulayın</h3><p>Öğrenci ve veli e-posta adreslerine ayrı doğrulama bağlantıları gönderildi.</p><p style="font-size:12px;color:#888">İki bağlantıya da bastıktan sonra aşağıdaki düğmeyi kullanın. Spam ve Gereksiz klasörlerini kontrol edin.</p><button class="btn-main" onclick="app.finishParentRegister()">İki Adresi Kontrol Et</button></div>'}
+  if(typeof app.finishParentRegister==='function')app.finishParentRegister=async function(){let p=this._parentPending;if(!p)return;try{let sc=creds[String(p.se).toLowerCase()],pc=creds[String(p.pe).toLowerCase()];if(!sc||!pc)throw Error('Doğrulama oturumları bulunamadı.');let su=await userFor(sc.email,sc.pass);await reload(su);if(!su.emailVerified)return this.toast('Öğrenci e-postası henüz doğrulanmadı.','error');let pu=await userFor(pc.email,pc.pass);await reload(pu);if(!pu.emailVerified)return this.toast('Veli e-postası henüz doğrulanmadı.','error');await setDoc(doc(__verifyDb,'parents',p.pu),{username:p.pu,adSoyad:p.pn,email:p.pe,password:await sha(p.pp),studentUsername:p.su,studentEmail:p.se,school:p.student.school||'',grade:p.student.grade||'',section:p.student.section||'',studentVerified:true,parentVerified:true,emailVerified:true,authUid:pu.uid,createdAt:serverTimestamp()});this.toast('Veli hesabı oluşturuldu.','success');this.parentAuthForm('login')}catch(e){this.toast('Doğrulama tamamlanamadı: '+e.message,'error')}};
+  const oldDev=app.openDevMenu;app.openDevMenu=function(){let r=oldDev.apply(this,arguments);setTimeout(()=>{let area=document.getElementById('dev-action-area');if(area&&String(this.currentUser?.rank||'').toLowerCase()==='developer'&&!document.getElementById('os-email-domains-btn')){let b=document.createElement('button');b.id='os-email-domains-btn';b.className='btn-main';b.style.cssText='background:#34495e;margin-top:10px';b.innerHTML='<i class="fas fa-at"></i> E-posta Domain Engelleri';b.onclick=()=>app.openEmailDomainManager();area.parentNode.insertBefore(b,area)}},0);return r};
+  app.openEmailDomainManager=async function(){let bg=document.createElement('div');bg.id='os-domain-modal';bg.className='modal-bg';bg.innerHTML='<div class="modal"><h3>E-posta Domain Engelleri</h3><div style="display:flex;gap:7px"><input id="os-domain-input" placeholder="örnek: gecicimail.com"><button class="btn-main" style="width:auto" onclick="app.addBlockedDomain()">Ekle</button></div><div id="os-domain-list">Yükleniyor...</div><button class="btn-danger" style="background:#888" onclick="document.getElementById(\'os-domain-modal\').remove()">Kapat</button></div>';document.body.appendChild(bg);this.renderBlockedDomains()};
+  app.renderBlockedDomains=async function(){let s=await getDocs(collection(__verifyDb,'blocked_email_domains')),el=document.getElementById('os-domain-list');el.innerHTML=s.empty?'<p style="font-size:12px;color:#888">Developer tarafından eklenen domain yok.</p>':s.docs.map(x=>'<div class="os-email-domain-row"><span>'+x.id+'</span><button class="btn-danger" onclick="app.removeBlockedDomain(\''+x.id+'\')"><i class="fas fa-trash"></i></button></div>').join('')};
+  app.addBlockedDomain=async function(){let d=domain(document.getElementById('os-domain-input').value);if(!d||d.includes('/')||!d.includes('.'))return this.toast('Geçerli bir domain girin.','error');await setDoc(doc(__verifyDb,'blocked_email_domains',d),{domain:d,addedBy:this.currentUser.username,createdAt:serverTimestamp()});document.getElementById('os-domain-input').value='';this.renderBlockedDomains()};
+  app.removeBlockedDomain=async function(d){await deleteDoc(doc(__verifyDb,'blocked_email_domains',d));this.renderBlockedDomains()};
+  new MutationObserver(function(){verifyUI();parentUI()}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});return true}
  if(!install()){let n=0,t=setInterval(()=>{if(install()||++n>500)clearInterval(t)},40)}
 })();
 </script>
