@@ -4,15 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OKULUMUZ OS - HATIRLATMA UYGULAMASI</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" href="/icon-192x192.png">
+<link rel="icon" type="image/png" href="https://gamerkunefe14-droid.github.io/Okulumuz-os/icon-192x192.png">
 <meta name="theme-color" content="#ff9f43">
 <meta name="application-name" content="Okulumuz Os">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Okulumuz Os">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="https://gamerkunefe14-droid.github.io/Okulumuz-os/icon-192x192.png">
-<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js');}</script>
+<script>window.__OKULUMUZ_WEB_MODE__=true;if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(list){list.forEach(function(reg){reg.unregister();});}).catch(function(){});}if('caches' in window){caches.keys().then(function(keys){keys.forEach(function(key){if(key.indexOf('okulumuz')!==-1)caches.delete(key);});}).catch(function(){});}</script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
         :root { --bg: #f0f2f5; --card: #ffffff; --text: #333; --nav: #ffffff; }
@@ -315,20 +314,14 @@ import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, u
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-const firebaseConfigEndpoint = location.hostname === 'okulumuz-os.vercel.app' || location.hostname.endsWith('.vercel.app')
-  ? '/api/firebase-config'
-  : 'https://okulumuz-os.vercel.app/api/firebase-config';
-const firebaseConfigResponse = await fetch(firebaseConfigEndpoint, {
-cache: 'no-store',
-headers: { 'Accept': 'application/json' }
-});
-if(!firebaseConfigResponse.ok) {
-throw new Error('Firebase yapılandırması sunucudan alınamadı. Vercel ortam değişkenlerini kontrol edin.');
-}
-const firebaseConfig = await firebaseConfigResponse.json();
-if(!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-throw new Error('Firebase yapılandırması eksik.');
-}
+const firebaseConfig = {
+apiKey: "AIzaSyBjs49askwa3CJi9MY_ABhK2l1umFLuEZo",
+authDomain: "bizimokul14-4d546.firebaseapp.com",
+projectId: "bizimokul14-4d546",
+storageBucket: "bizimokul14-4d546.firebasestorage.app",
+messagingSenderId: "144133286740",
+appId: "1:144133286740:web:5ce1ad633fed06233376c1"
+};
 
 const fApp = initializeApp(firebaseConfig);
 const db = getFirestore(fApp);
@@ -7178,5 +7171,5 @@ const __finalAuth=getAuth(),__finalDb=getFirestore();
  if(!install()){var n=0,t=setInterval(function(){if(install()||++n>600)clearInterval(t)},40)}
 })();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a566ade38a5de1a1',t:'MTc5Mzk5NTE3Mg=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a566ade38a5de1a1',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
