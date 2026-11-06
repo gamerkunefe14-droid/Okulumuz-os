@@ -309,22 +309,26 @@ main { flex: 1; padding: 15px; overflow-y: auto; }
 
 
 <script src="https://cdn.jsdelivr.net/npm/argon2-browser@1.18.0/dist/argon2-bundled.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, updateDoc, onSnapshot, orderBy, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-const firebaseConfig = {
-apiKey: "AIzaSyBjs49askwa3CJi9MY_ABhK2l1umFLuEZo",
-authDomain: "bizimokul14-4d546.firebaseapp.com",
-projectId: "bizimokul14-4d546",
-storageBucket: "bizimokul14-4d546.firebasestorage.app",
-messagingSenderId: "144133286740",
-appId: "1:144133286740:web:5ce1ad633fed06233376c1"
-};
+const firebaseConfigEndpoint = location.hostname === 'okulumuz-os.vercel.app' || location.hostname.endsWith('.vercel.app')
+  ? '/api/firebase-config'
+  : 'https://okulumuz-os.vercel.app/api/firebase-config';
+const firebaseConfigResponse = await fetch(firebaseConfigEndpoint, {
+cache: 'no-store',
+headers: { 'Accept': 'application/json' }
+});
+if(!firebaseConfigResponse.ok) {
+throw new Error('Firebase yapılandırması sunucudan alınamadı. Vercel ortam değişkenlerini kontrol edin.');
+}
+const firebaseConfig = await firebaseConfigResponse.json();
+if(!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+throw new Error('Firebase yapılandırması eksik.');
+}
 
 const fApp = initializeApp(firebaseConfig);
 const db = getFirestore(fApp);
@@ -4253,838 +4257,19 @@ app.toggleArgon2 = function() {
 
 
 
-function __qrPrefKey(){ return 'kunefe_qr_' + (app.currentUser ? app.currentUser.username : ''); }
-function __qrIsOn(){
-  try { return localStorage.getItem(__qrPrefKey()) === '1'; } catch(e){ return false; }
-}
-function __qrSetOn(on){
-  try { if(on) localStorage.setItem(__qrPrefKey(),'1'); else localStorage.removeItem(__qrPrefKey()); } catch(e){}
-}
-
-async function __buildQRPayload(u){
-  var payload = {
-    u: u.username,
-    p: u.password            // hash (SHA-256 veya Argon2)
-  };
-  if(u.isTeacher){
-    try {
-      var q = query(collection(db,"registration_codes"), where("usedBy","==",u.username));
-      var snap = await getDocs(q);
-      var codes = [];
-      snap.forEach(d => { codes.push(d.data()); });
-      if(codes.length) payload.teacherCodes = codes.map(c=>c.code);
-    } catch(e){}
-  }
-  if(u.isMod || u.isAdmin){
-    try {
-      var q2 = query(collection(db,"registration_codes"), where("usedBy","==",u.username), where("type","==","manager"));
-      var snap2 = await getDocs(q2);
-      var mc = [];
-      snap2.forEach(d => { var dd=d.data(); mc.push({code:dd.code, pass:dd.password}); });
-      if(mc.length) payload.managerCodes = mc;
-    } catch(e){}
-  }
-  return JSON.stringify(payload);
-}
-
 function __qrModal(html, id){
   var old = document.getElementById(id);
   if(old) old.remove();
   var bg = document.createElement('div');
   bg.id = id;
-  bg.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:3000;';
+  bg.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);display:flex;justify-content:center;align-items:center;z-index:3000;';
   var card = document.createElement('div');
-  card.style.cssText = 'background:var(--card); padding:20px; border-radius:15px; width:92%; max-width:420px; max-height:90vh; overflow-y:auto; text-align:center;';
-  card.innerHTML = html;
+  card.style.cssText = 'background:var(--card);padding:20px;border-radius:15px;width:92%;max-width:420px;max-height:90vh;overflow-y:auto;text-align:center;';
+  card.innerHTML = html || '';
   bg.appendChild(card);
   document.body.appendChild(bg);
   return bg;
 }
-
-var __prevRenderSettingsQR = app.renderSettings;
-app.renderSettings = function() {
-  var out = __prevRenderSettingsQR.apply(this, arguments);
-  try {
-    var main = document.getElementById('main-content');
-    if(!main) return out;
-    var oldBox = document.getElementById('qr-settings-box');
-    if(oldBox) oldBox.remove();
-
-    var argonBox = document.getElementById('argon2-switch-box');
-    var qrOn = __qrIsOn();
-    var box = document.createElement('div');
-    box.id = 'qr-settings-box';
-    box.className = 'settings-section';
-    box.innerHTML =
-      '<div class="argon2-switch-wrap">' +
-        '<span style="font-size:14px; font-weight:600;">QR ile Hızlı Giriş</span>' +
-        '<label class="argon2-switch" for="qr-toggle">' +
-          '<input type="checkbox" id="qr-toggle" ' + (qrOn ? 'checked' : '') + ' onchange="app.toggleQR()">' +
-          '<span class="argon2-slider"></span>' +
-        '</label>' +
-      '</div>' +
-      '<div class="argon2-note">QR ile girişi aktif eder.</div>' +
-      '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; cursor:pointer;" onclick="app.toggleQRDrawer()">' +
-        '<span style="font-size:14px; font-weight:600;">Giriş QR Kodu</span>' +
-        '<i class="fas fa-chevron-down" id="qr-drawer-chevron"></i>' +
-      '</div>' +
-      '<div id="qr-drawer-body" style="display:none; margin-top:10px;">' +
-        '<div id="qr-generate-step">' +
-          '<button class="btn-main" style="margin-top:5px;" onclick="app.generateQRAction()">QR Kod Oluştur</button>' +
-        '</div>' +
-        '<div id="qr-show-step" style="display:none;">' +
-          '<button class="btn-success" style="margin-top:5px;" onclick="app.showQRAction()">QR Kodu Göster</button>' +
-        '</div>' +
-      '</div>';
-    if(argonBox && argonBox.parentNode) {
-      argonBox.parentNode.insertBefore(box, argonBox.nextSibling);
-    } else {
-      var secs = main.querySelectorAll('.settings-section');
-      var last = secs[secs.length-1];
-      if(last && last.parentNode) last.parentNode.insertBefore(box, last);
-      else main.appendChild(box);
-    }
-  } catch(e) { console.error("QR ayar ekleme hatası:", e); }
-  return out;
-};
-
-app.toggleQR = function() {
-  var cb = document.getElementById('qr-toggle');
-  if(!cb) return;
-  var on = cb.checked;
-  __qrSetOn(on);
-  if(on) app.toast('QR ile hızlı giriş AÇIK.', 'success');
-  else app.toast('QR ile hızlı giriş KAPALI.', 'info');
-};
-app.toggleQRDrawer = function() {
-  var body = document.getElementById('qr-drawer-body');
-  var ch = document.getElementById('qr-drawer-chevron');
-  if(body) {
-    var open = body.style.display !== 'none';
-    body.style.display = open ? 'none' : 'block';
-    if(ch) ch.className = open ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
-  }
-};
-app.qrGenerated = false;
-app.generateQRAction = function() {
-  var self = this;
-  __buildQRPayload(self.currentUser).then(function(payload){
-    self._qrPayload = payload;
-    self.qrGenerated = true;
-    document.getElementById('qr-generate-step').style.display = 'none';
-    document.getElementById('qr-show-step').style.display = 'block';
-    app.toast('QR kodu oluşturuldu. Şimdi gösterebilirsiniz.', 'success');
-  });
-};
-app.showQRAction = function() {
-  var payload = this._qrPayload;
-  if(!payload) return app.toast('Önce QR oluşturmalısınız.', 'error');
-  if(typeof QRCode === 'undefined') return app.toast('QR kütüphanesi yüklenemedi.', 'error');
-  var bg = __qrModal('', 'qr-display-modal');
-  bg.querySelector('div').innerHTML =
-    '<h3 style="margin-bottom:15px;">Giriş QR Kodunuz</h3>' +
-    '<canvas id="qr-canvas" style="margin:0 auto 10px auto;"></canvas>' +
-    '<p style="font-size:11px; color:#888; margin-bottom:15px;">Bu QR, giriş bilgilerinizi içerir. Güvenli şekilde saklayın.</p>' +
-    '<button class="btn-main" onclick="app.downloadQR()"><i class="fas fa-download"></i> İndir</button>' +
-    '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'qr-display-modal\').remove()">Kapat</button>';
-  QRCode.toCanvas(document.getElementById('qr-canvas'), payload, { width: 240, margin: 1 }, function(err){
-    if(err) console.error(err);
-  });
-};
-app.downloadQR = function() {
-  var c = document.getElementById('qr-canvas');
-  if(!c) return;
-  var a = document.createElement('a');
-  a.download = 'giris-qr.png';
-  a.href = c.toDataURL('image/png');
-  a.click();
-};
-
-var __prevToggleAuthQR = app.toggleAuth;
-app.toggleAuth = function(mode) {
-  var out = __prevToggleAuthQR.apply(this, arguments);
-  try {
-    if(mode === 'login' || mode === false) {
-      var loginFields = document.getElementById('login-fields');
-      if(loginFields) {
-        var existing = document.getElementById('qr-login-btn');
-        if(!existing) {
-          var btn = document.createElement('div');
-          btn.id = 'qr-login-btn';
-          btn.className = 'toggle-link';
-          btn.style.marginTop = '8px';
-          btn.style.textAlign = 'center';
-          btn.style.color = '#9b59b6';
-          btn.style.cursor = 'pointer';
-          btn.innerText = 'QR ile Giriş Yap';
-          btn.onclick = function(){ app.openQRLogin(); };
-          loginFields.appendChild(btn);
-        }
-      }
-    }
-  } catch(e) { console.error("QR login buton ekleme:", e); }
-  return out;
-};
-
-app.openQRLogin = function() {
-  var bg = __qrModal(
-    '<h3 style="margin-bottom:15px;">QR ile Giriş</h3>' +
-    '<button class="btn-main" onclick="app.scanWithCamera()"><i class="fas fa-camera"></i> Kamera ile Tara</button>' +
-    '<button class="btn-success" style="margin-top:8px;" onclick="app.scanFromFile()"><i class="fas fa-image"></i> Dosyalardan Aç</button>' +
-    '<button class="btn-danger" style="background:#888; margin-top:8px;" onclick="document.getElementById(\'qr-login-modal\').remove()">İptal</button>',
-    'qr-login-modal'
-  );
-};
-
-app.scanWithCamera = function() {
-  var bg = __qrModal(
-    '<h3 style="margin-bottom:10px;">Kamera ile Tara</h3>' +
-    '<video id="qr-video" playsinline muted style="width:100%; max-height:60vh; border-radius:10px; background:#000;"></video>' +
-    '<p id="qr-scan-msg" style="font-size:12px; color:#888; margin-top:8px;">QR kodu kameraya gösterin...</p>' +
-    '<button class="btn-danger" style="background:#888; margin-top:8px;" onclick="app.stopQRScan(); document.getElementById(\'qr-cam-modal\').remove()">Kapat</button>',
-    'qr-cam-modal'
-  );
-  var video = document.getElementById('qr-video');
-  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      .then(function(stream){
-        app._qrStream = stream;
-        video.srcObject = stream;
-        video.play();
-        app._qrScanTimer = setInterval(function(){ app.scanVideoFrame(); }, 300);
-      })
-      .catch(function(e){
-        document.getElementById('qr-scan-msg').textContent = 'Kamera erişimi alınamadı: ' + e.message;
-      });
-  } else {
-    document.getElementById('qr-scan-msg').textContent = 'Bu cihaz kamera desteklemiyor.';
-  }
-};
-app.scanVideoFrame = function() {
-  var video = document.getElementById('qr-video');
-  if(!video || !video.videoWidth) return;
-  var canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  var ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  if(typeof jsQR === 'undefined') return;
-  var code = jsQR(img.data, img.width, img.height);
-  if(code && code.data) {
-    app.stopQRScan();
-    app.processQRData(code.data);
-  }
-};
-app.stopQRScan = function() {
-  if(app._qrScanTimer) { clearInterval(app._qrScanTimer); app._qrScanTimer=null; }
-  if(app._qrStream) { app._qrStream.getTracks().forEach(function(t){ t.stop(); }); app._qrStream=null; }
-};
-app.scanFromFile = function() {
-  var input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.onchange = function(e) {
-    var file = e.target.files[0];
-    if(!file) return;
-    var reader = new FileReader();
-    reader.onload = function(ev) {
-      var img = new Image();
-      img.onload = function(){
-        var canvas = document.createElement('canvas');
-        canvas.width = img.width; canvas.height = img.height;
-        var ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        var imgd = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        if(typeof jsQR === 'undefined') return;
-        var code = jsQR(imgd.data, imgd.width, imgd.height);
-        if(code && code.data) app.processQRData(code.data);
-        else app.toast('QR bulunamadı.', 'error');
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  };
-  input.click();
-};
-
-app.processQRData = function(data) {
-  var payload;
-  try { payload = JSON.parse(data); }
-  catch(e){ return app.toast('Geçersiz QR kodu.', 'error'); }
-  var uname = payload.u, passHash = payload.p;
-  if(!uname || !passHash) return app.toast('QR içeriği eksik.', 'error');
-
-  var self = this;
-  getDoc(doc(db, "users", uname)).then(async function(ud){
-    if(!ud.exists()) return app.toast('Kullanıcı bulunamadı.', 'error');
-    var u = ud.data();
-    var qrOn = localStorage.getItem('kunefe_qr_' + uname) === '1';
-    if(!qrOn) return app.toast('Bu hesap için QR ile hızlı giriş kapalı. Lütfen normal giriş yapın.', 'error');
-    var ok = (passHash === u.password);
-    if(!ok) return app.toast('QR bilgileri eşleşmedi.', 'error');
-
-    var bg = __qrModal('', 'qr-confirm-modal');
-    bg.querySelector('div').innerHTML =
-      '<h3 style="margin-bottom:10px;">Kullanıcı Adını Doğrula</h3>' +
-      '<p style="font-size:12px; color:#888; margin-bottom:10px;">Güvenlik için kullanıcı adınızı girin.</p>' +
-      '<input type="text" id="qr-confirm-username" placeholder="Kullanıcı Adı" style="margin-bottom:10px;">' +
-      '<button class="btn-main" onclick="app.confirmQRLogin(\'' + uname + '\')">Giriş Yap</button>' +
-      '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'qr-confirm-modal\').remove()">İptal</button>';
-  });
-};
-app.confirmQRLogin = function(uname) {
-  var entered = document.getElementById('qr-confirm-username').value.trim();
-  if(entered !== uname) return app.toast('Kullanıcı adı eşleşmedi.', 'error');
-  var m = document.getElementById('qr-confirm-modal');
-  if(m) m.remove();
-  var m2 = document.getElementById('qr-login-modal');
-  if(m2) m2.remove();
-  var m3 = document.getElementById('qr-cam-modal');
-  if(m3) m3.remove();
-  getDoc(doc(db, "users", uname)).then(function(ud){
-    if(!ud.exists()) return;
-    app.currentUser = ud.data();
-    var lr = document.getElementById('login-remember');
-    if(lr && lr.checked){
-      localStorage.setItem('kunefe_remember_login_user', uname);
-      localStorage.setItem('kunefe_remember_login_pass', ud.data().password);
-    }
-    app.launch();
-  });
-};
-
-
-app.showQRAction = function() {
-  var payload = this._qrPayload;
-  if(!payload) return app.toast('Önce QR oluşturmalısınız.', 'error');
-  if(typeof QRCode === 'undefined') return app.toast('QR kütüphanesi yüklenemedi. İnternet bağlantınızı kontrol edin.', 'error');
-
-  var bg = __qrModal('', 'qr-display-modal');
-  bg.querySelector('div').innerHTML =
-    '<h3 style="margin-bottom:15px;">Giriş QR Kodunuz</h3>' +
-    '<div id="qr-container" style="margin:0 auto 10px auto; width:240px; height:240px;"></div>' +
-    '<p style="font-size:11px; color:#888; margin-bottom:15px;">Bu QR, giriş bilgilerinizi içerir. Güvenli şekilde saklayın.</p>' +
-    '<button class="btn-main" onclick="app.downloadQR()"><i class="fas fa-download"></i> İndir</button>' +
-    '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'qr-display-modal\').remove()">Kapat</button>';
-
-  new QRCode(document.getElementById('qr-container'), {
-    text: payload,
-    width: 240,
-    height: 240,
-    correctLevel: QRCode.CorrectLevel.M
-  });
-  try {
-    var c = document.getElementById('qr-container').querySelector('canvas');
-    if(c) app._qrCanvas = c;
-    else app._qrCanvas = document.getElementById('qr-container').querySelector('img');
-  } catch(e){}
-};
-
-app.downloadQR = function() {
-  var src = app._qrCanvas;
-  if(!src) {
-    var c = document.getElementById('qr-container');
-    if(c) { src = c.querySelector('canvas') || c.querySelector('img'); }
-  }
-  if(!src) return app.toast('QR görseli bulunamadı.', 'error');
-  var dataUrl = src.toDataURL ? src.toDataURL('image/png') : src.src;
-  var a = document.createElement('a');
-  a.download = 'giris-qr.png';
-  a.href = dataUrl;
-  a.click();
-};
-
-
-app.showQRAction = function() {
-  var payload = this._qrPayload;
-  if(!payload) return app.toast('Önce QR oluşturmalısınız.', 'error');
-  if(typeof QRCode === 'undefined' || typeof QRCode.toCanvas !== 'function') {
-    return app.toast('QR kütüphanesi yüklenemedi. İnternet bağlantınızı kontrol edin.', 'error');
-  }
-
-  var bg = __qrModal('', 'qr-display-modal');
-  bg.querySelector('div').innerHTML =
-    '<h3 style="margin-bottom:15px;">Giriş QR Kodunuz</h3>' +
-    '<canvas id="qr-canvas" style="margin:0 auto 10px auto; display:block;"></canvas>' +
-    '<p style="font-size:11px; color:#888; margin-bottom:15px;">Bu QR, giriş bilgilerinizi içerir. Güvenli şekilde saklayın.</p>' +
-    '<button class="btn-main" onclick="app.downloadQR()"><i class="fas fa-download"></i> İndir</button>' +
-    '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'qr-display-modal\').remove()">Kapat</button>';
-
-  var canvas = document.getElementById('qr-canvas');
-  QRCode.toCanvas(canvas, payload, { width: 240, margin: 1 }, function(err){
-    if(err) console.error("QR hatası:", err);
-  });
-  app._qrCanvas = canvas;
-};
-
-app.downloadQR = function() {
-  var src = app._qrCanvas;
-  if(!src) src = document.getElementById('qr-canvas');
-  if(!src) return app.toast('QR görseli bulunamadı.', 'error');
-  var dataUrl = src.toDataURL ? src.toDataURL('image/png') : (src.src || '');
-  if(!dataUrl) return app.toast('QR görseli oluşturulamadı.', 'error');
-  var a = document.createElement('a');
-  a.download = 'giris-qr.png';
-  a.href = dataUrl;
-  a.click();
-};
-
-
-app.showQRAction = function() {
-  var payload = this._qrPayload;
-  if(!payload) return app.toast('Önce QR oluşturmalısınız.', 'error');
-  if(typeof QRCode === 'undefined' || typeof QRCode !== 'function') {
-    return app.toast('QR kütüphanesi yüklenemedi. İnternet bağlantınızı kontrol edin.', 'error');
-  }
-
-  var bg = __qrModal('', 'qr-display-modal');
-  bg.querySelector('div').innerHTML =
-    '<h3 style="margin-bottom:15px;">Giriş QR Kodunuz</h3>' +
-    '<div id="qr-box" style="margin:0 auto 10px auto;"></div>' +
-    '<p style="font-size:11px; color:#888; margin-bottom:15px;">Bu QR, giriş bilgilerinizi içerir. Güvenli şekilde saklayın.</p>' +
-    '<button class="btn-main" onclick="app.downloadQR()"><i class="fas fa-download"></i> İndir</button>' +
-    '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'qr-display-modal\').remove()">Kapat</button>';
-
-  var box = document.getElementById('qr-box');
-  box.innerHTML = '';
-  try {
-    new QRCode(box, {
-      text: payload,
-      width: 240,
-      height: 240,
-      correctLevel: QRCode.CorrectLevel.M
-    });
-    app._qrBox = box;
-  } catch(e) {
-    console.error("QR oluşturma hatası:", e);
-    box.innerHTML = '<p style="color:#d63031; font-size:13px;">QR oluşturulamadı.</p>';
-  }
-};
-
-app.downloadQR = function() {
-  var box = app._qrBox || document.getElementById('qr-box');
-  if(!box) return app.toast('QR bulunamadı.', 'error');
-  var el = box.querySelector('canvas') || box.querySelector('img');
-  if(!el) return app.toast('QR görseli bulunamadı.', 'error');
-  var dataUrl = el.toDataURL ? el.toDataURL('image/png') : (el.src || '');
-  if(!dataUrl) return app.toast('QR görseli oluşturulamadı.', 'error');
-  var a = document.createElement('a');
-  a.download = 'giris-qr.png';
-  a.href = dataUrl;
-  a.click();
-};
-
-
-
-
-var __QR_HASH_PREFIX_LEN = 12;
-
-async function __buildQRPayload2(u){
-  var payload = {
-    u: u.username,
-    p: (u.password || "").slice(0, __QR_HASH_PREFIX_LEN)
-  };
-  if(u.isTeacher){
-    try {
-      var q = query(collection(db,"registration_codes"), where("usedBy","==",u.username));
-      var snap = await getDocs(q);
-      var codes = [];
-      snap.forEach(d => { var dd=d.data(); if(dd.code) codes.push(dd.code); });
-      if(codes.length) payload.tc = codes;
-    } catch(e){}
-  }
-  if(u.isMod || u.isAdmin){
-    try {
-      var q2 = query(collection(db,"registration_codes"), where("usedBy","==",u.username), where("type","==","manager"));
-      var snap2 = await getDocs(q2);
-      var mc = [];
-      snap2.forEach(d => { var dd=d.data(); mc.push({c:dd.code||"", s:dd.password||""}); });
-      if(mc.length) payload.mc = mc;
-    } catch(e){}
-  }
-  return JSON.stringify(payload);
-}
-
-app.generateQRAction = function() {
-  var self = this;
-  __buildQRPayload2(self.currentUser).then(function(payload){
-    self._qrPayload = payload;
-    self.qrGenerated = true;
-    document.getElementById('qr-generate-step').style.display = 'none';
-    document.getElementById('qr-show-step').style.display = 'block';
-    app.toast('QR kodu oluşturuldu. Şimdi gösterebilirsiniz.', 'success');
-  });
-};
-
-app.processQRData = function(data) {
-  var payload;
-  try { payload = JSON.parse(data); }
-  catch(e){ return app.toast('Geçersiz QR kodu.', 'error'); }
-  var uname = payload.u, passPrefix = payload.p;
-  if(!uname || !passPrefix) return app.toast('QR içeriği eksik.', 'error');
-  getDoc(doc(db, "users", uname)).then(function(ud){
-    if(!ud.exists()) return app.toast('Kullanıcı bulunamadı.', 'error');
-    var u = ud.data();
-    var qrOn = localStorage.getItem('kunefe_qr_' + uname) === '1';
-    if(!qrOn) return app.toast('Bu hesap için QR ile hızlı giriş kapalı. Lütfen normal giriş yapın.', 'error');
-    var storedPrefix = (u.password || "").slice(0, __QR_HASH_PREFIX_LEN);
-    if(storedPrefix !== passPrefix) return app.toast('QR bilgileri eşleşmedi.', 'error');
-    var bg = __qrModal('', 'qr-confirm-modal');
-    bg.querySelector('div').innerHTML =
-      '<h3 style="margin-bottom:10px;">Kullanıcı Adını Doğrula</h3>' +
-      '<p style="font-size:12px; color:#888; margin-bottom:10px;">Güvenlik için kullanıcı adınızı girin.</p>' +
-      '<input type="text" id="qr-confirm-username" placeholder="Kullanıcı Adı" style="margin-bottom:10px;">' +
-      '<button class="btn-main" onclick="app.confirmQRLogin(\'' + uname + '\')">Giriş Yap</button>' +
-      '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'qr-confirm-modal\').remove()">İptal</button>';
-  });
-};
-
-
-app.showQRAction = function() {
-  var payload = this._qrPayload;
-  if(!payload) return app.toast('Önce QR oluşturmalısınız.', 'error');
-  if(typeof QRCode === 'undefined' || typeof QRCode !== 'function') {
-    return app.toast('QR kütüphanesi yüklenemedi. İnternet bağlantınızı kontrol edin.', 'error');
-  }
-  var bg = __qrModal('', 'qr-display-modal');
-  bg.querySelector('div').innerHTML =
-    '<h3 style="margin-bottom:15px;">Giriş QR Kodunuz</h3>' +
-    '<div id="qr-box" style="margin:0 auto 10px auto;"></div>' +
-    '<p style="font-size:11px; color:#888; margin-bottom:15px;">Bu QR, giriş bilgilerinizi içerir. Güvenli şekilde saklayın.</p>' +
-    '<button class="btn-main" onclick="app.downloadQR()"><i class="fas fa-download"></i> İndir</button>' +
-    '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'qr-display-modal\').remove()">Kapat</button>';
-  var box = document.getElementById('qr-box');
-  box.innerHTML = '';
-  try {
-    new QRCode(box, {
-      text: payload,
-      width: 240,
-      height: 240,
-      typeNumber: 0,                 // otomatik versiyon seçimi
-      correctLevel: QRCode.CorrectLevel.L   // düşük hata düzeltme = daha çok veri
-    });
-    app._qrBox = box;
-  } catch(e) {
-    console.error("QR oluşturma hatası:", e);
-    box.innerHTML = '<p style="color:#d63031; font-size:13px;">QR oluşturulamadı.</p>';
-  }
-};
-
-
-async function __buildQRPayload3(u){
-  var payload = {
-    u: u.username,
-    p: (u.password || "").slice(0, 8)   // 8 karakter hash öneki
-  };
-  if(u.isTeacher){
-    try {
-      var q = query(collection(db,"registration_codes"), where("usedBy","==",u.username));
-      var snap = await getDocs(q);
-      var arr = [];
-      snap.forEach(d => { var dd=d.data(); if(dd.code) arr.push(dd.code); });
-      if(arr.length) payload.tc = arr.join(",");
-    } catch(e){}
-  }
-  if(u.isMod || u.isAdmin){
-    try {
-      var q2 = query(collection(db,"registration_codes"), where("usedBy","==",u.username), where("type","==","manager"));
-      var snap2 = await getDocs(q2);
-      var arr2 = [];
-      snap2.forEach(d => { var dd=d.data(); arr2.push((dd.code||"") + ":" + (dd.password||"")); });
-      if(arr2.length) payload.mc = arr2.join(",");
-    } catch(e){}
-  }
-  return JSON.stringify(payload);
-}
-
-app.generateQRAction = function() {
-  var self = this;
-  __buildQRPayload3(self.currentUser).then(function(payload){
-    self._qrPayload = payload;
-    self.qrGenerated = true;
-    document.getElementById('qr-generate-step').style.display = 'none';
-    document.getElementById('qr-show-step').style.display = 'block';
-    app.toast('QR kodu oluşturuldu. Şimdi gösterebilirsiniz.', 'success');
-  });
-};
-
-
-async function __buildQRPayload4(u){
-  var parts = [u.username, (u.password || "").slice(0, 4)];
-  if(u.isTeacher){
-    try {
-      var q = query(collection(db,"registration_codes"), where("usedBy","==",u.username));
-      var snap = await getDocs(q);
-      var arr = [];
-      snap.forEach(d => { var dd=d.data(); if(dd.code) arr.push(dd.code); });
-      parts.push(arr.join(","));
-    } catch(e){ parts.push(""); }
-  } else { parts.push(""); }
-  if(u.isMod || u.isAdmin){
-    try {
-      var q2 = query(collection(db,"registration_codes"), where("usedBy","==",u.username), where("type","==","manager"));
-      var snap2 = await getDocs(q2);
-      var arr2 = [];
-      snap2.forEach(d => { var dd=d.data(); arr2.push((dd.code||"") + ":" + (dd.password||"")); });
-      parts.push(arr2.join(","));
-    } catch(e){ parts.push(""); }
-  } else { parts.push(""); }
-  return JSON.stringify(parts);
-}
-
-app.generateQRAction = function() {
-  var self = this;
-  __buildQRPayload4(self.currentUser).then(function(payload){
-    self._qrPayload = payload;
-    self.qrGenerated = true;
-    document.getElementById('qr-generate-step').style.display = 'none';
-    document.getElementById('qr-show-step').style.display = 'block';
-    app.toast('QR kodu oluşturuldu. Şimdi gösterebilirsiniz.', 'success');
-  });
-};
-
-app.processQRData = function(data) {
-  var parts;
-  try { parts = JSON.parse(data); }
-  catch(e){ return app.toast('Geçersiz QR kodu.', 'error'); }
-  if(!Array.isArray(parts) || parts.length < 2) return app.toast('QR içeriği eksik.', 'error');
-  var uname = parts[0], passPrefix = parts[1];
-  if(!uname || !passPrefix) return app.toast('QR içeriği eksik.', 'error');
-  getDoc(doc(db, "users", uname)).then(function(ud){
-    if(!ud.exists()) return app.toast('Kullanıcı bulunamadı.', 'error');
-    var u = ud.data();
-    var qrOn = localStorage.getItem('kunefe_qr_' + uname) === '1';
-    if(!qrOn) return app.toast('Bu hesap için QR ile hızlı giriş kapalı. Lütfen normal giriş yapın.', 'error');
-    var storedPrefix = (u.password || "").slice(0, 4);
-    if(storedPrefix !== passPrefix) return app.toast('QR bilgileri eşleşmedi.', 'error');
-    var bg = __qrModal('', 'qr-confirm-modal');
-    bg.querySelector('div').innerHTML =
-      '<h3 style="margin-bottom:10px;">Kullanıcı Adını Doğrula</h3>' +
-      '<p style="font-size:12px; color:#888; margin-bottom:10px;">Güvenlik için kullanıcı adınızı girin.</p>' +
-      '<input type="text" id="qr-confirm-username" placeholder="Kullanıcı Adı" style="margin-bottom:10px;">' +
-      '<button class="btn-main" onclick="app.confirmQRLogin(\'' + uname + '\')">Giriş Yap</button>' +
-      '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'qr-confirm-modal\').remove()">İptal</button>';
-  });
-};
-
-
-
-app.showQRAction = function() {
-  var payload = this._qrPayload;
-  if(!payload) return app.toast('Önce giriş simgesi oluşturmalısınız.', 'error');
-  if(typeof QRCode === 'undefined' || typeof QRCode !== 'function') {
-    return app.toast('Giriş simgesi kütüphanesi yüklenemedi.', 'error');
-  }
-
-  var bg = __qrModal('', 'qr-display-modal');
-  bg.querySelector('div').innerHTML =
-    '<h3 style="margin-bottom:8px;"><i class="fas fa-qrcode" style="color:#ff9f43;"></i> Giriş Simgeniz</h3>' +
-    '<div style="margin:0 auto; width:250px; height:250px; padding:12px; border-radius:20px; background:#fff; box-shadow:0 4px 15px rgba(0,0,0,0.15);" id="gisimge-box"></div>' +
-    '<p style="font-size:11px; color:#888; margin-top:12px; margin-bottom:15px;">Bu simge, giriş bilgilerinizi içerir. Taratmak için cihazınızda saklayın.</p>' +
-    '<button class="btn-main" onclick="app.downloadQR()"><i class="fas fa-download"></i> İndir</button>' +
-    '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'qr-display-modal\').remove()">Kapat</button>';
-
-  var box = document.getElementById('gisimge-box');
-  box.innerHTML = '';
-  try {
-    new QRCode(box, {
-      text: payload,
-      width: 220,
-      height: 220,
-      typeNumber: 0,
-      colorDark: "#ff9f43",
-      colorLight: "#ffffff",
-      correctLevel: QRCode.CorrectLevel.L
-    });
-    app._qrBox = box;
-  } catch(e) {
-    console.error("Giriş simgesi oluşturma hatası:", e);
-    box.innerHTML = '<p style="color:#d63031; font-size:13px;">Giriş simgesi oluşturulamadı.</p>';
-  }
-};
-
-app.downloadQR = function() {
-  var box = app._qrBox || document.getElementById('gisimge-box');
-  if(!box) return app.toast('Giriş simgesi bulunamadı.', 'error');
-  var el = box.querySelector('canvas') || box.querySelector('img');
-  if(!el) return app.toast('Giriş simgesi görseli bulunamadı.', 'error');
-  var dataUrl = el.toDataURL ? el.toDataURL('image/png') : (el.src || '');
-  if(!dataUrl) return app.toast('Giriş simgesi oluşturulamadı.', 'error');
-  var a = document.createElement('a');
-  a.download = 'giris-simgesi.png';
-  a.href = dataUrl;
-  a.click();
-};
-
-
-
-var __prevToggleAuthLabel = app.toggleAuth;
-app.toggleAuth = function(mode) {
-  var out = __prevToggleAuthLabel.apply(this, arguments);
-  try {
-    var btn = document.getElementById('qr-login-btn');
-    if(btn && btn.innerText === 'QR ile Giriş Yap') {
-      btn.innerText = 'Giriş Simgesi ile Giriş';
-    }
-  } catch(e){}
-  return out;
-};
-
-app.showQRAction = function() {
-  var payload = this._qrPayload;
-  if(!payload) return app.toast('Önce giriş simgesi oluşturmalısınız.', 'error');
-  if(typeof QRCode === 'undefined' || typeof QRCode !== 'function') {
-    return app.toast('Giriş simgesi kütüphanesi yüklenemedi.', 'error');
-  }
-
-  var bg = __qrModal('', 'qr-display-modal');
-  bg.querySelector('div').innerHTML =
-    '<h3 style="margin-bottom:8px;"><i class="fas fa-qrcode" style="color:#ff9f43;"></i> Giriş Simgeniz</h3>' +
-    '<div style="margin:0 auto; width:250px; height:250px; padding:12px; border-radius:20px; background:#fff; box-shadow:0 4px 15px rgba(0,0,0,0.15);" id="gisimge-box"></div>' +
-    '<p style="font-size:11px; color:#888; margin-top:12px; margin-bottom:15px;">Bu simge, giriş bilgilerinizi içerir. Taratmak için cihazınızda saklayın.</p>' +
-    '<button class="btn-main" onclick="app.downloadQR()"><i class="fas fa-download"></i> İndir</button>' +
-    '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'qr-display-modal\').remove()">Kapat</button>';
-
-  var box = document.getElementById('gisimge-box');
-  box.innerHTML = '';
-  var made = false;
-
-  try {
-    new QRCode(box, {
-      text: payload,
-      width: 220,
-      height: 220,
-      typeNumber: 0,
-      colorDark: "#ff9f43",
-      colorLight: "#ffffff",
-      correctLevel: QRCode.CorrectLevel.L
-    });
-    made = true;
-  } catch(e) {
-    console.error("Renkli giriş simgesi başarısız:", e);
-  }
-
-  if(!made){
-    try {
-      box.innerHTML = '';
-      new QRCode(box, {
-        text: payload,
-        width: 220,
-        height: 220,
-        typeNumber: 0,
-        correctLevel: QRCode.CorrectLevel.L
-      });
-      made = true;
-    } catch(e2) {
-      console.error("Giriş simgesi oluşturulamadı:", e2);
-      box.innerHTML = '<p style="color:#d63031; font-size:13px;">Giriş simgesi oluşturulamadı. İçerik çok büyük olabilir.</p>';
-    }
-  }
-  app._qrBox = box;
-};
-
-
-async function __buildQRPayload5(u){
-  var parts = [u.username, (u.password || "").slice(0, 2)];
-  if(u.isTeacher){
-    try {
-      var q = query(collection(db,"registration_codes"), where("usedBy","==",u.username));
-      var snap = await getDocs(q);
-      var arr = [];
-      snap.forEach(d => { var dd=d.data(); if(dd.code && arr.length < 4) arr.push(dd.code); });
-      parts.push(arr.join(","));
-    } catch(e){ parts.push(""); }
-  } else { parts.push(""); }
-  if(u.isMod || u.isAdmin){
-    try {
-      var q2 = query(collection(db,"registration_codes"), where("usedBy","==",u.username), where("type","==","manager"));
-      var snap2 = await getDocs(q2);
-      var arr2 = [];
-      snap2.forEach(d => { var dd=d.data(); if(arr2.length < 4) arr2.push((dd.code||"") + ":" + (dd.password||"")); });
-      parts.push(arr2.join(","));
-    } catch(e){ parts.push(""); }
-  } else { parts.push(""); }
-  return JSON.stringify(parts);
-}
-
-app.generateQRAction = function() {
-  var self = this;
-  __buildQRPayload5(self.currentUser).then(function(payload){
-    self._qrPayload = payload;
-    self.qrGenerated = true;
-    document.getElementById('qr-generate-step').style.display = 'none';
-    document.getElementById('qr-show-step').style.display = 'block';
-    app.toast('Giriş simgesi oluşturuldu. Şimdi gösterebilirsiniz.', 'success');
-  });
-};
-
-app.processQRData = function(data) {
-  var parts;
-  try { parts = JSON.parse(data); }
-  catch(e){ return app.toast('Geçersiz giriş simgesi.', 'error'); }
-  if(!Array.isArray(parts) || parts.length < 2) return app.toast('Giriş simgesi içeriği eksik.', 'error');
-  var uname = parts[0], passPrefix = parts[1];
-  if(!uname || !passPrefix) return app.toast('Giriş simgesi içeriği eksik.', 'error');
-  getDoc(doc(db, "users", uname)).then(function(ud){
-    if(!ud.exists()) return app.toast('Kullanıcı bulunamadı.', 'error');
-    var u = ud.data();
-    var qrOn = localStorage.getItem('kunefe_qr_' + uname) === '1';
-    if(!qrOn) return app.toast('Bu hesap için giriş simgesi kapalı. Lütfen normal giriş yapın.', 'error');
-    var storedPrefix = (u.password || "").slice(0, 2);
-    if(storedPrefix !== passPrefix) return app.toast('Giriş simgesi bilgileri eşleşmedi.', 'error');
-    var bg = __qrModal('', 'qr-confirm-modal');
-    bg.querySelector('div').innerHTML =
-      '<h3 style="margin-bottom:10px;">Kullanıcı Adını Doğrula</h3>' +
-      '<p style="font-size:12px; color:#888; margin-bottom:10px;">Güvenlik için kullanıcı adınızı girin.</p>' +
-      '<input type="text" id="qr-confirm-username" placeholder="Kullanıcı Adı" style="margin-bottom:10px;">' +
-      '<button class="btn-main" onclick="app.confirmQRLogin(\'' + uname + '\')">Giriş Yap</button>' +
-      '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'qr-confirm-modal\').remove()">İptal</button>';
-  });
-};
-
-
-app.showQRAction = function() {
-  var payload = this._qrPayload;
-  if(!payload) return app.toast('Önce giriş simgesi oluşturmalısınız.', 'error');
-  if(typeof QRCode === 'undefined' || typeof QRCode !== 'function') {
-    return app.toast('Giriş simgesi kütüphanesi yüklenemedi.', 'error');
-  }
-  var bg = __qrModal('', 'qr-display-modal');
-  bg.querySelector('div').innerHTML =
-    '<h3 style="margin-bottom:8px;"><i class="fas fa-qrcode" style="color:#ff9f43;"></i> Giriş Simgeniz</h3>' +
-    '<div style="margin:0 auto; width:250px; height:250px; padding:12px; border-radius:20px; background:#fff; box-shadow:0 4px 15px rgba(0,0,0,0.15);" id="gisimge-box"></div>' +
-    '<p style="font-size:11px; color:#888; margin-top:12px; margin-bottom:15px;">Bu simge, giriş bilgilerinizi içerir. Taratmak için cihazınızda saklayın.</p>' +
-    '<button class="btn-main" onclick="app.downloadQR()"><i class="fas fa-download"></i> İndir</button>' +
-    '<button class="btn-danger" style="background:#888; margin-top:5px;" onclick="document.getElementById(\'qr-display-modal\').remove()">Kapat</button>';
-  var box = document.getElementById('gisimge-box');
-  box.innerHTML = '';
-  var made = false;
-  try {
-    new QRCode(box, {
-      text: payload, width: 220, height: 220,
-      typeNumber: 40, correctLevel: QRCode.CorrectLevel.L,
-      colorDark: "#ff9f43", colorLight: "#ffffff"
-    });
-    made = true;
-  } catch(e) { console.error("Renkli deneme başarısız:", e); }
-  if(!made){
-    try {
-      box.innerHTML = '';
-      new QRCode(box, {
-        text: payload, width: 220, height: 220,
-        typeNumber: 40, correctLevel: QRCode.CorrectLevel.L
-      });
-      made = true;
-    } catch(e2) {
-      console.error("Giriş simgesi oluşturulamadı:", e2);
-      box.innerHTML = '<p style="color:#d63031; font-size:13px;">Giriş simgesi oluşturulamadı.</p>';
-    }
-  }
-  app._qrBox = box;
-};
-
-
 
 function __devModeIsOn(){
   try { return localStorage.getItem('kunefe_devmode') === '1'; } catch(e){ return false; }
@@ -6422,8 +5607,7 @@ app.fetchSchools = async function() {
 
 </script>
 
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3da01bc9e49ea94',t:'MTc4OTgzNTc2MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a476ea8bee6a720d',t:'MTc5MTQ4MTA3NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4774c4b3c476e07',t:'MTc5MTQ4NTA3OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a53cca974d347583',t:'MTc5MzU1NTk0Ng=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a53cca974d347583',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
-</html>
+
 
 
 <style>
@@ -7072,7 +6256,7 @@ __cvAuth.languageCode='tr';
   };
   app.showCounselorVerify=function(){let f=$('os-counselor-form'),p=this._counselorFirebasePending;if(!f||!p)return;f.innerHTML='<div style="text-align:center"><i class="fas fa-envelope-open-text" style="font-size:45px;color:#8e44ad"></i><h3>E-postanızı doğrulayın</h3><p>Bağlantı şu adrese gönderildi:</p><b style="color:#3498db;word-break:break-all"></b><p style="font-size:12px;color:#888">E-postadaki bağlantıya basın. Ardından buraya dönüp aşağıdaki düğmeyi kullanın. Spam/Gereksiz klasörünü de kontrol edin.</p><button class="btn-main" onclick="app.finishCounselorFirebaseRegister()">Doğrulamayı Kontrol Et</button><button class="btn-main" style="background:#77808f" onclick="app.resendCounselorFirebaseMail()">Bağlantıyı Yeniden Gönder</button></div>';f.querySelector('b').textContent=p.email};
   app.resendCounselorFirebaseMail=async function(){try{let p=this._counselorFirebasePending,u=await authUser(p.email,p.pass);await sendEmailVerification(u,__cvAction);this.toast('Doğrulama bağlantısı yeniden gönderildi.','success')}catch(e){let msg='Bağlantı yeniden gönderilemedi: '+e.message;window.__counselorVisibleError?.(msg);this.toast(msg,'error')}};
-  app.finishCounselorFirebaseRegister=async function(){let p=this._counselorFirebasePending;if(!p)return;try{let u=await authUser(p.email,p.pass);await reload(u);if(!u.emailVerified)return this.toast('E-posta henüz doğrulanmamış. Bağlantıya bastıktan sonra tekrar deneyin.','error');await setDoc(doc(__cvDb,'users',p.username),{username:p.username,adSoyad:p.name,email:p.email,password:await sha(p.pass),school:p.school,grade:'Tümü',section:'Tümü',isBlocked:false,isLeader:false,isTeacher:false,isMod:false,isAdmin:false,isCounselor:true,rank:'',rankColor:'#ff9f43',counselorCodeHash:await sha(p.code),emailVerified:true,authUid:u.uid,createdAt:serverTimestamp()});await setDoc(doc(__cvDb,'counselor_code_claims',p.codeDoc),{codeId:p.codeDoc,usedBy:p.username,school:p.school,createdAt:serverTimestamp()});await setDoc(doc(__cvDb,'users_lookup',u.uid),{username:p.username,updatedAt:serverTimestamp()},{merge:true});this._counselorFirebasePending=null;this.toast('Rehber öğretmen hesabı oluşturuldu. Giriş yapabilirsiniz.','success');this.counselorAuthForm('login')}catch(e){console.error(e);this.toast('Kayıt tamamlanamadı: '+e.message,'error')}};
+  app.finishCounselorFirebaseRegister=async function(){let p=this._counselorFirebasePending;if(!p)return;try{let u=await authUser(p.email,p.pass);await reload(u);if(!u.emailVerified)return this.toast('E-posta henüz doğrulanmamış. Bağlantıya bastıktan sonra tekrar deneyin.','error');await setDoc(doc(__cvDb,'users',p.username),{username:p.username,adSoyad:p.name,email:p.email,school:p.school,registrationCodeId:p.codeDoc,grade:'Tümü',section:'Tümü',isBlocked:false,isLeader:false,isTeacher:false,isMod:false,isAdmin:false,isCounselor:true,rank:'',rankColor:'#ff9f43',counselorCodeHash:await sha(p.code),emailVerified:true,authUid:u.uid,createdAt:serverTimestamp()});await setDoc(doc(__cvDb,'counselor_code_claims',p.codeDoc),{codeId:p.codeDoc,usedBy:p.username,school:p.school,createdAt:serverTimestamp()});await setDoc(doc(__cvDb,'users_lookup',u.uid),{username:p.username,updatedAt:serverTimestamp()},{merge:true});this._counselorFirebasePending=null;this.toast('Rehber öğretmen hesabı oluşturuldu. Giriş yapabilirsiniz.','success');this.counselorAuthForm('login')}catch(e){console.error(e);this.toast('Kayıt tamamlanamadı: '+e.message,'error')}};
   return true}
  if(!install()){let n=0,t=setInterval(()=>{if(install()||++n>500)clearInterval(t)},40)}
 })();
@@ -7550,7 +6734,7 @@ const __verifyAuth=getAuth(),__verifyDb=getFirestore(),__verifyAction={url:'http
   app.cancelFirebaseVerification=async function(){try{let u=__verifyAuth.currentUser;if(u&&!u.emailVerified)await deleteUser(u)}catch(e){}this.tempUser=null;this.tempAction=null;document.getElementById('verify-modal')?.classList.add('hidden');this.toast('Kayıt iptal edildi.','info')};
   let oldVerify=app.verifyAndFinish;app.verifyAndFinish=async function(){let email=this._firebaseVerifyEmail,pass=this._firebaseVerifyPass;if(email&&pass){try{let u=await userFor(email,pass);await reload(u);if(!u.emailVerified)return this.toast('E-posta henüz doğrulanmadı. Bağlantıya bastıktan sonra tekrar deneyin.','error');let input=document.getElementById('verify-code');if(input)input.value=this.generatedCode;if(this.tempUser){this.tempUser.emailVerified=true;this.tempUser.authUid=u.uid}}catch(e){return this.toast('Doğrulama kontrol edilemedi: '+e.message,'error')}}return oldVerify.apply(this,arguments)};
   function parentUI(){let f=document.getElementById('os-parent-form');if(!f||!document.getElementById('par-student-code')||f.dataset.firebaseVerify)return;f.dataset.firebaseVerify='1';f.innerHTML='<div class="os-email-verify-box"><i class="fas fa-envelope-open-text"></i><h3>İki E-postayı Doğrulayın</h3><p>Öğrenci ve veli e-posta adreslerine ayrı doğrulama bağlantıları gönderildi.</p><p style="font-size:12px;color:#888">İki bağlantıya da bastıktan sonra aşağıdaki düğmeyi kullanın. Spam ve Gereksiz klasörlerini kontrol edin.</p><button class="btn-main" onclick="app.finishParentRegister()">İki Adresi Kontrol Et</button></div>'}
-  if(typeof app.finishParentRegister==='function')app.finishParentRegister=async function(){let p=this._parentPending;if(!p)return;try{let sc=creds[String(p.se).toLowerCase()],pc=creds[String(p.pe).toLowerCase()];if(!sc||!pc)throw Error('Doğrulama oturumları bulunamadı.');let su=await userFor(sc.email,sc.pass);await reload(su);if(!su.emailVerified)return this.toast('Öğrenci e-postası henüz doğrulanmadı.','error');let pu=await userFor(pc.email,pc.pass);await reload(pu);if(!pu.emailVerified)return this.toast('Veli e-postası henüz doğrulanmadı.','error');await setDoc(doc(__verifyDb,'parents',p.pu),{username:p.pu,adSoyad:p.pn,email:p.pe,password:await sha(p.pp),studentUsername:p.su,studentEmail:p.se,school:p.student.school||'',grade:p.student.grade||'',section:p.student.section||'',studentVerified:true,parentVerified:true,emailVerified:true,authUid:pu.uid,createdAt:serverTimestamp()});this.toast('Veli hesabı oluşturuldu.','success');this.parentAuthForm('login')}catch(e){this.toast('Doğrulama tamamlanamadı: '+e.message,'error')}};
+  if(typeof app.finishParentRegister==='function')app.finishParentRegister=async function(){let p=this._parentPending;if(!p)return;try{let sc=creds[String(p.se).toLowerCase()],pc=creds[String(p.pe).toLowerCase()];if(!sc||!pc)throw Error('Doğrulama oturumları bulunamadı.');let su=await userFor(sc.email,sc.pass);await reload(su);if(!su.emailVerified)return this.toast('Öğrenci e-postası henüz doğrulanmadı.','error');let pu=await userFor(pc.email,pc.pass);await reload(pu);if(!pu.emailVerified)return this.toast('Veli e-postası henüz doğrulanmadı.','error');await setDoc(doc(__verifyDb,'parents',p.pu),{username:p.pu,adSoyad:p.pn,email:p.pe,studentUsername:p.su,studentEmail:p.se,school:p.student.school||'',grade:p.student.grade||'',section:p.student.section||'',studentVerified:true,parentVerified:true,emailVerified:true,authUid:pu.uid,createdAt:serverTimestamp()});this.toast('Veli hesabı oluşturuldu.','success');this.parentAuthForm('login')}catch(e){this.toast('Doğrulama tamamlanamadı: '+e.message,'error')}};
   const oldDev=app.openDevMenu;app.openDevMenu=function(){let r=oldDev.apply(this,arguments);setTimeout(()=>{let area=document.getElementById('dev-action-area');if(area&&String(this.currentUser?.rank||'').toLowerCase()==='developer'&&!document.getElementById('os-email-domains-btn')){let b=document.createElement('button');b.id='os-email-domains-btn';b.className='btn-main';b.style.cssText='background:#34495e;margin-top:10px';b.innerHTML='<i class="fas fa-at"></i> E-posta Domain Engelleri';b.onclick=()=>app.openEmailDomainManager();area.parentNode.insertBefore(b,area)}},0);return r};
   app.openEmailDomainManager=async function(){let bg=document.createElement('div');bg.id='os-domain-modal';bg.className='modal-bg';bg.innerHTML='<div class="modal"><h3>E-posta Domain Engelleri</h3><div style="display:flex;gap:7px"><input id="os-domain-input" placeholder="örnek: gecicimail.com"><button class="btn-main" style="width:auto" onclick="app.addBlockedDomain()">Ekle</button></div><div id="os-domain-list">Yükleniyor...</div><button class="btn-danger" style="background:#888" onclick="document.getElementById(\'os-domain-modal\').remove()">Kapat</button></div>';document.body.appendChild(bg);this.renderBlockedDomains()};
   app.renderBlockedDomains=async function(){let s=await getDocs(collection(__verifyDb,'blocked_email_domains')),el=document.getElementById('os-domain-list');el.innerHTML=s.empty?'<p style="font-size:12px;color:#888">Developer tarafından eklenen domain yok.</p>':s.docs.map(x=>'<div class="os-email-domain-row"><span>'+x.id+'</span><button class="btn-danger" onclick="app.removeBlockedDomain(\''+x.id+'\')"><i class="fas fa-trash"></i></button></div>').join('')};
@@ -7967,3 +7151,32 @@ const __fullAuth=getAuth(),__fullAuthDb=getFirestore();
  if(!install()){let n=0,t=setInterval(()=>{if(install()||++n>500)clearInterval(t)},40)}
 })();
 </script>
+<script type="module">
+import{getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,reload}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import{getFirestore,doc,getDoc,setDoc,updateDoc,deleteField,serverTimestamp,collection,getDocs,query,where}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+const __finalAuth=getAuth(),__finalDb=getFirestore();
+(function(){
+ const key=s=>String(s||'').trim().toLocaleLowerCase('tr-TR'),safeError=e=>e?.code==='auth/network-request-failed'?'İnternet bağlantısı kurulamadı.':'Kullanıcı adı veya şifre hatalı.';
+ async function indexFor(username,parent=false){let id=key(username),name=parent?'parent_login_index':'login_index',s=await getDoc(doc(__finalDb,name,id));if(s.exists())return s.data();if(!parent&&id==='künefe')return{username:'Künefe',email:'gamerkunefe14@gmail.com'};throw Error('LOGIN_NOT_FOUND')}
+ async function signUsername(username,password,parent=false){let idx=await indexFor(username,parent),cred;try{cred=await signInWithEmailAndPassword(__finalAuth,idx.email,password)}catch(error){if(!parent&&key(username)==='künefe'){let legacy=await getDoc(doc(__finalDb,'users','Künefe')),stored=legacy.exists()?legacy.data().password:null,ok=false;if(stored){if(String(stored).startsWith('$argon2')){try{ok=await window.argon2.verify({pass:password,encoded:stored})}catch(e){}}else{let b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(password)),h=btoa(String.fromCharCode(...new Uint8Array(b)));ok=stored===password||stored===h}}if(ok)cred=await createUserWithEmailAndPassword(__finalAuth,idx.email,password);else throw error}else throw error}await cred.user.getIdToken(true);return{user:cred.user,index:idx}}
+ async function bindUser(username,user){await setDoc(doc(__finalDb,'users_lookup',user.uid),{username,updatedAt:serverTimestamp()},{merge:true})}
+ function install(){if(!window.app||!app.login||!app.verifyAndFinish||app.__authOnlyFinal)return false;app.__authOnlyFinal=true;
+  app.__signUsername=signUsername;
+  const oldVerify=app.verifyAndFinish;app.verifyAndFinish=async function(){let u=__finalAuth.currentUser,temp=this.tempUser;if(u)await reload(u);if(temp&&u?.emailVerified){delete temp.password;temp.authUid=u.uid;temp.authMigrated=true;temp.emailVerified=true;await setDoc(doc(__finalDb,'login_index',key(temp.username)),{username:temp.username,email:u.email,authUid:u.uid,updatedAt:serverTimestamp()},{merge:true})}return oldVerify.apply(this,arguments)};
+  app.login=async function(){let username=document.getElementById('login-user').value.trim(),password=document.getElementById('login-pass').value,button=document.querySelector('#login-fields .btn-main');if(!username||!password)return this.toast('Kullanıcı adı ve şifre gerekli.','error');if(button){button.disabled=true;button.textContent='Giriş yapılıyor...'}try{let a=await signUsername(username,password),actual=a.index.username||username;await bindUser(actual,a.user);let s=await getDoc(doc(__finalDb,'users',actual));if(!s.exists())throw Error('PROFILE_NOT_FOUND');let data={username:actual,...s.data()};if(data.password!==undefined)await updateDoc(doc(__finalDb,'users',actual),{password:deleteField(),authUid:a.user.uid,authMigrated:true,updatedAt:serverTimestamp()});this.currentUser={...data,password:undefined,authUid:a.user.uid,authMigrated:true};if(data.isBlocked){this._blockedLoginUsername=actual;return this.showBlockedAccount?.(this.currentUser)}let remember=document.getElementById('login-remember');if(remember?.checked)localStorage.setItem('kunefe_remember_login_user',actual);else localStorage.removeItem('kunefe_remember_login_user');this.launch()}catch(e){console.error(e);this.toast(e.message==='PROFILE_NOT_FOUND'?'Firebase hesabı var fakat uygulama profili bulunamadı. Yöneticiye başvurun.':safeError(e),'error')}finally{if(button){button.disabled=false;button.textContent='Giriş Yap'}}};
+  app.handleStaffAuth=async function(){let username=document.getElementById('staff-user').value.trim(),password=document.getElementById('staff-pass').value,code1=document.getElementById('staff-code1').value.trim(),code2=document.getElementById('staff-code2').value.trim(),mode=this.currentStaffMode;if(!username||!password||!code1)return this.toast('Kullanıcı adı, şifre ve rol kodu gerekli.','error');try{let a=await signUsername(username,password),actual=a.index.username||username;await bindUser(actual,a.user);let s=await getDoc(doc(__finalDb,'users',actual));if(!s.exists())throw Error('PROFILE_NOT_FOUND');let data={username:actual,...s.data()};if(mode==='manager'&&!data.isMod)throw Error('ROLE');if(mode==='teacher'&&!data.isTeacher)throw Error('ROLE');let codes=await getDocs(query(collection(__finalDb,'registration_codes'),where('type','==',mode),where('code','==',code1))),valid=false;codes.forEach(d=>{let x=d.data();if((!x.usedBy||x.usedBy===actual)&&(mode!=='manager'||x.password===code2))valid=true});if(!valid)throw Error('ROLE_CODE');if(data.password!==undefined)await updateDoc(doc(__finalDb,'users',actual),{password:deleteField(),authUid:a.user.uid,authMigrated:true,updatedAt:serverTimestamp()});this.currentUser={...data,password:undefined};if(data.isBlocked){this._blockedLoginUsername=actual;return this.showBlockedAccount?.(this.currentUser)}this.launch()}catch(e){console.error(e);this.toast(e.message==='ROLE'||e.message==='ROLE_CODE'?'Hesap rolü veya personel kodu hatalı.':safeError(e),'error')}};
+  if(typeof app.loginCounselor==='function')app.loginCounselor=async function(){let username=document.getElementById('coun-login-user').value.trim(),password=document.getElementById('coun-login-pass').value,code=document.getElementById('coun-login-code').value.trim().toUpperCase();try{let a=await signUsername(username,password),actual=a.index.username||username;await bindUser(actual,a.user);let s=await getDoc(doc(__finalDb,'users',actual));if(!s.exists())throw Error('PROFILE_NOT_FOUND');let data={username:actual,...s.data()};let b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(code)),h=btoa(String.fromCharCode(...new Uint8Array(b)));if(!data.isCounselor||data.counselorCodeHash!==h)throw Error('ROLE');if(data.password!==undefined)await updateDoc(doc(__finalDb,'users',actual),{password:deleteField(),authUid:a.user.uid,authMigrated:true,updatedAt:serverTimestamp()});this.currentUser={...data,password:undefined};if(data.isBlocked){this._blockedLoginUsername=actual;return this.showBlockedAccount?.(this.currentUser)}document.getElementById('os-counselor-auth')?.remove();this.launch()}catch(e){console.error(e);this.toast(e.message==='ROLE'?'Rehber öğretmen kodu veya hesap rolü hatalı.':safeError(e),'error')}};
+  if(typeof app.finishParentRegister==='function'){let oldParentFinish=app.finishParentRegister;app.finishParentRegister=async function(){let p=this._parentPending,r=await oldParentFinish.apply(this,arguments),u=__finalAuth.currentUser;if(p&&u?.emailVerified)await setDoc(doc(__finalDb,'parent_login_index',key(p.pu)),{username:p.pu,email:p.pe,authUid:u.uid,updatedAt:serverTimestamp()},{merge:true});return r}}
+  if(typeof app.parentLogin==='function')app.parentLogin=async function(){let su=document.getElementById('par-login-student').value.trim(),sp=document.getElementById('par-login-student-pass').value,pu=document.getElementById('par-login-user').value.trim(),pp=document.getElementById('par-login-pass').value;try{let student=await signUsername(su,sp),studentName=student.index.username||su;await bindUser(studentName,student.user);let ss=await getDoc(doc(__finalDb,'users',studentName));if(!ss.exists())throw Error('PROFILE_NOT_FOUND');let parent=await signUsername(pu,pp,true),parentName=parent.index.username||pu;await setDoc(doc(__finalDb,'parents_lookup',parent.user.uid),{parentUsername:parentName,studentUsername:studentName,updatedAt:serverTimestamp()},{merge:true});let ps=await getDoc(doc(__finalDb,'parents',parentName));if(!ps.exists()||ps.data().studentUsername!==studentName)throw Error('RELATION');if(ps.data().password!==undefined)await updateDoc(doc(__finalDb,'parents',parentName),{password:deleteField(),authUid:parent.user.uid,authMigrated:true,updatedAt:serverTimestamp()});this.parent={...ps.data(),password:undefined,username:parentName,student:{...ss.data(),password:undefined,username:studentName}};document.getElementById('os-parent-auth')?.remove();this.openParentPanel()}catch(e){console.error(e);this.toast(e.message==='RELATION'?'Veli hesabı bu öğrenciyle eşleşmiyor.':safeError(e),'error')}};
+  return true}
+ if(!install()){let n=0,t=setInterval(()=>{if(install()||++n>600)clearInterval(t)},40)}
+})();
+</script>
+<script>
+(function(){
+ function install(){if(!window.app||!app.verifyAndFinish||app.__registrationCodeAttachedFinal)return false;app.__registrationCodeAttachedFinal=true;var old=app.verifyAndFinish;app.verifyAndFinish=function(){if(this.tempAction==='register'&&this.tempUser&&this.tempCodeIdToBurn)this.tempUser.registrationCodeId=this.tempCodeIdToBurn;if(this.tempUser){if(this.tempUser.isTeacher!==true)this.tempUser.isTeacher=false;if(this.tempUser.isMod!==true)this.tempUser.isMod=false;if(this.tempUser.isAdmin!==true)this.tempUser.isAdmin=false;if(this.tempUser.isCounselor!==true)this.tempUser.isCounselor=false;if(!this.tempUser.rank)this.tempUser.rank='';delete this.tempUser.password;}return old.apply(this,arguments)};return true}
+ if(!install()){var n=0,t=setInterval(function(){if(install()||++n>600)clearInterval(t)},40)}
+})();
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a566ade38a5de1a1',t:'MTc5Mzk5NTE3Mg=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a566ade38a5de1a1',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
