@@ -6931,9 +6931,7 @@ button:active,.nav-item:active,.home-menu-btn:active{transform:scale(.985);trans
     if(recovering||Date.now()-lastRecovery<350)return;
     let main=document.getElementById('main-content'),page=app.__currentStablePage;if(!main||!page)return;
     let settingsLeak=page!=='settings'&&!!main.querySelector('#argon2-switch-box,#os-pin-settings,#settings-profile-section,#settings-old-pass');
-    let wrongFeed=page==='feed'&&!main.querySelector('#feed-container');
-    let wrongHome=page==='home'&&!main.querySelector('.home-menu-grid');
-    if(!settingsLeak&&!wrongFeed&&!wrongHome)return;
+    if(!settingsLeak)return;
     recovering=true;lastRecovery=Date.now();
     let active=document.querySelector('.bottom-nav .nav-item.active');
     setTimeout(async function(){try{await app.navigate(page,active)}catch(e){}finally{setTimeout(()=>recovering=false,180)}},30)
@@ -7174,7 +7172,7 @@ const __finalAuth=getAuth(),__finalDb=getFirestore();
  if(!install()){var n=0,t=setInterval(function(){if(install()||++n>600)clearInterval(t)},40)}
 })();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a597942c59c9a6a3',t:'MTc5NDUwNzkyMQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a597942c59c9a6a3',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
 <style>
 #os-auth-cosmos{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:radial-gradient(circle at 50% 115%,rgba(43,72,120,.38),transparent 46%),linear-gradient(155deg,#050810 0%,#0b1220 48%,#111827 100%)}#os-auth-cosmos::before,#os-auth-cosmos::after{content:"";position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.9) 0 1px,transparent 1.4px),radial-gradient(circle,rgba(173,210,255,.65) 0 1px,transparent 1.5px);background-size:71px 71px,113px 113px;background-position:8px 19px,39px 57px;opacity:.48;animation:osStarsDrift 28s linear infinite}#os-auth-cosmos::after{background-size:157px 157px,203px 203px;opacity:.25;animation-duration:46s;animation-direction:reverse}.os-meteor{position:absolute;top:-18vh;left:var(--x);width:var(--w);height:2px;border-radius:999px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.96),#fff);filter:drop-shadow(0 0 5px rgba(190,220,255,.9));transform:rotate(var(--angle));opacity:0;animation:osMeteorFall var(--speed) linear var(--delay) infinite}.os-meteor::after{content:"";position:absolute;right:-2px;top:-2px;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 9px #fff}.os-auth-brand{position:relative;text-align:center;margin:-8px 0 18px;color:#fff;font-size:30px;font-weight:950;letter-spacing:7px;text-shadow:0 0 18px rgba(110,178,255,.55)}#auth-screen{position:relative;z-index:2}.os-parent-auth,.os-counselor-auth-bg{background:rgba(5,8,16,.43)!important;backdrop-filter:blur(1px)}.os-parent-box,.os-counselor-auth-box{position:relative;z-index:2}.os-parent-box::before,.os-counselor-auth-box::before{content:"OKUL NET";display:block;text-align:center;margin:0 0 16px;color:#fff;font-size:25px;font-weight:950;letter-spacing:6px;text-shadow:0 0 18px rgba(110,178,255,.65)}.os-parent-box::before{color:#6c5ce7;text-shadow:0 0 15px rgba(108,92,231,.28)}.os-counselor-auth-box::before{color:#8e44ad;text-shadow:0 0 15px rgba(142,68,173,.25)}body.os-auth-cosmos-active{background:#050810!important}@keyframes osStarsDrift{to{transform:translate3d(-35px,55px,0)}}@keyframes osMeteorFall{0%{transform:translate3d(0,-10vh,0) rotate(var(--angle));opacity:0}7%{opacity:.92}38%{opacity:.78}55%,100%{transform:translate3d(var(--travel),125vh,0) rotate(var(--angle));opacity:0}}@media(max-width:600px){.os-auth-brand{font-size:24px;letter-spacing:5px;margin-bottom:15px}.auth-card{max-height:94vh;overflow-y:auto}.os-meteor{height:1.5px}.os-parent-box::before,.os-counselor-auth-box::before{font-size:21px;letter-spacing:4px}}
@@ -7445,3 +7443,32 @@ const iqDb=getFirestore(),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp
   #login-fields>[style*="display: flex"] button{min-height:46px!important;padding:8px 3px!important;font-size:10.5px!important}
 }
 </style>
+<style>
+#app-container>.bottom-nav{
+  display:flex!important;
+  flex:0 0 70px!important;
+  width:100%!important;
+  min-height:70px!important;
+  position:relative!important;
+  bottom:auto!important;
+  left:auto!important;
+  z-index:500!important;
+}
+#app-container>#main-content{min-height:0!important;overflow-y:auto!important}
+@media(max-width:900px){
+  #app-container>.bottom-nav{display:flex!important;flex:0 0 70px!important;padding-bottom:env(safe-area-inset-bottom)!important}
+}
+</style>
+<script>
+(function(){
+ function install(){
+  if(!window.app||app.__subpageNavFix)return false;
+  app.__subpageNavFix=true;
+  function keep(){let nav=document.querySelector('#app-container>.bottom-nav');if(nav){nav.classList.remove('hidden');nav.style.removeProperty('visibility');nav.style.removeProperty('opacity')}}
+  ['openSchedulePage','setHomeTab','openExamStudents','renderTeacherPanel','renderAdminPanel','renderCounselorPanel'].forEach(function(name){let old=app[name];if(typeof old!=='function')return;app[name]=function(){keep();let result=old.apply(this,arguments);Promise.resolve(result).finally(keep);return result}});
+  new MutationObserver(keep).observe(document.getElementById('app-container')||document.body,{attributes:true,childList:true,subtree:true,attributeFilter:['class','style']});
+  return true
+ }
+ if(!install()){let n=0,t=setInterval(()=>{if(install()||++n>500)clearInterval(t)},40)}
+})();
+</script>
