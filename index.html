@@ -814,7 +814,7 @@ document.getElementById('app-container').classList.remove('hidden');
 document.getElementById('display-name').innerText = this.currentUser.username;
 
 const lowerName = this.currentUser.username.toLowerCase();
-const hasAdminPower = lowerName === "künefe" || this.currentUser.isAdmin;
+const hasAdminPower = this.currentUser.isAdmin === true;
 if(hasAdminPower || this.currentUser.isMod) {
 document.getElementById('admin-btn').classList.remove('hidden');
 }
@@ -1128,7 +1128,7 @@ mediaHtml += `<div class="os-interactive-test-card" style="margin-top:12px;paddi
 }
 
 const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
+const isRealAdmin = this.currentUser.isAdmin === true;
 let canDelete = false;
 
 if(isRealAdmin) canDelete = true;
@@ -1594,7 +1594,7 @@ urlInputEl.classList.add('hidden');
 async renderAdminPanel() {
 const main = document.getElementById('main-content');
 const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
+const isRealAdmin = this.currentUser.isAdmin === true;
 
 let gradeCheckboxMarkup = "";
 for(let i=1; i<=12; i++) {
@@ -1833,7 +1833,7 @@ if(checkedBoxes.length === 0) return this.toast("Lütfen en az bir sınıf kadem
 const grades = Array.from(checkedBoxes).map(cb => cb.value);
 
 const lowerNameForSubject = this.currentUser.username.toLowerCase();
-const isRealAdminForSubject = lowerNameForSubject === "künefe" || this.currentUser.isAdmin;
+const isRealAdminForSubject = this.currentUser.isAdmin === true;
 
 try {
 await addDoc(collection(db, "subjects"), {
@@ -1852,7 +1852,7 @@ this.toast("Ders oluşturulurken hata oluştu.", "error");
 
 listenSubjectsList() {
 const lowerNameForList = this.currentUser.username.toLowerCase();
-const isRealAdminForList = lowerNameForList === "künefe" || this.currentUser.isAdmin;
+const isRealAdminForList = this.currentUser.isAdmin === true;
 onSnapshot(query(collection(db, "subjects"), orderBy("createdAt", "desc")), (snap) => {
 const cont = document.getElementById('admin-subjects-list');
 if(!cont) return;
@@ -1881,7 +1881,7 @@ if(renderedSubjectCount === 0) cont.innerHTML = "<p style='color:#999; font-size
 async deleteSubject(id) {
 if(await this.customConfirm("Bu ders kategorisini silmek istediğinize emin misiniz?")) {
 const lowerNameForDel = this.currentUser.username.toLowerCase();
-const isRealAdminForDel = lowerNameForDel === "künefe" || this.currentUser.isAdmin;
+const isRealAdminForDel = this.currentUser.isAdmin === true;
 if(!isRealAdminForDel) {
 const subjSnap = await getDoc(doc(db, "subjects", id));
 if(subjSnap.exists() && subjSnap.data().school !== this.currentUser.school) {
@@ -1947,7 +1947,7 @@ schoolSelectorDiv.classList.add('hidden');
 }
 
 const lowerNameForCodeSchool = this.currentUser.username.toLowerCase();
-const isRealAdminForCodeSchool = lowerNameForCodeSchool === "künefe" || this.currentUser.isAdmin;
+const isRealAdminForCodeSchool = this.currentUser.isAdmin === true;
 if(schoolSelectorDiv && isRealAdminForCodeSchool && type === 'teacher') {
 schoolSelectorDiv.classList.remove('hidden');
 const labelEl = schoolSelectorDiv.querySelector('label');
@@ -1977,7 +1977,7 @@ return result;
 };
 
 const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
+const isRealAdmin = this.currentUser.isAdmin === true;
 
 if (!isRealAdmin && type === 'manager') {
 const modManagerCodeData = {
@@ -2084,7 +2084,7 @@ listCont.appendChild(item);
 openAdminUserModal(u) {
 this.selectedEditUser = u;
 const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
+const isRealAdmin = this.currentUser.isAdmin === true;
 
 document.getElementById('edit-user-title').innerText = `${u.username} - Düzenle`;
 document.getElementById('admin-user-modal').classList.remove('hidden');
@@ -2132,7 +2132,7 @@ this.selectedEditUser[roleField] = newStatus;
 this.toast("Rol durumu başarıyla güncellendi!", "success");
 
 const lowerName = this.currentUser.username.toLowerCase();
-this.renderAdminUserList(lowerName === "künefe" || this.currentUser.isAdmin);
+this.renderAdminUserList(this.currentUser.isAdmin === true);
 },
 
 async adminUpdateStatus(blockStatus) {
@@ -2144,7 +2144,7 @@ document.getElementById('block-btn').classList.toggle('hidden', blockStatus);
 document.getElementById('unblock-btn').classList.toggle('hidden', !blockStatus);
 
 const lowerName = this.currentUser.username.toLowerCase();
-this.renderAdminUserList(lowerName === "künefe" || this.currentUser.isAdmin);
+this.renderAdminUserList(this.currentUser.isAdmin === true);
 },
 
 async adminChangeUsername() {
@@ -2181,7 +2181,7 @@ this.renderAdminPanel();
 async saveUserEdits() {
 if(!this.selectedEditUser) return;
 const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
+const isRealAdmin = this.currentUser.isAdmin === true;
 
 const updates = {
 grade: document.getElementById('edit-grade').value,
@@ -2426,7 +2426,7 @@ cont.innerHTML = "Yükleniyor...";
 let html = "";
 const school = document.getElementById('adm-school-select').value;
 const lowerName = this.currentUser.username.toLowerCase();
-const isRealAdmin = lowerName === "künefe" || this.currentUser.isAdmin;
+const isRealAdmin = this.currentUser.isAdmin === true;
 
 const annSnap = await getDocs(collection(db, "announcements"));
 annSnap.forEach(d => {
@@ -2494,7 +2494,7 @@ const userSnap = await getDocs(collection(db, "users"));
 userSnap.forEach(async (uDoc) => {
 const u = uDoc.data();
 const lowerName = u.username.toLowerCase();
-const isAdminUser = lowerName === "künefe" || u.isAdmin;
+const isAdminUser = u.isAdmin === true;
 
 if(!isAdminUser) {
 await deleteDoc(doc(db, "users", u.username));
@@ -2676,7 +2676,7 @@ renderSettings() {
 const main = document.getElementById('main-content');
                 const u = this.currentUser;
                 const lowerName = u.username.toLowerCase();
-                const isRealAdmin = lowerName === "künefe" || u.isAdmin;
+                const isRealAdmin = u.isAdmin === true;
                 const isMod = u.isMod;
                 const isTeacher = u.isTeacher;
 
@@ -4448,7 +4448,7 @@ app.resetSystemData = async function() {
     userSnap.forEach(uDoc => {
       const u = uDoc.data();
       const lowerName = u.username.toLowerCase();
-      const isKee = (lowerName === "künefe") || u.isAdmin || u.isMod;
+      const isKee = u.isAdmin === true || u.isMod === true;
       if(isKee) keepUsers.add(u.username);
     });
 
@@ -6175,7 +6175,7 @@ const __examDb=getFirestore();
  const isCounselor=()=>app.currentUser?.isCounselor===true,classes=u=>[...new Set([...(u.homeroomClasses||[]),...(u.subjectClasses||[])])];
  function install(){if(!window.app||!app.renderTeacherPanel||!app.renderAdminPanel||app.__examInstalled)return false;app.__examInstalled=true;
   const oldAdmin=app.renderAdminPanel;app.renderAdminPanel=async function(){let r=await oldAdmin.apply(this,arguments);setTimeout(()=>{let sel=document.getElementById('adm-code-type');if(sel&&!sel.querySelector('[value="counselor"]'))sel.insertAdjacentHTML('beforeend','<option value="counselor">Rehber Öğretmen</option>');app.addExamPanelButton('admin')},30);return r};
-  const oldGen=app.generateRegistrationCode;app.generateRegistrationCode=async function(){let sel=document.getElementById('adm-code-type');if(sel?.value!=='counselor')return oldGen.apply(this,arguments);let chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',code=Array.from({length:10},()=>chars[Math.floor(Math.random()*chars.length)]).join('');let school=(this.currentUser.isAdmin||String(this.currentUser.username).toLowerCase()==='künefe')?(document.getElementById('adm-code-school')?.value||this.currentUser.school):this.currentUser.school;await addDoc(collection(__examDb,'registration_codes'),{type:'counselor',code,school,createdAt:serverTimestamp(),usedBy:''});this.toast('Rehber öğretmen kodu oluşturuldu.','success');this.renderAdminPanel()};
+  const oldGen=app.generateRegistrationCode;app.generateRegistrationCode=async function(){let sel=document.getElementById('adm-code-type');if(sel?.value!=='counselor')return oldGen.apply(this,arguments);let chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',code=Array.from({length:10},()=>chars[Math.floor(Math.random()*chars.length)]).join('');let school=(this.currentUser.isAdmin===true)?(document.getElementById('adm-code-school')?.value||this.currentUser.school):this.currentUser.school;await addDoc(collection(__examDb,'registration_codes'),{type:'counselor',code,school,createdAt:serverTimestamp(),usedBy:''});this.toast('Rehber öğretmen kodu oluşturuldu.','success');this.renderAdminPanel()};
   function authBtn(){let row=document.querySelector('#login-fields [style*="display: flex"]');if(row&&!document.getElementById('os-counselor-login')){let b=document.createElement('button');b.id='os-counselor-login';b.className='btn-teacher';b.style.cssText='font-size:12px;padding:8px;background:#8e44ad';b.textContent='Rehber Öğretmen';b.onclick=()=>app.toggleAuth('counselor');row.appendChild(b)}}authBtn();
   const oldStaff=app.handleStaffAuth;app.handleStaffAuth=async function(){let mode=this.currentStaffMode,r=await oldStaff.apply(this,arguments);if(mode==='counselor'&&this.tempUser){this.tempUser.isCounselor=true;this.tempUser.isTeacher=false;this.tempUser.grade='Tümü';this.tempUser.section='Tümü'}return r};
   const oldLaunch=app.launch;app.launch=function(){let r=oldLaunch.apply(this,arguments);if(isCounselor()){setTimeout(()=>{let n=document.getElementById('nav-teacher');if(n){n.classList.remove('hidden');n.querySelector('span').textContent='Rehberlik';n.onclick=()=>app.renderCounselorPanel()}},50)}return r};
@@ -6315,7 +6315,7 @@ const __studyDb=getFirestore();
  function draw(){
   var feed=document.getElementById('feed-container');if(!feed)return;
   var items=(app.feedItems||[]).slice(0,30),ann=items.filter(x=>x.type==='duyuru'),other=items.filter(x=>x.type!=='duyuru'),me=app.currentUser?app.currentUser.username:'';
-  function announcement(c){var del=c.isDev&&c.sender===me?'<i class="fas fa-times" style="position:absolute;top:8px;right:8px;color:#d63031;cursor:pointer;z-index:5" onclick="event.stopPropagation();app.deleteDeveloperAnnounce(\''+c.id+'\')"></i>':'';if(c.isDev){var pin=c.pinned?'<span style="font-size:10px;background:#ffd700;color:#111;padding:2px 6px;border-radius:4px">Sabit</span>':'';return '<div style="position:relative;background:linear-gradient(180deg,rgba(255,215,0,.1),var(--card));border-left:5px solid #ffd700;border-radius:13px;padding:13px;margin-bottom:10px;box-shadow:0 3px 10px rgba(0,0,0,.06)">'+del+'<div style="display:flex;align-items:center;gap:6px"><i class="fas fa-star" style="color:#ffd700"></i><span style="color:#2980b9;font-weight:bold;font-size:11px">DEVELOPER DUYURUSU</span>'+pin+'</div><div style="font-size:14px;font-weight:600;margin-top:6px">'+e(c.text)+'</div><div style="font-size:10px;color:#888;margin-top:5px">'+e(c.sender)+'</div></div>'}return '<div style="background:var(--card);border-left:5px solid #3498db;border-radius:13px;padding:13px;margin-bottom:10px;box-shadow:0 3px 10px rgba(0,0,0,.06)"><div style="font-size:10px;color:#3498db;font-weight:bold"><i class="fas fa-bullhorn"></i> DUYURU</div><div style="font-size:14px;font-weight:600;margin-top:6px">'+e(c.text)+'</div></div>'}
+  function announcement(c){var del=c.isDev&&c.sender===me?'<div style="position:absolute;top:7px;right:7px;display:flex;gap:5px;z-index:5"><button title="'+(c.pinned?'Sabitlemeyi kaldır':'Duyuruyu sabitle')+'" style="width:28px;height:28px;padding:0;margin:0;background:'+(c.pinned?'#ffd700':'#eef1f5')+';color:#333;border-radius:8px" onclick="event.stopPropagation();app.toggleDeveloperAnnouncementPin(\''+c.id+'\','+(!c.pinned)+')"><i class="fas fa-thumbtack"></i></button><button title="Duyuruyu sil" style="width:28px;height:28px;padding:0;margin:0;background:#ffe8e8;color:#d63031;border-radius:8px" onclick="event.stopPropagation();app.deleteDeveloperAnnounce(\''+c.id+'\')"><i class="fas fa-trash"></i></button></div>':'';if(c.isDev){var pin=c.pinned?'<span style="font-size:10px;background:#ffd700;color:#111;padding:2px 6px;border-radius:4px">Sabit</span>':'';return '<div style="position:relative;background:linear-gradient(180deg,rgba(255,215,0,.1),var(--card));border-left:5px solid #ffd700;border-radius:13px;padding:13px;margin-bottom:10px;box-shadow:0 3px 10px rgba(0,0,0,.06)">'+del+'<div style="display:flex;align-items:center;gap:6px"><i class="fas fa-star" style="color:#ffd700"></i><span style="color:#2980b9;font-weight:bold;font-size:11px">DEVELOPER DUYURUSU</span>'+pin+'</div><div style="font-size:14px;font-weight:600;margin-top:6px">'+e(c.text)+'</div><div style="font-size:10px;color:#888;margin-top:5px">'+e(c.sender)+'</div></div>'}return '<div style="background:var(--card);border-left:5px solid #3498db;border-radius:13px;padding:13px;margin-bottom:10px;box-shadow:0 3px 10px rgba(0,0,0,.06)"><div style="font-size:10px;color:#3498db;font-weight:bold"><i class="fas fa-bullhorn"></i> DUYURU</div><div style="font-size:14px;font-weight:600;margin-top:6px">'+e(c.text)+'</div></div>'}
   function otherCard(c){var dl=c.deadline?String(c.deadline).replace('T',' '):'';return '<div style="background:var(--card);border-left:5px solid #ff9f43;border-radius:13px;padding:13px;margin-bottom:10px;box-shadow:0 3px 10px rgba(0,0,0,.06)"><div style="font-size:10px;color:#ff9f43;font-weight:bold"><i class="fas fa-book"></i> ÖDEV</div><div style="font-size:14px;font-weight:600;margin-top:6px">'+e(c.title)+'</div><div style="font-size:12px;color:#888;margin-top:4px">'+(c.subject?'Ders: '+e(c.subject):'')+(c.book?' · '+e(c.book):'')+(c.pages?' · Sayfa: '+e(c.pages):'')+'</div>'+(dl?'<div style="font-size:11px;color:#e67e22;margin-top:5px">Bitiş: '+e(dl)+'</div>':'')+'</div>'}
   feed.innerHTML='<div class="os-home-dashboard"><section class="os-home-column"><div class="os-home-column-title ann"><i class="fas fa-bullhorn"></i>Duyurular</div><div id="os-home-announcements" class="os-home-column-body">'+(ann.length?ann.map(announcement).join(''):'<div class="os-home-empty">Güncel duyuru bulunmuyor.</div>')+'</div></section><section class="os-home-column"><div class="os-home-column-title other"><i class="fas fa-layer-group"></i>Diğer</div><div id="os-home-other" class="os-home-column-body">'+(other.length?other.map(otherCard).join(''):'<div class="os-home-empty" id="os-other-empty">Güncel ödev veya etüt bulunmuyor.</div>')+'</div></section></div>';
   moveExtras()
@@ -6373,7 +6373,7 @@ const __forumDeleteDb=getFirestore(),__forumDeleteStorage=getStorage();
     const snap=await getDoc(postRef);
     if(!snap.exists()){this.toast('Gönderi zaten kaldırılmış.','info');this.renderSocial?.();return}
     const data=snap.data(),u=this.currentUser||{},isDeveloper=String(u.rank||'').toLowerCase()==='developer'&&u.devBanned!==true;
-    const allowed=data.sender===u.username||u.isMod===true||u.isAdmin===true||isDeveloper||String(u.username||'').toLowerCase()==='künefe';
+    const allowed=data.sender===u.username||u.isMod===true||u.isAdmin===true||isDeveloper;
     if(!allowed)return this.toast('Bu gönderiyi kaldırma yetkiniz yok.','error');
     await deleteDoc(postRef);
     this.toast('Gönderi forumdan kaldırıldı.','success');
@@ -6400,17 +6400,17 @@ import{getFirestore,collection,getDocs,doc,getDoc,setDoc,serverTimestamp}from'ht
 const __devBlockDb=getFirestore();
 (function(){
  const cid=(g,s)=>String(g)+'_'+String(s).toUpperCase(),dev=()=>String(app.currentUser?.rank||'').toLowerCase()==='developer'&&app.currentUser?.devBanned!==true;
- async function myControl(){let u=app.currentUser;if(!u||u.isMod||u.isAdmin||u.isTeacher||u.isCounselor||dev())return{};try{let x=await getDoc(doc(__devBlockDb,'school_controls',u.school,'classes',cid(u.grade,u.section)));return x.exists()?x.data():{}}catch(e){return{}}}
+ async function myControl(){let u=app.currentUser;if(!u)return{};try{let x=await getDoc(doc(__devBlockDb,'school_controls',u.school,'classes',cid(u.grade,u.section))),c=x.exists()?x.data():{};if(dev())return c.blockDevelopers===true?c:{};if(u.isMod||u.isAdmin||u.isTeacher||u.isCounselor)return{};return c}catch(e){return{}}}
  function install(){if(!window.app||!app.openDevMenu||app.__teacherStyleBlocking)return false;app.__teacherStyleBlocking=true;
   const oldDev=app.openDevMenu;app.openDevMenu=function(){let r=oldDev.apply(this,arguments);setTimeout(()=>{let area=document.getElementById('dev-action-area');if(area&&dev()&&!document.getElementById('os-class-block-btn')){let b=document.createElement('button');b.id='os-class-block-btn';b.className='btn-danger';b.style.cssText='margin-top:10px;background:#d63031';b.innerHTML='<i class="fas fa-ban"></i> Engel Koy';b.onclick=()=>app.openClassBlocking();area.parentNode.insertBefore(b,area)}},0);return r};
   app.openClassBlocking=async function(){if(!dev())return this.toast('Bu alan yalnızca Developer hesaplarına açıktır.','error');let old=document.getElementById('os-class-block-modal');if(old)old.remove();let bg=document.createElement('div');bg.id='os-class-block-modal';bg.className='modal-bg';bg.innerHTML='<div class="modal" style="max-height:90vh;overflow:auto"><h3><i class="fas fa-ban" style="color:#d63031"></i> Engel Koy</h3><p style="font-size:12px;color:#888">Engel uygulanacak okulu seçin.</p><div id="os-dev-block-body"><p>Okullar yükleniyor...</p></div><button class="btn-danger" style="background:#888" onclick="document.getElementById(\'os-class-block-modal\').remove()">Kapat</button></div>';document.body.appendChild(bg);try{let s=await getDocs(collection(__devBlockDb,'users')),schools=new Set;s.forEach(d=>{let x=d.data();if(x.school)schools.add(x.school)});this._devBlockSchools=[...schools].sort((a,b)=>a.localeCompare(b,'tr'));document.getElementById('os-dev-block-body').innerHTML='<div class="os-dev-block-schools">'+this._devBlockSchools.map((x,i)=>'<button class="os-dev-block-school" onclick="app.openTeacherStyleClassPicker('+i+')">'+String(x).replace(/[<>]/g,'')+'</button>').join('')+'</div>'}catch(e){document.getElementById('os-dev-block-body').textContent='Okullar alınamadı: '+e.message}};
-  app.openTeacherStyleClassPicker=function(index){this._devBlockSchool=this._devBlockSchools[index];this._devBlockClasses=[];let grades=Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'. Sınıf</option>').join(''),sections='ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ'.split('').map(x=>'<option value="'+x+'">'+x+' Şubesi</option>').join('');document.getElementById('os-dev-block-body').innerHTML='<button class="btn-main" style="width:auto;background:#777" onclick="app.openClassBlocking()"><i class="fas fa-arrow-left"></i> Okullar</button><h4 style="margin:12px 0 5px">'+String(this._devBlockSchool).replace(/[<>]/g,'')+'</h4><p style="font-size:12px;color:#888">Öğretmen kodu oluştururken olduğu gibi kademe ve şube seçip listeye ekleyin.</p><div class="os-dev-class-picker"><select id="os-dev-block-grade">'+grades+'</select><select id="os-dev-block-section">'+sections+'</select><button class="btn-main" onclick="app.addDevBlockClass()"><i class="fas fa-plus"></i> Ekle</button></div><div id="os-dev-selected-classes"></div><div style="border-top:1px solid rgba(127,140,141,.2);margin-top:12px;padding-top:12px"><label style="display:flex;justify-content:space-between;align-items:center"><b>Forumu kapat</b><input id="os-dev-disable-forum" type="checkbox"></label><label style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><b>Sınıf grubu mesajlaşmasını kapat</b><input id="os-dev-disable-chat" type="checkbox"></label><p style="font-size:11px;color:#888;margin-top:9px">Bir özelliği yeniden açmak için ilgili anahtarı kapalı bırakıp seçili sınıflara tekrar uygulayın.</p><button class="btn-danger" onclick="app.saveDevClassBlocks()"><i class="fas fa-save"></i> Seçili Sınıflara Uygula</button></div>';this.renderDevBlockClasses()};
+  app.openTeacherStyleClassPicker=function(index){this._devBlockSchool=this._devBlockSchools[index];this._devBlockClasses=[];let grades=Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'. Sınıf</option>').join(''),sections='ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ'.split('').map(x=>'<option value="'+x+'">'+x+' Şubesi</option>').join('');document.getElementById('os-dev-block-body').innerHTML='<button class="btn-main" style="width:auto;background:#777" onclick="app.openClassBlocking()"><i class="fas fa-arrow-left"></i> Okullar</button><h4 style="margin:12px 0 5px">'+String(this._devBlockSchool).replace(/[<>]/g,'')+'</h4><p style="font-size:12px;color:#888">Öğretmen kodu oluştururken olduğu gibi kademe ve şube seçip listeye ekleyin.</p><div class="os-dev-class-picker"><select id="os-dev-block-grade">'+grades+'</select><select id="os-dev-block-section">'+sections+'</select><button class="btn-main" onclick="app.addDevBlockClass()"><i class="fas fa-plus"></i> Ekle</button></div><div id="os-dev-selected-classes"></div><div style="border-top:1px solid rgba(127,140,141,.2);margin-top:12px;padding-top:12px"><label style="display:flex;justify-content:space-between;align-items:center"><b>Forumu kapat</b><input id="os-dev-disable-forum" type="checkbox"></label><label style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><b>Sınıf grubu mesajlaşmasını kapat</b><input id="os-dev-disable-chat" type="checkbox"></label><label style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:10px;border-radius:10px;background:rgba(255,159,67,.1)"><span><b>Developer için de kapat</b><small style="display:block;color:#888;margin-top:3px">Varsayılan olarak kapalıdır.</small></span><input id="os-dev-block-developers" type="checkbox"></label><p style="font-size:11px;color:#888;margin-top:9px">Bir özelliği yeniden açmak için ilgili anahtarı kapalı bırakıp seçili sınıflara tekrar uygulayın.</p><button class="btn-danger" onclick="app.saveDevClassBlocks()"><i class="fas fa-save"></i> Seçili Sınıflara Uygula</button></div>';this.renderDevBlockClasses()};
   app.addDevBlockClass=function(){let g=document.getElementById('os-dev-block-grade').value,s=document.getElementById('os-dev-block-section').value,c=g+'-'+s;if(this._devBlockClasses.includes(c))return this.toast('Bu sınıf zaten listede.','error');this._devBlockClasses.push(c);this.renderDevBlockClasses()};
   app.removeDevBlockClass=function(c){this._devBlockClasses=this._devBlockClasses.filter(x=>x!==c);this.renderDevBlockClasses()};
   app.renderDevBlockClasses=function(){let el=document.getElementById('os-dev-selected-classes');if(!el)return;el.innerHTML=this._devBlockClasses.length?this._devBlockClasses.map(c=>'<div class="os-dev-selected-class"><span><b>Sınıf:</b> '+c.replace('-','/')+'</span><i class="fas fa-times" onclick="app.removeDevBlockClass(\''+c+'\')"></i></div>').join(''):'<p style="font-size:11px;color:#999">Henüz sınıf eklenmedi.</p>'};
-  app.saveDevClassBlocks=async function(){if(!this._devBlockClasses?.length)return this.toast('En az bir sınıf ekleyin.','error');let forumDisabled=document.getElementById('os-dev-disable-forum').checked,chatDisabled=document.getElementById('os-dev-disable-chat').checked;try{for(let c of this._devBlockClasses){let [g,s]=c.split('-');await setDoc(doc(__devBlockDb,'school_controls',this._devBlockSchool,'classes',cid(g,s)),{school:this._devBlockSchool,grade:g,section:s,forumDisabled,chatDisabled,updatedBy:this.currentUser.username,updatedAt:serverTimestamp()},{merge:true})}this.toast('Seçilen sınıfların engel ayarları güncellendi.','success');document.getElementById('os-class-block-modal').remove()}catch(e){this.toast('Ayar uygulanamadı: '+e.message,'error')}};
-  if(typeof app.renderSocial==='function'){let o=app.renderSocial;app.renderSocial=async function(){let c=await myControl();if(c.forumDisabled){document.getElementById('main-content').innerHTML='<h3>Sosyal Akış</h3><div style="padding:30px;text-align:center;background:var(--card);border-radius:15px"><i class="fas fa-ban" style="font-size:35px;color:#d63031"></i><h4>Forum sınıfınız için kapalı</h4></div>';document.getElementById('social-add-btn')?.classList.add('hidden');return}return o.apply(this,arguments)}}
-  if(typeof app.openClassGroupChat==='function'){let o=app.openClassGroupChat;app.openClassGroupChat=async function(){let c=await myControl();if(c.chatDisabled)return this.toast('Sınıf grubu mesajlaşması sınıfınız için kapalı.','error');return o.apply(this,arguments)}}
+  app.saveDevClassBlocks=async function(){if(!this._devBlockClasses?.length)return this.toast('En az bir sınıf ekleyin.','error');let forumDisabled=document.getElementById('os-dev-disable-forum').checked,chatDisabled=document.getElementById('os-dev-disable-chat').checked,blockDevelopers=document.getElementById('os-dev-block-developers').checked;try{for(let c of this._devBlockClasses){let [g,s]=c.split('-');await setDoc(doc(__devBlockDb,'school_controls',this._devBlockSchool,'classes',cid(g,s)),{school:this._devBlockSchool,grade:g,section:s,forumDisabled,chatDisabled,blockDevelopers,updatedBy:this.currentUser.username,updatedAt:serverTimestamp()},{merge:true})}this.toast('Seçilen sınıfların engel ayarları güncellendi.','success');document.getElementById('os-class-block-modal').remove()}catch(e){this.toast('Ayar uygulanamadı: '+e.message,'error')}};
+  if(typeof app.renderSocial==='function'){let o=app.renderSocial;app.renderSocial=async function(){let c=await myControl();if(c.forumDisabled){document.getElementById('main-content').innerHTML='<div style="padding:45px 20px;text-align:center;background:var(--card);border-radius:15px"><i class="fas fa-ban" style="font-size:42px;color:#d63031"></i><h3 style="margin-top:14px">Bu sınıf için forum yasaklandı</h3></div>';document.getElementById('social-add-btn')?.classList.add('hidden');return}return o.apply(this,arguments)}}
+  if(typeof app.openClassGroupChat==='function'){let o=app.openClassGroupChat;app.openClassGroupChat=async function(){let c=await myControl();if(c.chatDisabled){document.getElementById('main-content').innerHTML='<div style="padding:45px 20px;text-align:center;background:var(--card);border-radius:15px"><i class="fas fa-ban" style="font-size:42px;color:#d63031"></i><h3 style="margin-top:14px">Bu sınıf için mesajlaşma yasaklandı</h3></div>';return}return o.apply(this,arguments)}}
   if(typeof app.submitSocialPost==='function'){let o=app.submitSocialPost;app.submitSocialPost=async function(){let c=await myControl();if(c.forumDisabled)return this.toast('Forum sınıfınız için kapalı.','error');return o.apply(this,arguments)}}
   if(typeof app.submitSocialReply==='function'){let o=app.submitSocialReply;app.submitSocialReply=async function(){let c=await myControl();if(c.forumDisabled)return this.toast('Forum sınıfınız için kapalı.','error');return o.apply(this,arguments)}}
   if(typeof app.sendMessage==='function'){let o=app.sendMessage;app.sendMessage=async function(){if(!this._readOnlyChannel){let c=await myControl();if(c.chatDisabled)return this.toast('Sınıf grubu mesajlaşması sınıfınız için kapalı.','error')}return o.apply(this,arguments)}}
@@ -6427,13 +6427,13 @@ const __slideDb=getFirestore();
 (function(){
  const SB='https://xsphzjkfyklnjkpspzrx.supabase.co',KEY='sb_publishable_UlkIP5VCeDn4afvqPuAdJw_uwqEKz_c',BUCKET='okulumuz-files';
  const esc=s=>{let d=document.createElement('div');d.textContent=String(s||'');return d.innerHTML},safe=s=>String(s||'').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'')||'okul';
- const canTopDelete=()=>app.currentUser?.isAdmin===true||String(app.currentUser?.username||'').toLowerCase()==='künefe'||String(app.currentUser?.rank||'').toLowerCase()==='developer';
+ const canTopDelete=()=>app.currentUser?.isAdmin===true||String(app.currentUser?.rank||'').toLowerCase()==='developer';
  async function validImage(file){let b=new Uint8Array(await file.slice(0,12).arrayBuffer()),png=b[0]===137&&b[1]===80&&b[2]===78&&b[3]===71&&b[4]===13&&b[5]===10&&b[6]===26&&b[7]===10,jpg=b[0]===255&&b[1]===216&&b[2]===255;return png||jpg}
  function install(){if(!window.app||!app.renderFeed||!app.renderAdminPanel||app.__schoolSliderInstalled)return false;app.__schoolSliderInstalled=true;app._slides=[];app._slideIndex=0;
-  app.renderSchoolSlider=function(){let feed=document.getElementById('feed-container');if(!feed)return;let a=this._slides||[];clearInterval(this._slideTimer);if(!a.length){feed.innerHTML='<div class="os-slider-empty"><i class="fas fa-images" style="font-size:30px;margin-bottom:8px"></i><div>Okul yönetimi henüz ana sayfa görseli eklememiş.</div></div>';return}this._slideIndex=((this._slideIndex%a.length)+a.length)%a.length;feed.innerHTML='<div class="os-school-slider"><div class="os-school-slide-track" style="transform:translateX(-'+(this._slideIndex*100)+'%)">'+a.map(x=>'<div class="os-school-slide"><img src="'+esc(x.url)+'" alt="Okul görseli" loading="eager">'+(canTopDelete()?'<button class="os-slide-delete" onclick="event.stopPropagation();app.deleteSchoolSlide(\''+x.id+'\')"><i class="fas fa-times"></i></button>':'')+'<button class="os-slide-report" onclick="event.stopPropagation();app.reportSchoolSlide(\''+x.id+'\')"><i class="fas fa-exclamation-circle"></i> Bildir</button></div>').join('')+'</div>'+(a.length>1?'<button class="os-school-arrow left" onclick="app.moveSchoolSlide(-1)"><i class="fas fa-chevron-left"></i></button><button class="os-school-arrow right" onclick="app.moveSchoolSlide(1)"><i class="fas fa-chevron-right"></i></button><div class="os-school-dots">'+a.map((_,i)=>'<button class="os-school-dot '+(i===this._slideIndex?'active':'')+'" onclick="app.goSchoolSlide('+i+')"></button>').join('')+'</div>':'')+'</div>';if(a.length>1)this._slideTimer=setInterval(()=>this.moveSchoolSlide(1),10000)};
+  app.renderSchoolSlider=function(){let feed=document.getElementById('os-home-slider-area');if(!feed)return;let a=this._slides||[];clearInterval(this._slideTimer);if(!a.length){feed.innerHTML='<div class="os-slider-empty"><i class="fas fa-images" style="font-size:30px;margin-bottom:8px"></i><div>Okul yönetimi henüz ana sayfa görseli eklememiş.</div></div>';return}this._slideIndex=((this._slideIndex%a.length)+a.length)%a.length;feed.innerHTML='<div class="os-school-slider"><div class="os-school-slide-track" style="transform:translateX(-'+(this._slideIndex*100)+'%)">'+a.map(x=>'<div class="os-school-slide"><img src="'+esc(x.url)+'" alt="Okul görseli" loading="eager">'+(canTopDelete()?'<button class="os-slide-delete" onclick="event.stopPropagation();app.deleteSchoolSlide(\''+x.id+'\')"><i class="fas fa-times"></i></button>':'')+'<button class="os-slide-report" onclick="event.stopPropagation();app.reportSchoolSlide(\''+x.id+'\')"><i class="fas fa-exclamation-circle"></i> Bildir</button></div>').join('')+'</div>'+(a.length>1?'<button class="os-school-arrow left" onclick="app.moveSchoolSlide(-1)"><i class="fas fa-chevron-left"></i></button><button class="os-school-arrow right" onclick="app.moveSchoolSlide(1)"><i class="fas fa-chevron-right"></i></button><div class="os-school-dots">'+a.map((_,i)=>'<button class="os-school-dot '+(i===this._slideIndex?'active':'')+'" onclick="app.goSchoolSlide('+i+')"></button>').join('')+'</div>':'')+'</div>';if(a.length>1)this._slideTimer=setInterval(()=>this.moveSchoolSlide(1),10000)};
   app.moveSchoolSlide=function(n){this._slideIndex+=n;this.renderSchoolSlider()};app.goSchoolSlide=function(i){this._slideIndex=i;this.renderSchoolSlider()};
   app.listenSchoolSlides=function(){if(this._slidesUnsub)this._slidesUnsub();let q=query(collection(__slideDb,'homepage_slides'),where('school','==',this.currentUser.school));this._slidesUnsub=onSnapshot(q,s=>{let a=[];s.forEach(d=>a.push({id:d.id,...d.data()}));a.sort((x,y)=>(x.createdAt?.toMillis?.()||0)-(y.createdAt?.toMillis?.()||0));this._slides=a;if(this._slideIndex>=a.length)this._slideIndex=0;this.renderSchoolSlider();this.renderAdminSlideList?.()},e=>{let f=document.getElementById('feed-container');if(f)f.innerHTML='<div class="os-slider-empty">Görseller alınamadı: '+esc(e.message)+'</div>'})};
-  const oldFeed=app.renderFeed;app.renderFeed=function(){let r=oldFeed.apply(this,arguments);if(this.homeAnnounUnsub){this.homeAnnounUnsub();this.homeAnnounUnsub=null}if(this.homeHomeworksUnsub){this.homeHomeworksUnsub();this.homeHomeworksUnsub=null}this.feedItems=[];this.listenSchoolSlides();return r};app._drawFeedV4=function(){app.renderSchoolSlider()};
+  const oldFeed=app.renderFeed,oldDrawFeed=app._drawFeedV4;app.renderFeed=function(){let r=oldFeed.apply(this,arguments),feed=document.getElementById('feed-container'),main=document.getElementById('main-content');if(feed&&!document.getElementById('os-home-slider-area'))feed.insertAdjacentHTML('beforebegin','<div id="os-home-slider-area"></div>');this.listenSchoolSlides();return r};app._drawFeedV4=function(){oldDrawFeed.apply(app,arguments);app.renderSchoolSlider()};
   const oldAdmin=app.renderAdminPanel;app.renderAdminPanel=async function(){let r=await oldAdmin.apply(this,arguments);setTimeout(()=>{let main=document.getElementById('main-content');if(main&&!document.getElementById('os-admin-slides')){let box=document.createElement('div');box.id='os-admin-slides';box.style.cssText='background:var(--card);padding:15px;border-radius:15px;margin:10px 0 15px';box.innerHTML='<h4><i class="fas fa-images" style="color:#3498db"></i> Ana Sayfa Fotoğrafları</h4><p style="font-size:11px;color:#888">Yalnızca gerçek PNG veya JPEG. En fazla 8 MB.</p><input id="os-slide-file" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg"><button class="btn-main" onclick="app.uploadSchoolSlide()">Fotoğraf Ekle</button><div id="os-admin-slide-list"></div>';main.querySelector('h3')?.insertAdjacentElement('afterend',box);app.loadAdminSlides()}},30);return r};
   app.loadAdminSlides=function(){if(this._adminSlidesUnsub)this._adminSlidesUnsub();let q=query(collection(__slideDb,'homepage_slides'),where('school','==',this.currentUser.school));this._adminSlidesUnsub=onSnapshot(q,s=>{this._adminSlides=[];s.forEach(d=>this._adminSlides.push({id:d.id,...d.data()}));this._adminSlides.sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));this.renderAdminSlideList()})};
   app.renderAdminSlideList=function(){let el=document.getElementById('os-admin-slide-list');if(!el)return;let a=this._adminSlides||[];el.innerHTML=a.length?a.map(x=>'<div class="os-admin-slide-card"><img src="'+esc(x.url)+'" alt=""><span>'+esc(x.fileName||'Fotoğraf')+'</span><button onclick="app.deleteSchoolSlide(\''+x.id+'\')"><i class="fas fa-trash"></i></button></div>').join(''):'<p style="font-size:11px;color:#888">Eklenmiş fotoğraf yok.</p>'};
@@ -6846,7 +6846,7 @@ const __inviteDb=getFirestore();
  const norm=v=>String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8),format=v=>{let x=norm(v);return x.length>4?x.slice(0,4)+'-'+x.slice(4):x},valid=v=>/^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(String(v||''));
  async function hash(v){let b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(v)));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
  function random(){let a=new Uint32Array(8);crypto.getRandomValues(a);let x=[...a].map(n=>chars[n%chars.length]).join('');return x.slice(0,4)+'-'+x.slice(4)}
- function realAdmin(){let u=app.currentUser||{};return u.isAdmin===true||String(u.username||'').toLowerCase()==='künefe'||String(u.rank||'').toLowerCase()==='developer'}
+ function realAdmin(){let u=app.currentUser||{};return u.isAdmin===true||String(u.rank||'').toLowerCase()==='developer'}
  async function saveCode(school,code){code=format(code);if(!valid(code))throw Error('Davet kodu 4+4 biçiminde toplam 8 harf/rakam olmalı.');let id=await hash(code),existing=await getDoc(doc(__inviteDb,'school_invites',id));if(existing.exists()&&existing.data().school!==school)throw Error('Bu davet kodu başka bir okulda kullanılıyor.');let old=await getDocs(query(collection(__inviteDb,'school_invites'),where('school','==',school)));for(let d of old.docs)if(d.id!==id)await deleteDoc(d.ref);await setDoc(doc(__inviteDb,'school_invites',id),{school,code,active:true,updatedBy:app.currentUser.username,updatedAt:serverTimestamp()});return code}
  function install(){if(!window.app||!app.renderAdminPanel||!app.startRegister||app.__schoolInviteInstalled)return false;app.__schoolInviteInstalled=true;
   app.addSchoolInviteRegistrationField=function(){let school=document.getElementById('reg-school');if(!school||document.getElementById('reg-school-invite'))return;let input=document.createElement('input');input.id='reg-school-invite';input.placeholder='Okul Davet Kodu (XXXX-XXXX)';input.maxLength=9;input.autocomplete='off';input.oninput=function(){let at=this.selectionStart;this.value=format(this.value);try{this.setSelectionRange(this.value.length,this.value.length)}catch(e){}};school.insertAdjacentElement('afterend',input);let note=document.createElement('small');note.className='os-invite-input-note';note.textContent='Okulunuzun idarecisinden aldığınız 8 karakterli davet kodunu girin.';input.insertAdjacentElement('afterend',note)};
@@ -6875,7 +6875,7 @@ import{getFirestore,doc,getDoc,setDoc,updateDoc,addDoc,collection,getDocs,query,
 const __banDb=getFirestore(),__banAuth=getAuth();
 (function(){
  const esc=s=>{let d=document.createElement('div');d.textContent=String(s||'');return d.innerHTML};
- function role(){let u=app.currentUser||{},r=String(u.rank||'').toLowerCase();if(r==='developer')return{key:'developer',label:'Developer',priority:3};if(u.isAdmin||String(u.username||'').toLowerCase()==='künefe')return{key:'admin',label:'Admin',priority:2};return{key:'manager',label:'İdareci',priority:1}}
+ function role(){let u=app.currentUser||{},r=String(u.rank||'').toLowerCase();if(r==='developer')return{key:'developer',label:'Developer',priority:3};if(u.isAdmin===true)return{key:'admin',label:'Admin',priority:2};return{key:'manager',label:'İdareci',priority:1}}
  async function applyBan(username,reason,extra={}){let r=role();await updateDoc(doc(__banDb,'users',username),{isBlocked:true,banReason:reason,bannedBy:app.currentUser.username,bannedByRole:r.key,bannedByRoleLabel:r.label,banPriority:r.priority,bannedAt:serverTimestamp(),...extra})}
  function askReason(username,onSave){document.getElementById('os-ban-reason-modal')?.remove();let bg=document.createElement('div');bg.id='os-ban-reason-modal';bg.className='modal-bg';bg.style.zIndex='24000';bg.innerHTML='<div class="modal"><h3><i class="fas fa-ban" style="color:#d63031"></i> Hesabı Engelle</h3><p style="font-size:12px;color:#888">@'+esc(username)+' hesabının neden engellendiğini açıkça yazın. Bu açıklama kullanıcıya gösterilecektir.</p><textarea id="os-ban-reason-input" rows="5" maxlength="1000" placeholder="Engelleme sebebi..."></textarea><button class="btn-danger" onclick="app.confirmBanReason()">Hesabı Engelle</button><button class="btn-main" style="background:#888" onclick="document.getElementById(\'os-ban-reason-modal\').remove()">İptal</button></div>';document.body.appendChild(bg);app._banReasonAction={username,onSave}}
  function install(){if(!window.app||!app.login||!app.adminUpdateStatus||app.__banAppealInstalled)return false;app.__banAppealInstalled=true;
@@ -7012,7 +7012,7 @@ import{getFirestore,collection,addDoc,serverTimestamp}from'https://www.gstatic.c
 const __publishDb=getFirestore();
 (function(){
  const SB='https://xsphzjkfyklnjkpspzrx.supabase.co',KEY='sb_publishable_UlkIP5VCeDn4afvqPuAdJw_uwqEKz_c',BUCKET='okulumuz-files';
- const safe=s=>String(s||'').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'')||'okul',isAdmin=()=>app.currentUser?.isAdmin===true||String(app.currentUser?.username||'').toLowerCase()==='künefe',esc=s=>{let d=document.createElement('div');d.textContent=String(s||'');return d.innerHTML};
+ const safe=s=>String(s||'').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'')||'okul',isAdmin=()=>app.currentUser?.isAdmin===true,esc=s=>{let d=document.createElement('div');d.textContent=String(s||'');return d.innerHTML};
  async function kind(file){let b=new Uint8Array(await file.slice(0,12).arrayBuffer());if(b[0]===37&&b[1]===80&&b[2]===68&&b[3]===70&&b[4]===45)return'pdf';if(b[0]===137&&b[1]===80&&b[2]===78&&b[3]===71&&b[4]===13&&b[5]===10&&b[6]===26&&b[7]===10)return'png';if(b[0]===255&&b[1]===216&&b[2]===255)return'jpg';return''}
  async function upload(file,school,area){let ext=await kind(file);if(!ext)throw Error('Dosyanın gerçek biçimi PDF, PNG veya JPEG değil.');let path=safe(school)+'/'+area+'/'+crypto.randomUUID()+'.'+ext,res=await fetch(SB+'/storage/v1/object/'+BUCKET+'/'+path,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':ext==='pdf'?'application/pdf':ext==='png'?'image/png':'image/jpeg','x-upsert':'false'},body:file});if(!res.ok)throw Error(await res.text());return{url:SB+'/storage/v1/object/public/'+BUCKET+'/'+path,path,ext}}
  function install(){if(!window.app||!app.renderAdminPanel||app.__modernPublisherInstalled)return false;app.__modernPublisherInstalled=true;app._modernType='announcement';app._modernClasses=[];
@@ -7157,8 +7157,8 @@ import{getFirestore,doc,getDoc,setDoc,updateDoc,deleteField,serverTimestamp,coll
 const __finalAuth=getAuth(),__finalDb=getFirestore();
 (function(){
  const key=s=>String(s||'').trim().toLocaleLowerCase('tr-TR'),safeError=e=>e?.code==='auth/network-request-failed'?'İnternet bağlantısı kurulamadı.':'Kullanıcı adı veya şifre hatalı.';
- async function indexFor(username,parent=false){let id=key(username),name=parent?'parent_login_index':'login_index',s=await getDoc(doc(__finalDb,name,id));if(s.exists())return s.data();if(!parent&&id==='künefe')return{username:'Künefe',email:'gamerkunefe14@gmail.com'};throw Error('LOGIN_NOT_FOUND')}
- async function signUsername(username,password,parent=false){let idx=await indexFor(username,parent),cred;try{cred=await signInWithEmailAndPassword(__finalAuth,idx.email,password)}catch(error){if(!parent&&key(username)==='künefe'){let legacy=await getDoc(doc(__finalDb,'users','Künefe')),stored=legacy.exists()?legacy.data().password:null,ok=false;if(stored){if(String(stored).startsWith('$argon2')){try{ok=await window.argon2.verify({pass:password,encoded:stored})}catch(e){}}else{let b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(password)),h=btoa(String.fromCharCode(...new Uint8Array(b)));ok=stored===password||stored===h}}if(ok)cred=await createUserWithEmailAndPassword(__finalAuth,idx.email,password);else throw error}else throw error}await cred.user.getIdToken(true);return{user:cred.user,index:idx}}
+ async function indexFor(username,parent=false){let id=key(username),name=parent?'parent_login_index':'login_index',s=await getDoc(doc(__finalDb,name,id));if(s.exists())return s.data();throw Error('LOGIN_NOT_FOUND')}
+ async function signUsername(username,password,parent=false){let idx=await indexFor(username,parent),cred=await signInWithEmailAndPassword(__finalAuth,idx.email,password);await cred.user.getIdToken(true);return{user:cred.user,index:idx}}
  async function bindUser(username,user){await setDoc(doc(__finalDb,'users_lookup',user.uid),{username,updatedAt:serverTimestamp()},{merge:true})}
  function install(){if(!window.app||!app.login||!app.verifyAndFinish||app.__authOnlyFinal)return false;app.__authOnlyFinal=true;
   app.__signUsername=signUsername;
@@ -7178,7 +7178,7 @@ const __finalAuth=getAuth(),__finalDb=getFirestore();
  if(!install()){var n=0,t=setInterval(function(){if(install()||++n>600)clearInterval(t)},40)}
 })();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5a509e56a7843d7',t:'MTc5NDY0OTA1OA=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5a509e56a7843d7',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5af9bd63c4a5709',t:'MTc5NDc1OTg5Mw=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5af9bd63c4a5709',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
 <style>
 #os-auth-cosmos{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:radial-gradient(circle at 50% 115%,rgba(43,72,120,.38),transparent 46%),linear-gradient(155deg,#050810 0%,#0b1220 48%,#111827 100%)}#os-auth-cosmos::before,#os-auth-cosmos::after{content:"";position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.9) 0 1px,transparent 1.4px),radial-gradient(circle,rgba(173,210,255,.65) 0 1px,transparent 1.5px);background-size:71px 71px,113px 113px;background-position:8px 19px,39px 57px;opacity:.48;animation:osStarsDrift 28s linear infinite}#os-auth-cosmos::after{background-size:157px 157px,203px 203px;opacity:.25;animation-duration:46s;animation-direction:reverse}.os-meteor{position:absolute;top:-18vh;left:var(--x);width:var(--w);height:2px;border-radius:999px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.96),#fff);filter:drop-shadow(0 0 5px rgba(190,220,255,.9));transform:rotate(var(--angle));opacity:0;animation:osMeteorFall var(--speed) linear var(--delay) infinite}.os-meteor::after{content:"";position:absolute;right:-2px;top:-2px;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 9px #fff}.os-auth-brand{position:relative;text-align:center;margin:-8px 0 18px;color:#fff;font-size:30px;font-weight:950;letter-spacing:7px;text-shadow:0 0 18px rgba(110,178,255,.55)}#auth-screen{position:relative;z-index:2}.os-parent-auth,.os-counselor-auth-bg{background:rgba(5,8,16,.43)!important;backdrop-filter:blur(1px)}.os-parent-box,.os-counselor-auth-box{position:relative;z-index:2}.os-parent-box::before,.os-counselor-auth-box::before{content:"OKUL NET";display:block;text-align:center;margin:0 0 16px;color:#fff;font-size:25px;font-weight:950;letter-spacing:6px;text-shadow:0 0 18px rgba(110,178,255,.65)}.os-parent-box::before{color:#6c5ce7;text-shadow:0 0 15px rgba(108,92,231,.28)}.os-counselor-auth-box::before{color:#8e44ad;text-shadow:0 0 15px rgba(142,68,173,.25)}body.os-auth-cosmos-active{background:#050810!important}@keyframes osStarsDrift{to{transform:translate3d(-35px,55px,0)}}@keyframes osMeteorFall{0%{transform:translate3d(0,-10vh,0) rotate(var(--angle));opacity:0}7%{opacity:.92}38%{opacity:.78}55%,100%{transform:translate3d(var(--travel),125vh,0) rotate(var(--angle));opacity:0}}@media(max-width:600px){.os-auth-brand{font-size:24px;letter-spacing:5px;margin-bottom:15px}.auth-card{max-height:94vh;overflow-y:auto}.os-meteor{height:1.5px}.os-parent-box::before,.os-counselor-auth-box::before{font-size:21px;letter-spacing:4px}}
@@ -7484,7 +7484,7 @@ const iqDb=getFirestore(),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp
 <script>
 (function(){
  function install(){if(!window.app||!app.navigate||!app.launch||app.__okulnetRoleHub)return false;app.__okulnetRoleHub=true;
-  function dev(){let u=app.currentUser||{};return u.devBanned!==true&&(String(u.rank||'').toLocaleLowerCase('tr-TR')==='developer'||String(u.username||'').toLocaleLowerCase('tr-TR')==='künefe')}
+  function dev(){let u=app.currentUser||{};return u.devBanned!==true&&(String(u.rank||'').toLocaleLowerCase('tr-TR')==='developer')}
   function navItem(){return Array.from(document.querySelectorAll('.bottom-nav .nav-item')).find(x=>{let s=x.querySelector('span')?.textContent.trim();return ['Sınıfım','Sınıfımız','Kullanıcılar','Okulumuz','OkulNET'].includes(s)})}
   function label(){let item=navItem(),span=item?.querySelector('span');if(!span)return;span.textContent=dev()?'OkulNET':'Okulumuz';let icon=item.querySelector('i');if(icon)icon.className=dev()?'fas fa-network-wired':'fas fa-school'}
   app.renderOkulNETDeveloperHub=function(){let main=document.getElementById('main-content');if(!main)return;main.innerHTML='<h3><i class="fas fa-network-wired" style="color:#ff9f43;margin-right:7px"></i>OkulNET</h3><p style="font-size:12px;color:#888;margin-top:5px">Developer yönetim ve güvenlik araçları</p><div class="os-dev-hub-grid"><button class="os-dev-hub-btn" style="background:#5865f2" onclick="app.openManagedMessageModal(\'system\')"><i class="fas fa-bullhorn"></i><span>Sistem Mesajı</span><small>Kullanıcılara sistem mesajı gönder</small></button><button class="os-dev-hub-btn" style="background:#69707d" onclick="app.openReportedMessages()"><i class="fas fa-flag"></i><span>Bildirilen Mesajlar</span><small>Raporlanan içerikleri incele</small></button><button class="os-dev-hub-btn" style="background:#d63031" onclick="app.openClassBlocking()"><i class="fas fa-ban"></i><span>Engel Koy</span><small>Sınıf forumu veya sohbetini kapat</small></button><button class="os-dev-hub-btn" style="background:#34495e" onclick="app.openEmailDomainManager()"><i class="fas fa-at"></i><span>E-posta Engelleri</span><small>Geçici e-posta alan adlarını yönet</small></button><button class="os-dev-hub-btn" style="background:#e67e22" onclick="app.openBanAppeals()"><i class="fas fa-gavel"></i><span>İtirazlar</span><small>Hesap engeli itirazlarını incele</small></button><button class="os-dev-hub-btn" style="background:#9b59b6" onclick="app.openDevMenu()"><i class="fas fa-tools"></i><span>Tüm Developer Araçları</span><small>Gelişmiş seçenekleri aç</small></button></div>'};
@@ -7495,3 +7495,63 @@ const iqDb=getFirestore(),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp
  if(!install()){let n=0,t=setInterval(()=>{if(install()||++n>500)clearInterval(t)},40)}
 })();
 </script>
+<style>
+#os-home-cosmos{display:none;position:absolute;inset:60px 0 70px;overflow:hidden;pointer-events:none;z-index:0;background:radial-gradient(circle at 50% 115%,rgba(43,72,120,.42),transparent 48%),linear-gradient(155deg,#050810 0%,#0b1220 48%,#111827 100%)}
+#app-container.os-home-cosmos-active #os-home-cosmos{display:block}
+#app-container.os-home-cosmos-active #main-content{position:relative;z-index:1;background:transparent!important;color:#eef5ff}
+#app-container.os-home-cosmos-active #main-content>h3{color:#fff;text-shadow:0 0 12px rgba(98,169,255,.35)}
+.os-home-star{position:absolute;border-radius:50%;background:#fff;pointer-events:none;opacity:var(--opacity);width:var(--size);height:var(--size);box-shadow:0 0 var(--glow) rgba(165,210,255,.9);animation:osHomeStarTwinkle var(--twinkle) ease-in-out var(--delay) infinite alternate}
+.os-home-meteor{position:absolute;z-index:1;height:1.5px;border-radius:999px;opacity:0;background:linear-gradient(90deg,transparent,rgba(180,220,255,.3),#fff);transform-origin:right center;filter:drop-shadow(0 0 4px rgba(190,225,255,.9));animation:osHomeMeteor var(--speed) linear var(--delay) infinite}
+.os-home-meteor::after{content:"";position:absolute;right:-2px;top:-2px;width:5px;height:5px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff}
+@keyframes osHomeStarTwinkle{to{opacity:.25;transform:scale(.72)}}
+@keyframes osHomeMeteor{0%,8%{opacity:0;transform:translate3d(0,0,0) rotate(var(--angle))}12%{opacity:.9}45%{opacity:.65}65%,100%{opacity:0;transform:translate3d(var(--travel),95vh,0) rotate(var(--angle))}}
+@media(prefers-reduced-motion:reduce){.os-home-star,.os-home-meteor{animation:none!important}}
+</style>
+<script>
+(function(){
+ function install(){if(!window.app||!app.navigate||!app.launch||app.__homeCosmosFinal)return false;app.__homeCosmosFinal=true;
+  function create(){let host=document.getElementById('app-container');if(!host||document.getElementById('os-home-cosmos'))return;let sky=document.createElement('div');sky.id='os-home-cosmos';sky.setAttribute('aria-hidden','true');for(let i=0;i<95;i++){let s=document.createElement('i');s.className='os-home-star';s.style.cssText='left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;--size:'+(Math.random()*1.8+.6)+'px;--opacity:'+(Math.random()*.65+.25)+';--glow:'+(Math.random()*7+2)+'px;--twinkle:'+(Math.random()*3+2)+'s;--delay:-'+Math.random()*5+'s';sky.appendChild(s)}for(let i=0;i<4;i++){let m=document.createElement('i');m.className='os-home-meteor';m.style.cssText='left:'+(Math.random()*75+5)+'%;top:'+(Math.random()*35-15)+'%;width:'+(Math.random()*100+85)+'px;--angle:'+(Math.random()*12+38)+'deg;--travel:'+(Math.random()*260+520)+'px;--speed:'+(Math.random()*4+7)+'s;--delay:'+(Math.random()*10+1)+'s';sky.appendChild(m)}host.insertBefore(sky,host.firstChild)}
+  function set(on){create();document.getElementById('app-container')?.classList.toggle('os-home-cosmos-active',!!on)}
+  const oldNavigate=app.navigate;app.navigate=function(page){set(page==='feed');return oldNavigate.apply(this,arguments)};
+  const oldLaunch=app.launch;app.launch=function(){let r=oldLaunch.apply(this,arguments);set(false);return r};
+  create();return true
+ }
+ if(!install()){let n=0,t=setInterval(()=>{if(install()||++n>500)clearInterval(t)},40)}
+})();
+</script>
+<style>
+@keyframes osAuthCardArrival{0%{opacity:0;transform:translateY(34px) scale(.9);filter:blur(7px)}65%{opacity:1;transform:translateY(-5px) scale(1.015);filter:blur(0)}100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}
+body.os-auth-cosmos-active #auth-screen{animation:osAuthCardArrival .72s cubic-bezier(.18,.82,.22,1) both;transform-origin:center center}
+@media(max-width:600px){
+ #app-container.os-home-cosmos-active #feed-container{padding-top:16px!important}
+ #app-container.os-home-cosmos-active .os-home-column-title{font-size:14px!important;color:#eef5ff!important;text-shadow:0 0 10px rgba(70,145,255,.35)}
+ #app-container.os-home-cosmos-active .os-home-column-body{height:auto!important;max-height:none!important;min-height:0!important;overflow:visible!important;padding-right:0!important}
+ #app-container.os-home-cosmos-active .os-home-dashboard{gap:18px!important}
+}
+@media(prefers-reduced-motion:reduce){body.os-auth-cosmos-active #auth-screen{animation:none!important}}
+</style>
+<script type="module">
+import{getFirestore,doc,updateDoc}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+const __announceActionDb=getFirestore();
+(function(){
+ function install(){if(!window.app||app.__announcePinActions)return false;app.__announcePinActions=true;
+  app.toggleDeveloperAnnouncementPin=async function(id,on){let u=this.currentUser||{},dev=u.devBanned!==true&&(String(u.rank||'').toLocaleLowerCase('tr-TR')==='developer');if(!dev)return this.toast('Bu işlem yalnızca Developer hesaplarına açıktır.','error');try{await updateDoc(doc(__announceActionDb,'announcements',id),{pinned:!!on});this.toast(on?'Duyuru sabitlendi.':'Duyurunun sabitlemesi kaldırıldı.','success')}catch(e){console.error(e);this.toast('Duyuru güncellenemedi: '+e.message,'error')}};
+  return true
+ }
+ if(!install()){let n=0,t=setInterval(()=>{if(install()||++n>500)clearInterval(t)},40)}
+})();
+</script>
+<style>
+#app-container.os-home-cosmos-active #main-content>h3{display:none!important}
+#app-container.os-home-cosmos-active .os-home-column-title{display:none!important}
+#app-container.os-home-cosmos-active .os-home-profile-strip{margin:0 0 12px!important;order:0}
+#app-container.os-home-cosmos-active #os-home-slider-area{display:block!important;margin:0 0 14px!important;order:1}
+#app-container.os-home-cosmos-active #feed-container{padding-top:0!important;order:2}
+#app-container.os-home-cosmos-active .os-home-dashboard{gap:12px!important}
+#app-container.os-home-cosmos-active .os-home-column-body{padding-top:0!important}
+@media(max-width:600px){
+ #app-container.os-home-cosmos-active #main-content{padding-top:12px!important}
+ #app-container.os-home-cosmos-active .os-school-slider{margin-top:0!important}
+ #app-container.os-home-cosmos-active #feed-container{padding-top:0!important}
+}
+</style>
