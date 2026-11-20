@@ -7141,7 +7141,85 @@ const __finalAuth=getAuth(),__finalDb=getFirestore();
  if(!install()){var n=0,t=setInterval(function(){if(install()||++n>600)clearInterval(t)},40)}
 })();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5d8e59ec97c890c',t:'MTc5NTE5MjgzMQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5d8e59ec97c890c',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<style>
+.os-dev-content-delete{position:absolute!important;top:8px!important;right:8px!important;z-index:12!important;width:32px!important;height:32px!important;padding:0!important;margin:0!important;border:0!important;border-radius:9px!important;background:#ffe8e8!important;color:#d63031!important;display:flex!important;align-items:center!important;justify-content:center!important;cursor:pointer!important;box-shadow:0 2px 8px rgba(0,0,0,.12)!important}.os-dev-content-card{position:relative!important;padding-right:48px!important}
+</style>
+<script type="module">
+import{getFirestore,collection,onSnapshot,doc,deleteDoc}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+const __devContentDb=getFirestore();
+(function(){
+ const dev=()=>String(app.currentUser?.rank||'').toLowerCase()==='developer'&&app.currentUser?.devBanned!==true;
+ const esc=v=>{let x=document.createElement('div');x.textContent=String(v??'');return x.innerHTML};
+ const button=(col,id,label)=>dev()?'<button class="os-dev-content-delete" title="'+esc(label||'İçeriği sil')+'" onclick="event.stopPropagation();app.deleteAnyPublishedContent(\''+col+'\',\''+id+'\')"><i class="fas fa-trash"></i></button>':'';
+ const access=x=>typeof app.checkAccess==='function'?app.checkAccess(x):true;
+ app.deleteAnyPublishedContent=async function(col,id){
+  if(!dev())return this.toast('Bu işlem yalnızca Developer hesaplarına açıktır.','error');
+  if(!['announcements','homeworks','images'].includes(col)||!id)return this.toast('İçerik bilgisi geçersiz.','error');
+  if(!await this.customConfirm('Bu içerik kim yayınlamış olursa olsun kalıcı olarak silinecek. Devam edilsin mi?'))return;
+  try{await deleteDoc(doc(__devContentDb,col,id));this.toast('İçerik silindi.','success')}
+  catch(e){console.error(e);this.toast('İçerik silinemedi: '+(e?.code==='permission-denied'?'Firestore izni reddetti. Güncel firestore.rules dosyasını yayınlayın.':e.message),'error')}
+ };
+ function install(){if(!window.app||!app.setHomeTab||!app.renderWorksheetsFeed||app.__developerDeleteAllContent)return false;app.__developerDeleteAllContent=true;
+  app.setHomeTab=function(tab){
+   this.activeHomeTab=tab;document.querySelectorAll('.home-menu-btn').forEach(x=>x.classList.remove('active'));document.getElementById('tab-btn-'+tab)?.classList.add('active');
+   if(this.homeAnnounUnsub){this.homeAnnounUnsub();this.homeAnnounUnsub=null}if(this.homeImagesUnsub){this.homeImagesUnsub();this.homeImagesUnsub=null}if(this.homeHomeworksUnsub){this.homeHomeworksUnsub();this.homeHomeworksUnsub=null}
+   const root=document.getElementById('home-tab-content');if(!root)return;root.innerHTML='';
+   if(tab==='homeworks'){
+    root.innerHTML='<div id="homework-list"></div>';this.homeHomeworksUnsub=onSnapshot(collection(__devContentDb,'homeworks'),snap=>{let el=document.getElementById('homework-list');if(!el)return;let out='',now=Date.now();snap.forEach(d=>{let x=d.data();if(!access(x))return;let deadline=new Date(x.deadline).getTime();if(Number.isFinite(deadline)&&now>deadline)return;let urgent=Number.isFinite(deadline)&&(deadline-now)<=86400000;out+='<div class="homework-card os-dev-content-card">'+button('homeworks',d.id,'Ödevi sil')+(urgent?'<div class="warning-icon">!</div>':'')+'<h4>'+esc(x.title)+'</h4><p><b>Ders:</b> '+esc(x.subject)+'</p><p><b>Kitap:</b> '+esc(x.book)+'</p><p><b>Sayfalar:</b> '+esc(x.pages)+'</p>'+(x.deadline?'<p style="margin-top:5px;font-size:11px;color:#666"><b>Bitiş:</b> '+esc(String(x.deadline).replace('T',' '))+'</p>':'')+'</div>'});el.innerHTML=out||'<p style="font-size:13px;color:#999">Şu an güncel bir ödev akışı bulunmuyor.</p>'});return
+   }
+   if(tab==='announcements'){
+    root.innerHTML='<div id="announcement-list"></div>';this.homeAnnounUnsub=onSnapshot(collection(__devContentDb,'announcements'),snap=>{let el=document.getElementById('announcement-list');if(!el)return;let a=[];snap.forEach(d=>{let x=d.data();if(x.homeDocType!=='exam'&&access(x))a.push({id:d.id,...x,ts:x.createdAt?.toMillis?.()||0})});a.sort((x,y)=>(y.pinned===true)-(x.pinned===true)||y.ts-x.ts);el.innerHTML=a.map(x=>'<div class="homework-card os-dev-content-card" style="border-left-color:#3498db">'+button('announcements',x.id,'Duyuruyu sil')+'<h4><i class="fas fa-bullhorn"></i> Duyuru</h4><p style="margin-top:5px;font-size:15px">'+esc(x.text)+'</p></div>').join('')||'<p style="font-size:13px;color:#999">Şu an herhangi bir duyuru bulunmuyor.</p>'});return
+   }
+   if(tab==='worksheets'){
+    let options='<option value="">-- Sınıf Seçin --</option>';for(let i=1;i<=12;i++)options+='<option value="'+i+'" '+(String(this.selectedWorksheetGrade)===String(i)?'selected':'')+'>'+i+'. Sınıf</option>';
+    root.innerHTML='<div style="margin-bottom:12px;display:flex;gap:8px"><div style="flex:1"><label style="font-size:12px;font-weight:bold;display:block;margin-bottom:5px">Sınıf Kademesi:</label><select id="home-ws-grade-selector" onchange="app.onWorksheetGradeChange()" style="margin:0">'+options+'</select></div><div style="flex:1"><label style="font-size:12px;font-weight:bold;display:block;margin-bottom:5px">Ders Kategorisi:</label><select id="home-ws-subject-selector" onchange="app.onWorksheetSubjectChange()" style="margin:0"><option value="">-- Tüm Dersler --</option></select></div></div><div id="worksheet-list"></div>';this.updateHomeWorksheetSubjectsDropdown();this.renderWorksheetsFeed();return
+   }
+   if(tab==='exams'){
+    root.innerHTML='<div id="exam-list"></div>';this.homeAnnounUnsub=onSnapshot(collection(__devContentDb,'announcements'),snap=>{let el=document.getElementById('exam-list');if(!el)return;let out='';snap.forEach(d=>{let x=d.data();if(x.school!==this.currentUser.school||x.homeDocType!=='exam')return;if(x.targetType!=='school-all'&&!(String(x.grade)===String(this.currentUser.grade)&&String(x.section)===String(this.currentUser.section)))return;let url=x.examUrl||x.fileUrl||'';out+='<div class="homework-card os-dev-content-card" style="border-left-color:#e67e22">'+button('announcements',d.id,'Sınav tarihini sil')+'<h4 style="color:#e67e22"><i class="fas fa-calendar-alt"></i> Sınav Tarihi Planı</h4><p style="margin-top:5px;font-size:15px;font-weight:bold">'+esc(x.text)+'</p>'+(x.examDate?'<p style="font-size:12px;margin-top:5px">'+esc(String(x.examDate).replace('T',' '))+'</p>':'')+(url?'<a href="'+esc(url)+'" target="_blank" style="display:block;margin-top:10px;color:#e67e22;font-weight:bold"><i class="fas fa-external-link-alt"></i> Sınav Planı Bağlantısını Aç</a>':'')+'</div>'});el.innerHTML=out||'<p style="font-size:13px;color:#999">Okulunuza ait girilmiş bir sınav tarihi planı yok.</p>'});return
+   }
+  };
+  app.renderWorksheetsFeed=function(){let el=document.getElementById('worksheet-list');if(!el)return;if(this.homeImagesUnsub){this.homeImagesUnsub();this.homeImagesUnsub=null}if(!this.selectedWorksheetGrade){el.innerHTML='<p style="font-size:13px;color:#888;text-align:center;padding:10px">Lütfen yukarıdan sınıf kademesi seçin.</p>';return}el.innerHTML='<p style="font-size:12px;color:#666">Yükleniyor...</p>';this.homeImagesUnsub=onSnapshot(collection(__devContentDb,'images'),snap=>{let out='';snap.forEach(d=>{let x=d.data();if(x.school!==this.currentUser.school||x.homeDocType!=='worksheet'||String(x.grade)!==String(this.selectedWorksheetGrade))return;if(this.selectedWorksheetSubject&&x.subjectCategory!==this.selectedWorksheetSubject)return;let url=x.url||x.fileUrl||x.externalUrl||'',name=x.fileName||'Çalışma Belgesi';out+='<div class="homework-card os-dev-content-card" style="border-left-color:#2ecc71">'+button('images',d.id,'Çalışma kağıdını sil')+'<h4 style="color:#2ecc71"><i class="fas fa-paperclip"></i> Çalışma Kağıdı '+(x.subjectCategory?'['+esc(x.subjectCategory)+']':'')+'</h4>'+(x.text?'<p style="margin-bottom:5px;font-weight:bold">'+esc(x.text)+'</p>':'')+(url?'<a href="'+esc(url)+'" target="_blank" style="display:block;margin-top:10px;color:#2ecc71;font-weight:bold"><i class="fas fa-external-link-alt"></i> Bağlantıyı Aç ('+esc(name)+')</a>':'')+'</div>'});el.innerHTML=out||'<p style="font-size:13px;color:#999">Seçilen kriterlere uygun çalışma kağıdı bulunamadı.</p>'})};
+  const oldDraw=app._drawFeedV4;app._drawFeedV4=function(){oldDraw.apply(app,arguments);if(!dev())return;setTimeout(()=>{let visible=[...(app.feedItems||[])].slice(0,30),ann=visible.filter(x=>x.type==='duyuru'),other=visible.filter(x=>x.type!=='duyuru');[...document.querySelectorAll('#os-home-announcements>div')].filter(card=>!card.classList.contains('os-home-empty')).forEach((card,i)=>{let x=ann[i];if(!x||card.querySelector('.os-dev-content-delete'))return;card.classList.add('os-dev-content-card');card.insertAdjacentHTML('afterbegin',button('announcements',x.id,'Duyuruyu sil'))});[...document.querySelectorAll('#os-home-other>div')].filter(card=>card.id!=='os-study-upcoming'&&!card.classList.contains('os-home-empty')).forEach((card,i)=>{let x=other[i];if(!x||card.querySelector('.os-dev-content-delete'))return;card.classList.add('os-dev-content-card');card.insertAdjacentHTML('afterbegin',button('homeworks',x.id,'Ödevi sil'))})},0)};
+  return true
+ }
+ if(!install()){let n=0,t=setInterval(()=>{if(install()||++n>500)clearInterval(t)},40)}
+})();
+</script>
+<style>
+#home-tab-content.os-inline-menu-panel{margin-top:12px;scroll-margin-top:12px}#home-tab-content.os-inline-menu-panel>h3:first-child{font-size:16px;margin:4px 0 10px}.home-menu-btn.os-inline-active{border-color:#ff9f43!important;background:rgba(255,159,67,.08)!important}
+</style>
+<script>
+(function(){
+ function install(){
+  if(!window.app||!app.renderHome||!app.openSchedulePage||!app.renderMyExams||!app.renderMyStudies||app.__menusOpenInline)return false;
+  app.__menusOpenInline=true;
+  async function inside(original,buttonId,args,ctx){
+   var outer=document.getElementById('main-content'),panel=document.getElementById('home-tab-content');
+   if(!outer||!panel)return original.apply(ctx,args);
+   document.querySelectorAll('.home-menu-btn').forEach(function(x){x.classList.remove('active','os-inline-active')});
+   var button=document.getElementById(buttonId);if(button)button.classList.add('active','os-inline-active');
+   panel.classList.add('os-inline-menu-panel');
+   var outerTemp='os-main-content-shell';outer.id=outerTemp;panel.id='main-content';
+   try{return await original.apply(ctx,args)}
+   finally{var activePanel=document.getElementById('main-content'),shell=document.getElementById(outerTemp);if(activePanel)activePanel.id='home-tab-content';if(shell)shell.id='main-content';setTimeout(function(){document.getElementById('home-tab-content')?.scrollIntoView({behavior:'smooth',block:'nearest'})},0)}
+  }
+  var schedule=app.openSchedulePage,exams=app.renderMyExams,studies=app.renderMyStudies;
+  app.openSchedulePage=function(){return inside(schedule,'os-schedule-menu-btn',arguments,this)};
+  app.renderMyExams=function(){return inside(exams,'os-exams-menu',arguments,this)};
+  app.renderMyStudies=function(){return inside(studies,'os-study-menu',arguments,this)};
+  function bind(){
+   var scheduleButton=document.getElementById('os-schedule-menu-btn');if(scheduleButton){scheduleButton.classList.add('os-inline-menu-button');scheduleButton.onclick=function(){app.openSchedulePage()}}
+   var examsButton=document.getElementById('os-exams-menu');if(examsButton){examsButton.classList.add('os-inline-menu-button');examsButton.onclick=function(){app.renderMyExams()}}
+   var studyButton=document.getElementById('os-study-menu');if(studyButton){studyButton.classList.add('os-inline-menu-button');studyButton.onclick=function(){app.renderMyStudies()}}
+  }
+  var oldHome=app.renderHome;app.renderHome=function(){var result=oldHome.apply(this,arguments);setTimeout(bind,80);return result};
+  new MutationObserver(function(changes){for(var i=0;i<changes.length;i++){if(changes[i].addedNodes.length){bind();break}}}).observe(document.getElementById('main-content')||document.body,{childList:true,subtree:true});
+  bind();return true
+ }
+ if(!install()){var n=0,t=setInterval(function(){if(install()||++n>500)clearInterval(t)},40)}
+})();
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5d92c2e49b242a9',t:'MTc5NTE5NTcyMQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5d92c2e49b242a9',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
 <style>
 #os-auth-cosmos{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:radial-gradient(circle at 50% 115%,rgba(43,72,120,.38),transparent 46%),linear-gradient(155deg,#050810 0%,#0b1220 48%,#111827 100%)}#os-auth-cosmos::before,#os-auth-cosmos::after{content:"";position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.9) 0 1px,transparent 1.4px),radial-gradient(circle,rgba(173,210,255,.65) 0 1px,transparent 1.5px);background-size:71px 71px,113px 113px;background-position:8px 19px,39px 57px;opacity:.48;animation:osStarsDrift 28s linear infinite}#os-auth-cosmos::after{background-size:157px 157px,203px 203px;opacity:.25;animation-duration:46s;animation-direction:reverse}.os-meteor{position:absolute;top:-18vh;left:var(--x);width:var(--w);height:2px;border-radius:999px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.96),#fff);filter:drop-shadow(0 0 5px rgba(190,220,255,.9));transform:rotate(var(--angle));opacity:0;animation:osMeteorFall var(--speed) linear var(--delay) infinite}.os-meteor::after{content:"";position:absolute;right:-2px;top:-2px;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 9px #fff}.os-auth-brand{position:relative;text-align:center;margin:-8px 0 18px;color:#fff;font-size:30px;font-weight:950;letter-spacing:7px;text-shadow:0 0 18px rgba(110,178,255,.55)}#auth-screen{position:relative;z-index:2}.os-parent-auth,.os-counselor-auth-bg{background:rgba(5,8,16,.43)!important;backdrop-filter:blur(1px)}.os-parent-box,.os-counselor-auth-box{position:relative;z-index:2}.os-parent-box::before,.os-counselor-auth-box::before{content:"OKUL NET";display:block;text-align:center;margin:0 0 16px;color:#fff;font-size:25px;font-weight:950;letter-spacing:6px;text-shadow:0 0 18px rgba(110,178,255,.65)}.os-parent-box::before{color:#6c5ce7;text-shadow:0 0 15px rgba(108,92,231,.28)}.os-counselor-auth-box::before{color:#8e44ad;text-shadow:0 0 15px rgba(142,68,173,.25)}body.os-auth-cosmos-active{background:#050810!important}@keyframes osStarsDrift{to{transform:translate3d(-35px,55px,0)}}@keyframes osMeteorFall{0%{transform:translate3d(0,-10vh,0) rotate(var(--angle));opacity:0}7%{opacity:.92}38%{opacity:.78}55%,100%{transform:translate3d(var(--travel),125vh,0) rotate(var(--angle));opacity:0}}@media(max-width:600px){.os-auth-brand{font-size:24px;letter-spacing:5px;margin-bottom:15px}.auth-card{max-height:94vh;overflow-y:auto}.os-meteor{height:1.5px}.os-parent-box::before,.os-counselor-auth-box::before{font-size:21px;letter-spacing:4px}}
